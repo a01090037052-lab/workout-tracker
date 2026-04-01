@@ -62,7 +62,8 @@ export default function ProgramPage() {
               </div>
               <p className="text-xs text-text-secondary mb-2">{prog.description}</p>
               <div className="flex gap-3 text-xs text-text-secondary">
-                <span>{prog.durationWeeks}주 프로그램</span>
+                <span>주 {prog.daysPerWeek}일</span>
+                <span>{prog.durationWeeks}주</span>
                 <span>{prog.exercises.length}종목</span>
               </div>
             </button>

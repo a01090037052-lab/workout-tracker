@@ -3,6 +3,7 @@ export interface ProgramTemplate {
   name: string;
   description: string;
   type: 'strength' | 'hypertrophy';
+  daysPerWeek: number;
   durationWeeks: number;
   exercises: string[]; // 대표 운동명 (사용자가 매핑)
   getWeekPlan: (week: number, oneRepMaxes: Record<string, number>) => WeekPlan;
@@ -33,6 +34,7 @@ const wendler531: ProgramTemplate = {
   name: '5/3/1 (웬들러)',
   description: '4주 주기. 주요 복합운동의 점진적 과부하 프로그램. TM(Training Max) = 1RM의 90%',
   type: 'strength',
+  daysPerWeek: 4,
   durationWeeks: 4,
   exercises: ['스쿼트', '벤치프레스', '데드리프트', '오버헤드 프레스'],
   getWeekPlan(week: number, oneRepMaxes: Record<string, number>): WeekPlan {
@@ -72,6 +74,7 @@ const linearProgression: ProgramTemplate = {
   name: '리니어 프로그레션',
   description: '매주 2.5kg씩 증량. 초보자에게 가장 효과적인 프로그램',
   type: 'strength',
+  daysPerWeek: 3,
   durationWeeks: 12,
   exercises: ['스쿼트', '벤치프레스', '데드리프트', '오버헤드 프레스', '바벨 로우'],
   getWeekPlan(week: number, oneRepMaxes: Record<string, number>): WeekPlan {
@@ -121,6 +124,7 @@ const pplHypertrophy: ProgramTemplate = {
   name: 'PPL (Push/Pull/Legs)',
   description: '밀기·당기기·하체 3분할. 주 6일 근비대 프로그램',
   type: 'hypertrophy',
+  daysPerWeek: 6,
   durationWeeks: 8,
   exercises: ['벤치프레스', '오버헤드 프레스', '바벨 로우', '풀업', '스쿼트', '루마니안 데드리프트'],
   getWeekPlan(week: number, oneRepMaxes: Record<string, number>): WeekPlan {
@@ -167,4 +171,206 @@ const pplHypertrophy: ProgramTemplate = {
   },
 };
 
-export const programTemplates: ProgramTemplate[] = [wendler531, linearProgression, pplHypertrophy];
+// StrongLifts 5x5 (주3일, 초보자 스트렝스)
+const strongLifts5x5: ProgramTemplate = {
+  id: 'sl5x5',
+  name: 'StrongLifts 5×5',
+  description: '주 3일 A/B 교대. 매 운동마다 +2.5kg 증량. 초보자 스트렝스의 정석',
+  type: 'strength',
+  daysPerWeek: 3,
+  durationWeeks: 12,
+  exercises: ['스쿼트', '벤치프레스', '바벨 로우', '오버헤드 프레스', '데드리프트'],
+  getWeekPlan(week: number, oneRepMaxes: Record<string, number>): WeekPlan {
+    const ex = this.exercises;
+    function calc(exName: string, session: number) {
+      const orm = oneRepMaxes[exName] || 0;
+      const base = orm > 0 ? roundToPlate(orm * 0.5) : 0;
+      const w = base > 0 ? roundToPlate(base + session * 2.5) : 0;
+      return { exerciseName: exName, sets: Array.from({ length: exName === ex[4] ? 1 : 5 }, () => ({
+        percentage: orm > 0 ? Math.round((w / orm) * 100) : 0, reps: 5, weight: w || undefined,
+      }))};
+    }
+    const s = (week - 1) * 3; // 세션 번호
+    const days: DayPlan[] = [
+      { label: 'Day A (월)', exercises: [calc(ex[0], s), calc(ex[1], s), calc(ex[2], s)] },
+      { label: 'Day B (수)', exercises: [calc(ex[0], s+1), calc(ex[3], s+1), calc(ex[4], s+1)] },
+      { label: 'Day A (금)', exercises: [calc(ex[0], s+2), calc(ex[1], s+2), calc(ex[2], s+2)] },
+    ];
+    return { label: `Week ${week}`, days };
+  },
+};
+
+// PHUL (주4일, 근비대+스트렝스 혼합)
+const phul: ProgramTemplate = {
+  id: 'phul',
+  name: 'PHUL (Power Hypertrophy)',
+  description: '주 4일. 파워 2일 + 근비대 2일. 근력과 근비대를 동시에 추구하는 중급자 프로그램',
+  type: 'hypertrophy',
+  daysPerWeek: 4,
+  durationWeeks: 8,
+  exercises: ['벤치프레스', '바벨 로우', '스쿼트', '데드리프트', '덤벨 벤치프레스', '랫풀다운', '레그프레스', '루마니안 데드리프트'],
+  getWeekPlan(week: number, oneRepMaxes: Record<string, number>): WeekPlan {
+    const powerInt = Math.min(0.80 + (week - 1) * 0.015, 0.90);
+    const hyperInt = Math.min(0.65 + (week - 1) * 0.02, 0.75);
+
+    function make(exName: string, intensity: number, numSets: number, reps: number) {
+      const orm = oneRepMaxes[exName] || 0;
+      const w = orm > 0 ? roundToPlate(orm * intensity) : 0;
+      return { exerciseName: exName, sets: Array.from({ length: numSets }, () => ({
+        percentage: Math.round(intensity * 100), reps, weight: w || undefined,
+      }))};
+    }
+
+    const days: DayPlan[] = [
+      { label: '상체 파워 (월)', exercises: [
+        make('벤치프레스', powerInt, 4, 5),
+        make('바벨 로우', powerInt, 4, 5),
+      ]},
+      { label: '하체 파워 (화)', exercises: [
+        make('스쿼트', powerInt, 4, 5),
+        make('데드리프트', powerInt, 3, 5),
+      ]},
+      { label: '상체 근비대 (목)', exercises: [
+        make('덤벨 벤치프레스', hyperInt, 4, 10),
+        make('랫풀다운', hyperInt, 4, 10),
+      ]},
+      { label: '하체 근비대 (금)', exercises: [
+        make('레그프레스', hyperInt, 4, 12),
+        make('루마니안 데드리프트', hyperInt, 3, 10),
+      ]},
+    ];
+    return { label: `Week ${week} (파워 ${Math.round(powerInt*100)}% / 근비대 ${Math.round(hyperInt*100)}%)`, days };
+  },
+};
+
+// 상하 분할 (주4일, 근비대)
+const upperLower: ProgramTemplate = {
+  id: 'upperlower',
+  name: '상하 분할 (Upper/Lower)',
+  description: '주 4일. 상체/하체 교대. 밸런스 잡힌 근비대 프로그램. 중급자 추천',
+  type: 'hypertrophy',
+  daysPerWeek: 4,
+  durationWeeks: 8,
+  exercises: ['벤치프레스', '바벨 로우', '오버헤드 프레스', '랫풀다운', '스쿼트', '루마니안 데드리프트', '레그프레스', '레그 컬'],
+  getWeekPlan(week: number, oneRepMaxes: Record<string, number>): WeekPlan {
+    const int = Math.min(0.65 + (week - 1) * 0.02, 0.80);
+
+    function make(exName: string, numSets: number, reps: number) {
+      const orm = oneRepMaxes[exName] || 0;
+      const w = orm > 0 ? roundToPlate(orm * int) : 0;
+      return { exerciseName: exName, sets: Array.from({ length: numSets }, () => ({
+        percentage: Math.round(int * 100), reps, weight: w || undefined,
+      }))};
+    }
+
+    const days: DayPlan[] = [
+      { label: '상체 A (월)', exercises: [make('벤치프레스', 4, 8), make('바벨 로우', 4, 8)] },
+      { label: '하체 A (화)', exercises: [make('스쿼트', 4, 8), make('루마니안 데드리프트', 3, 10)] },
+      { label: '상체 B (목)', exercises: [make('오버헤드 프레스', 4, 10), make('랫풀다운', 4, 10)] },
+      { label: '하체 B (금)', exercises: [make('레그프레스', 4, 12), make('레그 컬', 3, 12)] },
+    ];
+    return { label: `Week ${week} (${Math.round(int * 100)}%)`, days };
+  },
+};
+
+// nSuns 5/3/1 LP (주4일, 중급 스트렝스)
+const nsuns: ProgramTemplate = {
+  id: 'nsuns',
+  name: 'nSuns 5/3/1 LP',
+  description: '주 4일. 웬들러 5/3/1 변형. 매주 증량하는 공격적인 중급자 스트렝스 프로그램',
+  type: 'strength',
+  daysPerWeek: 4,
+  durationWeeks: 6,
+  exercises: ['벤치프레스', '오버헤드 프레스', '스쿼트', '데드리프트'],
+  getWeekPlan(week: number, oneRepMaxes: Record<string, number>): WeekPlan {
+    const ex = this.exercises;
+    // nSuns T1: 메인 리프트 8~9세트, 주차별 TM 증가
+    function t1Sets(exName: string, weekNum: number) {
+      const orm = oneRepMaxes[exName] || 0;
+      const tm = orm > 0 ? roundToPlate(orm * 0.9 + (weekNum - 1) * 2.5) : 0;
+      const scheme = [
+        { pct: 0.75, reps: 5 }, { pct: 0.85, reps: 3 }, { pct: 0.95, reps: 1 },
+        { pct: 0.90, reps: 3 }, { pct: 0.85, reps: 3 }, { pct: 0.80, reps: 3 },
+        { pct: 0.75, reps: 5 }, { pct: 0.70, reps: 5 }, { pct: 0.65, reps: 5 },
+      ];
+      return { exerciseName: exName, sets: scheme.map((s) => ({
+        percentage: Math.round(s.pct * 100),
+        reps: s.reps,
+        weight: tm > 0 ? roundToPlate(tm * s.pct) : undefined,
+      }))};
+    }
+    // T2: 보조 리프트 8세트
+    function t2Sets(exName: string, weekNum: number) {
+      const orm = oneRepMaxes[exName] || 0;
+      const tm = orm > 0 ? roundToPlate(orm * 0.9 + (weekNum - 1) * 2.5) : 0;
+      const base = tm * 0.5;
+      return { exerciseName: `${exName} (보조)`, sets: Array.from({ length: 8 }, (_, i) => {
+        const pct = 0.50 + i * 0.025;
+        return {
+          percentage: Math.round(pct * 100),
+          reps: i < 5 ? 5 : 8,
+          weight: base > 0 ? roundToPlate(tm * pct) : undefined,
+        };
+      })};
+    }
+
+    const days: DayPlan[] = [
+      { label: '벤치 + 보조 OHP (월)', exercises: [t1Sets(ex[0], week), t2Sets(ex[1], week)] },
+      { label: '스쿼트 + 보조 데드 (화)', exercises: [t1Sets(ex[2], week), t2Sets(ex[3], week)] },
+      { label: 'OHP + 보조 벤치 (목)', exercises: [t1Sets(ex[1], week), t2Sets(ex[0], week)] },
+      { label: '데드 + 보조 스쿼트 (금)', exercises: [t1Sets(ex[3], week), t2Sets(ex[2], week)] },
+    ];
+    return { label: `Week ${week} (TM +${(week-1)*2.5}kg)`, days };
+  },
+};
+
+// GZCLP (주3일, 초중급 스트렝스)
+const gzclp: ProgramTemplate = {
+  id: 'gzclp',
+  name: 'GZCLP',
+  description: '주 3~4일. 3단계 피라미드(T1/T2/T3). 체계적인 초중급 스트렝스 프로그램',
+  type: 'strength',
+  daysPerWeek: 3,
+  durationWeeks: 8,
+  exercises: ['스쿼트', '벤치프레스', '데드리프트', '오버헤드 프레스'],
+  getWeekPlan(week: number, oneRepMaxes: Record<string, number>): WeekPlan {
+    const ex = this.exercises;
+    // T1: 5x3+ (고중량, 저반복) → 매주 +2.5kg
+    function t1(exName: string) {
+      const orm = oneRepMaxes[exName] || 0;
+      const w = orm > 0 ? roundToPlate(orm * 0.85 + (week - 1) * 2.5) : 0;
+      return { exerciseName: `${exName} (T1)`, sets: Array.from({ length: 5 }, () => ({
+        percentage: orm > 0 ? Math.round((w / orm) * 100) : 0, reps: 3, weight: w || undefined,
+      }))};
+    }
+    // T2: 3x10 (중중량, 중반복) → 매주 +2.5kg
+    function t2(exName: string) {
+      const orm = oneRepMaxes[exName] || 0;
+      const w = orm > 0 ? roundToPlate(orm * 0.65 + (week - 1) * 2.5) : 0;
+      return { exerciseName: `${exName} (T2)`, sets: Array.from({ length: 3 }, () => ({
+        percentage: orm > 0 ? Math.round((w / orm) * 100) : 0, reps: 10, weight: w || undefined,
+      }))};
+    }
+
+    const days: DayPlan[] = [
+      { label: 'Day 1 (월)', exercises: [t1(ex[0]), t2(ex[1])] },
+      { label: 'Day 2 (수)', exercises: [t1(ex[3]), t2(ex[2])] },
+      { label: 'Day 3 (금)', exercises: [t1(ex[1]), t2(ex[0])] },
+    ];
+    return { label: `Week ${week}`, days };
+  },
+};
+
+export const programTemplates: ProgramTemplate[] = [
+  // 주 3일
+  strongLifts5x5,
+  gzclp,
+  linearProgression,
+  // 주 4일
+  phul,
+  upperLower,
+  nsuns,
+  wendler531,
+  // 주 6일
+  pplHypertrophy,
+];
