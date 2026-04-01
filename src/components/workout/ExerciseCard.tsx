@@ -2,7 +2,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
 import { usePreviousRecord } from '../../hooks/usePreviousRecord';
 import SetRow from './SetRow';
-import type { WorkoutExercise, WorkoutSet, TrainingGoal, MuscleGroup } from '../../types';
+import { getProgressionMessage } from '../../hooks/useTrainingGuide';
+import type { WorkoutExercise, WorkoutSet, TrainingGoal, Condition, MuscleGroup } from '../../types';
 
 const muscleColors: Record<MuscleGroup, string> = {
   '가슴': 'from-red-500/20 to-red-500/5 border-red-500/20',
@@ -27,6 +28,7 @@ const muscleDots: Record<MuscleGroup, string> = {
 interface Props {
   exercise: WorkoutExercise;
   trainingGoal: TrainingGoal;
+  condition: Condition;
   onAddSet: () => void;
   onRemoveSet: (setIndex: number) => void;
   onUpdateSet: (setIndex: number, updates: Partial<WorkoutSet>) => void;
@@ -38,6 +40,7 @@ interface Props {
 export default function ExerciseCard({
   exercise,
   trainingGoal,
+  condition,
   onAddSet,
   onRemoveSet,
   onUpdateSet,
@@ -114,14 +117,28 @@ export default function ExerciseCard({
         <SetRow
           key={i}
           set={set}
-          previousSet={previousSets?.[i]}
+          setIndex={i}
+          currentSets={exercise.sets}
+          previousSessionSets={previousSets}
           estimated1RM={estimated1RM}
           trainingGoal={trainingGoal}
+          condition={condition}
           onUpdate={(updates) => onUpdateSet(i, updates)}
           onComplete={() => handleComplete(i)}
           onRemove={() => onRemoveSet(i)}
         />
       ))}
+
+      {/* 증량 메시지 */}
+      {(() => {
+        const msg = getProgressionMessage(trainingGoal, exercise.sets);
+        if (!msg) return null;
+        return (
+          <div className="mx-3 mt-1 mb-2 px-3 py-2 bg-success/10 border border-success/20 rounded-lg text-xs text-success">
+            🎯 {msg}
+          </div>
+        );
+      })()}
 
       {/* 세트 추가 */}
       <button

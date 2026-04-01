@@ -122,6 +122,7 @@ export default function WorkoutPage() {
           key={ex.exerciseId}
           exercise={ex}
           trainingGoal={workout.trainingGoal}
+          condition={workout.condition}
           onAddSet={() => workout.addSet(ex.exerciseId)}
           onRemoveSet={(i) => workout.removeSet(ex.exerciseId, i)}
           onUpdateSet={(i, updates) => workout.updateSet(ex.exerciseId, i, updates)}

@@ -1,26 +1,44 @@
-import type { WorkoutSet, TrainingGoal } from '../../types';
-import { getTrainingZone, checkGoalMismatch, suggestNextWeight } from '../../hooks/useTrainingGuide';
+import type { WorkoutSet, TrainingGoal, Condition } from '../../types';
+import { getTrainingZone, checkGoalMismatch, suggestForSet } from '../../hooks/useTrainingGuide';
 
 interface Props {
   set: WorkoutSet;
-  previousSet?: WorkoutSet;
+  setIndex: number;
+  currentSets: WorkoutSet[];
+  previousSessionSets?: WorkoutSet[];
   estimated1RM?: number;
   trainingGoal?: TrainingGoal;
+  condition?: Condition;
   onUpdate: (updates: Partial<WorkoutSet>) => void;
   onComplete: () => void;
   onRemove: () => void;
 }
 
-export default function SetRow({ set, previousSet, estimated1RM, trainingGoal, onUpdate, onComplete, onRemove }: Props) {
+export default function SetRow({
+  set, setIndex, currentSets, previousSessionSets,
+  estimated1RM, trainingGoal, condition,
+  onUpdate, onComplete, onRemove,
+}: Props) {
   const zone = set.isCompleted && estimated1RM
     ? getTrainingZone(set.weight, set.reps, estimated1RM)
     : null;
 
   const mismatch = zone && trainingGoal ? checkGoalMismatch(trainingGoal, zone) : null;
 
-  const suggestion = !set.isCompleted && estimated1RM && trainingGoal && previousSet
-    ? suggestNextWeight(trainingGoal, previousSet.weight, previousSet.reps, estimated1RM)
+  // 새 추천 시스템
+  const suggestion = !set.isCompleted && trainingGoal
+    ? suggestForSet({
+        goal: trainingGoal,
+        setIndex,
+        currentSets,
+        previousSessionSets,
+        estimated1RM,
+        condition,
+      })
     : null;
+
+  const hasSuggestion = suggestion && suggestion.weight > 0;
+  const previousSet = previousSessionSets?.[setIndex];
 
   return (
     <div className="mb-1">
@@ -47,7 +65,7 @@ export default function SetRow({ set, previousSet, estimated1RM, trainingGoal, o
             type="number"
             value={set.weight || ''}
             onChange={(e) => onUpdate({ weight: Number(e.target.value) })}
-            placeholder={suggestion ? `${suggestion.weight}` : '0'}
+            placeholder={hasSuggestion ? `${suggestion.weight}` : '0'}
             className={`w-full rounded-lg px-2 py-2 text-center text-sm font-mono font-semibold outline-none transition-all ${
               set.isCompleted
                 ? 'bg-primary/10 text-primary-light'
@@ -63,7 +81,7 @@ export default function SetRow({ set, previousSet, estimated1RM, trainingGoal, o
             type="number"
             value={set.reps || ''}
             onChange={(e) => onUpdate({ reps: Number(e.target.value) })}
-            placeholder={suggestion ? `${suggestion.reps}` : '0'}
+            placeholder={hasSuggestion ? `${suggestion.reps}` : '0'}
             className={`w-full rounded-lg px-2 py-2 text-center text-sm font-mono font-semibold outline-none transition-all ${
               set.isCompleted
                 ? 'bg-primary/10 text-primary-light'
@@ -94,7 +112,7 @@ export default function SetRow({ set, previousSet, estimated1RM, trainingGoal, o
         </button>
       </div>
 
-      {/* 운동 영역 표시 */}
+      {/* 운동 영역 표시 (완료 시) */}
       {zone && (
         <div className={`flex items-center gap-1 px-4 py-1 text-xs ${zone.color}`}>
           <span>{zone.icon}</span>
@@ -103,16 +121,18 @@ export default function SetRow({ set, previousSet, estimated1RM, trainingGoal, o
         </div>
       )}
 
-      {/* 무게 추천 */}
-      {suggestion && !set.isCompleted && !set.weight && (
+      {/* 무게 추천 (미완료 시, 항상 표시) */}
+      {suggestion && !set.isCompleted && (
         <div className="flex items-center gap-2 px-4 py-1">
-          <span className="text-xs text-primary-light/80">{suggestion.message}</span>
-          <button
-            onClick={() => onUpdate({ weight: suggestion.weight, reps: suggestion.reps })}
-            className="text-[10px] px-2 py-0.5 bg-primary/20 text-primary-light rounded-full font-medium"
-          >
-            적용
-          </button>
+          <span className="text-xs text-primary-light/80 flex-1">{suggestion.message}</span>
+          {hasSuggestion && !set.weight && (
+            <button
+              onClick={() => onUpdate({ weight: suggestion.weight, reps: suggestion.reps })}
+              className="text-[10px] px-2.5 py-1 bg-primary/20 text-primary-light rounded-full font-medium whitespace-nowrap"
+            >
+              적용
+            </button>
+          )}
         </div>
       )}
     </div>

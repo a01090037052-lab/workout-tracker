@@ -1,7 +1,7 @@
 {
   "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"gh workflow run deploy.yml --repo a01090037052-lab/workout-tracker --ref master 2>&1\",\"description\":\"Re-trigger deploy workflow\"}",
-  "error": "Exit code 1\ncould not create workflow dispatch event: HTTP 422: Workflow does not have 'workflow_dispatch' trigger (https://api.github.com/repos/a01090037052-lab/workout-tracker/actions/workflows/254695933/dispatches)",
-  "timestamp": "2026-04-01T06:23:38.566Z",
+  "tool_input_preview": "{\"command\":\"cd \\\"/Users/woohyuk/Documents/Claude/01_study/운동 기록/app\\\" && npm run build 2>&1\",\"timeout\":30000,\"description\":\"Build project\"}",
+  "error": "Exit code 2\n\n> app@0.0.0 build\n> tsc -b && vite build\n\nsrc/hooks/useTrainingGuide.ts(133,3): error TS6133: 'estimated1RM' is declared but its value is never read.\nsrc/hooks/useTrainingGuide.ts(246,3): error TS6133: 'repRange' is declared but its value is never read.",
+  "timestamp": "2026-04-01T06:40:16.678Z",
   "retry_count": 1
 }
