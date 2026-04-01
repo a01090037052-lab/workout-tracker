@@ -75,6 +75,8 @@ function SessionDetail({ session, onClose }: { session: WorkoutSession; onClose:
           <button
             onClick={async () => {
               if (session.id) {
+                // 관련 PR도 삭제
+                await db.personalRecords.where('sessionId').equals(session.id).delete();
                 await db.sessions.delete(session.id);
                 onClose();
               }

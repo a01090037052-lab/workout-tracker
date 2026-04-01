@@ -67,7 +67,9 @@ export default function SetRow({
           <input
             type="number"
             value={set.weight || ''}
-            onChange={(e) => onUpdate({ weight: Number(e.target.value) })}
+            onChange={(e) => onUpdate({ weight: Math.max(0, Number(e.target.value)) })}
+            min="0"
+            max="999"
             placeholder={hasSuggestion ? `${suggestion.weight}` : '0'}
             className={`w-full rounded-lg px-2 py-2 text-center text-sm font-mono font-semibold outline-none transition-all ${
               set.isCompleted
@@ -83,7 +85,9 @@ export default function SetRow({
           <input
             type="number"
             value={set.reps || ''}
-            onChange={(e) => onUpdate({ reps: Number(e.target.value) })}
+            onChange={(e) => onUpdate({ reps: Math.max(0, Math.floor(Number(e.target.value))) })}
+            min="0"
+            max="999"
             placeholder={hasSuggestion ? `${suggestion.reps}` : '0'}
             className={`w-full rounded-lg px-2 py-2 text-center text-sm font-mono font-semibold outline-none transition-all ${
               set.isCompleted

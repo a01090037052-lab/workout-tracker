@@ -23,6 +23,7 @@ export default function SettingsPage() {
       routines: await db.routines.toArray(),
       personalRecords: await db.personalRecords.toArray(),
       injuryLogs: await db.injuryLogs.toArray(),
+      settings: { weightSuggestion: localStorage.getItem('weightSuggestion') || 'on' },
       exportDate: new Date().toISOString(),
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -52,20 +53,48 @@ export default function SettingsPage() {
           return;
         }
 
-        // 기존 데이터 삭제 후 복원
-        await db.sessions.clear();
-        await db.routines.clear();
-        await db.personalRecords.clear();
-        await db.injuryLogs.clear();
-        await db.exercises.clear();
+        // 안전한 복원: 기존 데이터 백업 후 시도, 실패 시 롤백
+        const backup = {
+          exercises: await db.exercises.toArray(),
+          sessions: await db.sessions.toArray(),
+          routines: await db.routines.toArray(),
+          personalRecords: await db.personalRecords.toArray(),
+          injuryLogs: await db.injuryLogs.toArray(),
+        };
 
-        if (data.exercises?.length) await db.exercises.bulkAdd(data.exercises);
-        if (data.sessions?.length) await db.sessions.bulkAdd(data.sessions);
-        if (data.routines?.length) await db.routines.bulkAdd(data.routines);
-        if (data.personalRecords?.length) await db.personalRecords.bulkAdd(data.personalRecords);
-        if (data.injuryLogs?.length) await db.injuryLogs.bulkAdd(data.injuryLogs);
+        try {
+          await db.sessions.clear();
+          await db.routines.clear();
+          await db.personalRecords.clear();
+          await db.injuryLogs.clear();
+          await db.exercises.clear();
 
-        showToast('데이터 복원 완료!');
+          if (data.exercises?.length) await db.exercises.bulkAdd(data.exercises);
+          if (data.sessions?.length) await db.sessions.bulkAdd(data.sessions);
+          if (data.routines?.length) await db.routines.bulkAdd(data.routines);
+          if (data.personalRecords?.length) await db.personalRecords.bulkAdd(data.personalRecords);
+          if (data.injuryLogs?.length) await db.injuryLogs.bulkAdd(data.injuryLogs);
+
+          // settings 복원
+          if (data.settings?.weightSuggestion) {
+            localStorage.setItem('weightSuggestion', data.settings.weightSuggestion);
+          }
+
+          showToast(`복원 완료! (세션 ${data.sessions?.length || 0}개, 루틴 ${data.routines?.length || 0}개)`);
+        } catch (restoreErr) {
+          // 롤백
+          await db.exercises.clear();
+          await db.sessions.clear();
+          await db.routines.clear();
+          await db.personalRecords.clear();
+          await db.injuryLogs.clear();
+          if (backup.exercises.length) await db.exercises.bulkAdd(backup.exercises);
+          if (backup.sessions.length) await db.sessions.bulkAdd(backup.sessions);
+          if (backup.routines.length) await db.routines.bulkAdd(backup.routines);
+          if (backup.personalRecords.length) await db.personalRecords.bulkAdd(backup.personalRecords);
+          if (backup.injuryLogs.length) await db.injuryLogs.bulkAdd(backup.injuryLogs);
+          showToast('복원 실패. 기존 데이터를 유지합니다.');
+        }
       } catch {
         showToast('파일 읽기 실패');
       }

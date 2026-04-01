@@ -1,12 +1,13 @@
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
+import { getLocalDate } from '../hooks/useLocalDate';
 
 function getStreak(dates: string[]): number {
   if (dates.length === 0) return 0;
   const sorted = [...new Set(dates)].sort().reverse();
-  const today = new Date().toISOString().split('T')[0];
-  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+  const today = getLocalDate();
+  const yesterday = getLocalDate(new Date(Date.now() - 86400000));
 
   if (sorted[0] !== today && sorted[0] !== yesterday) return 0;
 
@@ -36,7 +37,7 @@ const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDate();
 
   const todaySessions = useLiveQuery(
     () => db.sessions.where('date').equals(today).toArray()

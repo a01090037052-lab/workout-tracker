@@ -29,16 +29,20 @@ export default function WorkoutPage() {
   const [showRestTimer, setShowRestTimer] = useState(false);
   const [showPlateCalc, setShowPlateCalc] = useState(false);
   const [showInjuryLog, setShowInjuryLog] = useState(false);
+  const [toast, setToast] = useState('');
 
   // 루틴으로 운동 시작
   useEffect(() => {
     const state = location.state as { routineId?: number; exercises?: { exerciseId: number; sets: number; order: number }[] } | null;
     if (state?.exercises && !workout.isActive) {
       workout.startWorkout();
-      for (const ex of state.exercises) {
-        workout.addExercise(ex.exerciseId);
-      }
-      // state 정리
+      // 루틴의 세트 수를 반영하여 운동 추가
+      const sorted = [...state.exercises].sort((a, b) => a.order - b.order);
+      setTimeout(() => {
+        for (const ex of sorted) {
+          workout.addExercise(ex.exerciseId, ex.sets);
+        }
+      }, 0);
       navigate('/workout', { replace: true, state: null });
     }
   }, [location.state]);
@@ -190,8 +194,14 @@ export default function WorkoutPage() {
               </button>
               <button
                 onClick={async () => {
-                  await workout.finishWorkout();
-                  navigate('/');
+                  const id = await workout.finishWorkout();
+                  if (id) {
+                    navigate('/');
+                  } else {
+                    setShowFinishConfirm(false);
+                    setToast('완료된 세트가 없어요. 무게와 횟수를 입력하고 체크해주세요.');
+                    setTimeout(() => setToast(''), 3000);
+                  }
                 }}
                 className="flex-1 py-2.5 bg-success text-white rounded-lg text-sm font-semibold"
               >
@@ -228,6 +238,13 @@ export default function WorkoutPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* 토스트 */}
+      {toast && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-surface-light px-4 py-2 rounded-lg text-sm shadow-lg z-[60] max-w-[90%] text-center">
+          {toast}
         </div>
       )}
     </div>

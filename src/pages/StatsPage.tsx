@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
+import { parseLocalDate } from '../hooks/useLocalDate';
 const COLORS = ['#6366F1', '#22C55E', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4'];
 
 export default function StatsPage() {
@@ -235,9 +236,9 @@ function WeeklyStats({ sessions, exercises, personalRecords }: { sessions: any[]
   const startOfLastWeek = new Date(startOfWeek);
   startOfLastWeek.setDate(startOfLastWeek.getDate() - 7);
 
-  const thisWeek = sessions.filter((s) => new Date(s.date) >= startOfWeek);
+  const thisWeek = sessions.filter((s) => parseLocalDate(s.date) >= startOfWeek);
   const lastWeek = sessions.filter((s) => {
-    const d = new Date(s.date);
+    const d = parseLocalDate(s.date);
     return d >= startOfLastWeek && d < startOfWeek;
   });
 
@@ -255,7 +256,7 @@ function WeeklyStats({ sessions, exercises, personalRecords }: { sessions: any[]
   const thisDuration = calcDuration(thisWeek);
 
   // 이번 주 PR
-  const weekPRs = personalRecords.filter((pr: any) => new Date(pr.date) >= startOfWeek);
+  const weekPRs = personalRecords.filter((pr: any) => parseLocalDate(pr.date) >= startOfWeek);
 
   // 부위별 볼륨 (이번 주)
   const muscleVolume: Record<string, number> = {};
