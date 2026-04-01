@@ -1,0 +1,17 @@
+{
+  "name": "운동 기록",
+  "short_name": "운동기록",
+  "description": "개인 웨이트 트레이닝 기록 앱",
+  "start_url": "/workout-tracker/",
+  "display": "standalone",
+  "background_color": "#0F172A",
+  "theme_color": "#6366F1",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
