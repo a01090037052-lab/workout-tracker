@@ -23,41 +23,63 @@ export default function SetRow({ set, previousSet, estimated1RM, trainingGoal, o
     : null;
 
   return (
-    <div>
-      <div className={`flex items-center gap-2 py-2 px-3 rounded-lg transition-colors ${set.isCompleted ? 'bg-primary/10' : ''}`}>
+    <div className="mb-1">
+      <div className={`flex items-center gap-2 py-2.5 px-3 rounded-xl transition-all duration-200 ${
+        set.isCompleted
+          ? 'bg-gradient-to-r from-primary/15 to-primary/5 border border-primary/20'
+          : 'hover:bg-surface-light/50'
+      }`}>
         {/* 세트 번호 */}
-        <span className="text-sm text-text-secondary w-8 text-center">{set.setNumber}</span>
+        <span className={`text-sm w-7 text-center font-mono font-bold ${
+          set.isCompleted ? 'text-primary-light' : 'text-text-secondary'
+        }`}>
+          {set.setNumber}
+        </span>
 
         {/* 이전 기록 */}
-        <div className="w-20 text-xs text-text-secondary text-center">
-          {previousSet ? `${previousSet.weight}kg×${previousSet.reps}` : '-'}
+        <div className="w-[72px] text-xs text-text-secondary text-center font-mono">
+          {previousSet ? `${previousSet.weight}×${previousSet.reps}` : '-'}
         </div>
 
         {/* 무게 입력 */}
-        <input
-          type="number"
-          value={set.weight || ''}
-          onChange={(e) => onUpdate({ weight: Number(e.target.value) })}
-          placeholder={suggestion ? `${suggestion.weight}` : 'kg'}
-          className="w-16 bg-surface-light rounded px-2 py-1.5 text-center text-sm outline-none focus:ring-2 focus:ring-primary"
-        />
+        <div className="relative w-[68px]">
+          <input
+            type="number"
+            value={set.weight || ''}
+            onChange={(e) => onUpdate({ weight: Number(e.target.value) })}
+            placeholder={suggestion ? `${suggestion.weight}` : '0'}
+            className={`w-full rounded-lg px-2 py-2 text-center text-sm font-mono font-semibold outline-none transition-all ${
+              set.isCompleted
+                ? 'bg-primary/10 text-primary-light'
+                : 'bg-surface-light focus:ring-2 focus:ring-primary focus:bg-surface'
+            }`}
+          />
+          <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px] text-text-secondary">kg</span>
+        </div>
 
         {/* 횟수 입력 */}
-        <input
-          type="number"
-          value={set.reps || ''}
-          onChange={(e) => onUpdate({ reps: Number(e.target.value) })}
-          placeholder={suggestion ? `${suggestion.reps}` : '회'}
-          className="w-14 bg-surface-light rounded px-2 py-1.5 text-center text-sm outline-none focus:ring-2 focus:ring-primary"
-        />
+        <div className="relative w-[56px]">
+          <input
+            type="number"
+            value={set.reps || ''}
+            onChange={(e) => onUpdate({ reps: Number(e.target.value) })}
+            placeholder={suggestion ? `${suggestion.reps}` : '0'}
+            className={`w-full rounded-lg px-2 py-2 text-center text-sm font-mono font-semibold outline-none transition-all ${
+              set.isCompleted
+                ? 'bg-primary/10 text-primary-light'
+                : 'bg-surface-light focus:ring-2 focus:ring-primary focus:bg-surface'
+            }`}
+          />
+          <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px] text-text-secondary">회</span>
+        </div>
 
         {/* 완료 체크 */}
         <button
           onClick={onComplete}
-          className={`w-8 h-8 rounded-full flex items-center justify-center text-sm transition-colors ${
+          className={`w-9 h-9 rounded-full flex items-center justify-center text-sm transition-all duration-200 ${
             set.isCompleted
-              ? 'bg-success text-white'
-              : 'bg-surface-light text-text-secondary'
+              ? 'bg-gradient-to-br from-success to-green-600 text-white shadow-md shadow-success/30 scale-105'
+              : 'bg-surface-light text-text-secondary hover:bg-border active:scale-95'
           }`}
         >
           ✓
@@ -66,28 +88,28 @@ export default function SetRow({ set, previousSet, estimated1RM, trainingGoal, o
         {/* 삭제 */}
         <button
           onClick={onRemove}
-          className="text-text-secondary text-xs hover:text-danger transition-colors"
+          className="text-text-secondary/50 text-xs hover:text-danger transition-colors w-5 text-center"
         >
           ✕
         </button>
       </div>
 
-      {/* 운동 영역 표시 (완료 시) */}
+      {/* 운동 영역 표시 */}
       {zone && (
-        <div className={`flex items-center gap-1 px-3 pb-1 text-xs ${zone.color}`}>
+        <div className={`flex items-center gap-1 px-4 py-1 text-xs ${zone.color}`}>
           <span>{zone.icon}</span>
           <span>{zone.label}</span>
           {mismatch && <span className="text-warning ml-1">⚠ {mismatch}</span>}
         </div>
       )}
 
-      {/* 무게 추천 (미완료 시) */}
+      {/* 무게 추천 */}
       {suggestion && !set.isCompleted && !set.weight && (
-        <div className="flex items-center gap-2 px-3 pb-1">
-          <span className="text-xs text-primary-light">{suggestion.message}</span>
+        <div className="flex items-center gap-2 px-4 py-1">
+          <span className="text-xs text-primary-light/80">{suggestion.message}</span>
           <button
             onClick={() => onUpdate({ weight: suggestion.weight, reps: suggestion.reps })}
-            className="text-[10px] px-2 py-0.5 bg-primary/20 text-primary-light rounded"
+            className="text-[10px] px-2 py-0.5 bg-primary/20 text-primary-light rounded-full font-medium"
           >
             적용
           </button>

@@ -34,6 +34,7 @@ body {
   position: relative;
 }
 
+/* 숫자 입력 스피너 제거 */
 input[type="number"] {
   -moz-appearance: textfield;
 }
@@ -41,4 +42,86 @@ input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
+}
+
+/* 페이지 전환 애니메이션 */
+main > * {
+  animation: pageIn 0.25s ease-out;
+}
+
+@keyframes pageIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 카드 등장 애니메이션 (stagger) */
+.space-y-2 > *,
+.space-y-3 > * {
+  animation: cardIn 0.3s ease-out backwards;
+}
+.space-y-2 > *:nth-child(1), .space-y-3 > *:nth-child(1) { animation-delay: 0.05s; }
+.space-y-2 > *:nth-child(2), .space-y-3 > *:nth-child(2) { animation-delay: 0.1s; }
+.space-y-2 > *:nth-child(3), .space-y-3 > *:nth-child(3) { animation-delay: 0.15s; }
+.space-y-2 > *:nth-child(4), .space-y-3 > *:nth-child(4) { animation-delay: 0.2s; }
+.space-y-2 > *:nth-child(5), .space-y-3 > *:nth-child(5) { animation-delay: 0.25s; }
+
+@keyframes cardIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 모달 등장 */
+.fixed.inset-0 {
+  animation: overlayIn 0.2s ease-out;
+}
+
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* 모달 콘텐츠 슬라이드 업 */
+.fixed.inset-0 > div {
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* 체크 버튼 펄스 */
+@keyframes checkPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1.05); }
+}
+
+/* 스크롤바 숨기기 (모바일 느낌) */
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+/* 선택 하이라이트 방지 */
+button, a {
+  -webkit-tap-highlight-color: transparent;
 }
