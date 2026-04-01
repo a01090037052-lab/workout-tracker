@@ -25,8 +25,11 @@ export default function SetRow({
 
   const mismatch = zone && trainingGoal ? checkGoalMismatch(trainingGoal, zone) : null;
 
+  // 무게 추천 on/off 설정
+  const weightSuggestionEnabled = localStorage.getItem('weightSuggestion') !== 'off';
+
   // 새 추천 시스템
-  const suggestion = !set.isCompleted && trainingGoal
+  const suggestion = weightSuggestionEnabled && !set.isCompleted && trainingGoal
     ? suggestForSet({
         goal: trainingGoal,
         setIndex,

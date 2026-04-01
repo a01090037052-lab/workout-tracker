@@ -84,6 +84,17 @@ export default function SettingsPage() {
     showToast('모든 기록이 초기화되었습니다');
   };
 
+  // 무게 추천 설정
+  const [weightSuggestion, setWeightSuggestion] = useState(() =>
+    localStorage.getItem('weightSuggestion') !== 'off'
+  );
+  const toggleWeightSuggestion = () => {
+    const next = !weightSuggestion;
+    setWeightSuggestion(next);
+    localStorage.setItem('weightSuggestion', next ? 'on' : 'off');
+    showToast(next ? '무게 추천 켜짐' : '무게 추천 꺼짐');
+  };
+
   // 통계
   const sessionCount = useLiveQuery(() => db.sessions.count());
   const exerciseCount = useLiveQuery(() => db.exercises.count());
@@ -109,6 +120,27 @@ export default function SettingsPage() {
             <div className="text-xl font-bold">{prCount ?? 0}</div>
             <div className="text-xs text-text-secondary">PR 기록</div>
           </div>
+        </div>
+      </section>
+
+      {/* 운동 설정 */}
+      <section className="bg-surface rounded-xl p-4 mb-4">
+        <h2 className="font-semibold mb-3">운동 설정</h2>
+        <div className="flex justify-between items-center">
+          <div>
+            <div className="text-sm">무게 추천</div>
+            <div className="text-xs text-text-secondary">세트별 무게/횟수 추천 메시지 표시</div>
+          </div>
+          <button
+            onClick={toggleWeightSuggestion}
+            className={`w-12 h-7 rounded-full transition-colors relative ${
+              weightSuggestion ? 'bg-primary' : 'bg-surface-light'
+            }`}
+          >
+            <div className={`w-5 h-5 bg-white rounded-full absolute top-1 transition-all ${
+              weightSuggestion ? 'right-1' : 'left-1'
+            }`} />
+          </button>
         </div>
       </section>
 
