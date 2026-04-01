@@ -60,9 +60,15 @@ export default function WorkoutPage() {
         </button>
         <button
           onClick={() => navigate('/routines')}
-          className="w-full bg-surface hover:bg-surface-light text-text font-semibold py-4 rounded-xl text-lg transition-colors"
+          className="w-full bg-surface hover:bg-surface-light text-text font-semibold py-4 rounded-xl text-lg transition-colors mb-3"
         >
           루틴으로 시작
+        </button>
+        <button
+          onClick={() => navigate('/programs')}
+          className="w-full bg-surface hover:bg-surface-light text-text-secondary font-semibold py-4 rounded-xl text-lg transition-colors"
+        >
+          프로그램 보기
         </button>
       </div>
     );

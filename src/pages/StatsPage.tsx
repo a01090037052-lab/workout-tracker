@@ -3,10 +3,11 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
 import { parseLocalDate } from '../hooks/useLocalDate';
+import MuscleHeatmap from '../components/stats/MuscleHeatmap';
 const COLORS = ['#6366F1', '#22C55E', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4'];
 
 export default function StatsPage() {
-  const [tab, setTab] = useState<'exercise' | 'muscle' | 'weekly'>('exercise');
+  const [tab, setTab] = useState<'exercise' | 'muscle' | 'heatmap' | 'weekly'>('exercise');
   const [selectedExerciseId, setSelectedExerciseId] = useState<number | null>(null);
 
   const exercises = useLiveQuery(() => db.exercises.toArray());
@@ -22,6 +23,7 @@ export default function StatsPage() {
         {([
           { key: 'exercise', label: '종목별' },
           { key: 'muscle', label: '근육군' },
+          { key: 'heatmap', label: '히트맵' },
           { key: 'weekly', label: '주간' },
         ] as const).map((t) => (
           <button
@@ -46,6 +48,7 @@ export default function StatsPage() {
         />
       )}
       {tab === 'muscle' && <MuscleStats sessions={sessions || []} exercises={exercises || []} />}
+      {tab === 'heatmap' && <HeatmapTab sessions={sessions || []} exercises={exercises || []} />}
       {tab === 'weekly' && <WeeklyStats sessions={sessions || []} exercises={exercises || []} personalRecords={personalRecords || []} />}
     </div>
   );
@@ -146,6 +149,71 @@ function ExerciseStats({
       {rmData.length === 0 && volumeData.length === 0 && (
         <div className="bg-surface rounded-xl p-6 text-center text-text-secondary">이 종목의 기록이 없어요</div>
       )}
+    </div>
+  );
+}
+
+// === 히트맵 탭 ===
+function HeatmapTab({ sessions, exercises }: { sessions: any[]; exercises: any[] }) {
+  const [period, setPeriod] = useState<'week' | 'month' | 'all'>('month');
+  const exerciseMap = new Map(exercises.map((e: any) => [e.id, e]));
+
+  const now = new Date();
+  const cutoff = period === 'week'
+    ? new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7)
+    : period === 'month'
+      ? new Date(now.getFullYear(), now.getMonth() - 1, now.getDate())
+      : null;
+
+  const filtered = cutoff
+    ? sessions.filter((s) => parseLocalDate(s.date) >= cutoff)
+    : sessions;
+
+  const volumes: Record<string, number> = {};
+  for (const session of filtered) {
+    for (const ex of session.exercises) {
+      const info = exerciseMap.get(ex.exerciseId);
+      if (!info) continue;
+      const vol = ex.sets
+        .filter((s: any) => s.isCompleted)
+        .reduce((acc: number, s: any) => acc + s.weight * s.reps, 0);
+      volumes[info.muscleGroup] = (volumes[info.muscleGroup] || 0) + vol;
+    }
+  }
+
+  if (filtered.length === 0) {
+    return (
+      <div className="bg-surface rounded-xl p-8 text-center border border-border border-dashed">
+        <div className="text-3xl mb-2">🏋️</div>
+        <p className="text-text-secondary text-sm">운동 기록이 없어요</p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* 기간 선택 */}
+      <div className="flex gap-2 mb-4">
+        {([
+          { key: 'week', label: '최근 1주' },
+          { key: 'month', label: '최근 1달' },
+          { key: 'all', label: '전체' },
+        ] as const).map((p) => (
+          <button
+            key={p.key}
+            onClick={() => setPeriod(p.key)}
+            className={`flex-1 py-2 rounded-lg text-xs font-medium transition-colors ${
+              period === p.key ? 'bg-primary/20 text-primary-light border border-primary/30' : 'bg-surface text-text-secondary'
+            }`}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="bg-surface rounded-xl p-4">
+        <MuscleHeatmap volumes={volumes} />
+      </div>
     </div>
   );
 }

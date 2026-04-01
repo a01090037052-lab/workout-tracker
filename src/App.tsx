@@ -8,6 +8,7 @@ import HistoryPage from './pages/HistoryPage';
 import StatsPage from './pages/StatsPage';
 import SettingsPage from './pages/SettingsPage';
 import RoutinePage from './pages/RoutinePage';
+import ProgramPage from './pages/ProgramPage';
 
 function App() {
   useEffect(() => {
@@ -22,6 +23,7 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/workout" element={<WorkoutPage />} />
             <Route path="/routines" element={<RoutinePage />} />
+            <Route path="/programs" element={<ProgramPage />} />
             <Route path="/history" element={<HistoryPage />} />
             <Route path="/stats" element={<StatsPage />} />
             <Route path="/settings" element={<SettingsPage />} />

@@ -3,6 +3,7 @@ import { db } from '../../db';
 import { usePreviousRecord } from '../../hooks/usePreviousRecord';
 import SetRow from './SetRow';
 import { getProgressionMessage } from '../../hooks/useTrainingGuide';
+import { useSmartInsight } from '../../hooks/useSmartInsight';
 import type { WorkoutExercise, WorkoutSet, TrainingGoal, Condition, MuscleGroup } from '../../types';
 
 const muscleColors: Record<MuscleGroup, string> = {
@@ -60,6 +61,7 @@ export default function ExerciseCard({
   }, [exercise.exerciseId]);
 
   const estimated1RM = currentPR?.estimated1RM;
+  const insight = useSmartInsight(exercise.exerciseId);
 
   const handleComplete = (setIndex: number) => {
     const set = exercise.sets[setIndex];
@@ -101,6 +103,14 @@ export default function ExerciseCard({
           </button>
         </div>
       </div>
+
+      {/* 스마트 인사이트 */}
+      {insight && (
+        <div className={`mx-1 mb-2 px-3 py-2 bg-surface-light/50 rounded-lg text-xs ${insight.color} flex items-start gap-1.5`}>
+          <span>{insight.icon}</span>
+          <span>{insight.message}</span>
+        </div>
+      )}
 
       {/* 헤더 라벨 */}
       <div className="flex items-center gap-2 px-3 mb-1.5 text-[10px] text-text-secondary uppercase tracking-wider font-medium">

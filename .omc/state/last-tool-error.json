@@ -1,7 +1,7 @@
 {
   "tool_name": "Bash",
   "tool_input_preview": "{\"command\":\"cd \\\"/Users/woohyuk/Documents/Claude/01_study/운동 기록/app\\\" && npm run build 2>&1\",\"timeout\":30000,\"description\":\"Build project\"}",
-  "error": "Exit code 2\n\n> app@0.0.0 build\n> tsc -b && vite build\n\nsrc/components/workout/ExercisePicker.tsx(171,17): error TS2322: Type '{ key: number | undefined; name: string; muscleGroup: MuscleGroup; equipmentType: EquipmentType; description: string; onSelect: () => void; }' is not assignable to type 'IntrinsicAttributes & { name: string; equipmentType: string; description: string; onSelect: () => void; }'.\n  Property 'muscleGroup' does not exist on type 'IntrinsicAttributes & { name: string; equipment...",
-  "timestamp": "2026-04-01T07:26:01.634Z",
+  "error": "Exit code 2\n\n> app@0.0.0 build\n> tsc -b && vite build\n\nsrc/hooks/useSmartInsight.ts(12,3): error TS2322: Type 'SmartInsight | null | undefined' is not assignable to type 'SmartInsight | null'.\n  Type 'undefined' is not assignable to type 'SmartInsight | null'.",
+  "timestamp": "2026-04-01T08:52:03.745Z",
   "retry_count": 2
 }
