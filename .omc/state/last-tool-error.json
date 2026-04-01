@@ -1,7 +1,7 @@
 {
   "tool_name": "Bash",
   "tool_input_preview": "{\"command\":\"cd \\\"/Users/woohyuk/Documents/Claude/01_study/운동 기록/app\\\" && npm run build 2>&1\",\"timeout\":30000,\"description\":\"Build project\"}",
-  "error": "Exit code 2\n\n> app@0.0.0 build\n> tsc -b && vite build\n\nsrc/pages/SettingsPage.tsx(83,17): error TS6133: 'count' is declared but its value is never read.",
-  "timestamp": "2026-04-01T06:59:36.328Z",
-  "retry_count": 1
+  "error": "Exit code 2\n\n> app@0.0.0 build\n> tsc -b && vite build\n\nsrc/components/workout/ExercisePicker.tsx(171,17): error TS2322: Type '{ key: number | undefined; name: string; muscleGroup: MuscleGroup; equipmentType: EquipmentType; description: string; onSelect: () => void; }' is not assignable to type 'IntrinsicAttributes & { name: string; equipmentType: string; description: string; onSelect: () => void; }'.\n  Property 'muscleGroup' does not exist on type 'IntrinsicAttributes & { name: string; equipment...",
+  "timestamp": "2026-04-01T07:26:01.634Z",
+  "retry_count": 2
 }
