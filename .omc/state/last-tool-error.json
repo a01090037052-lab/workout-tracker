@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"cd \\\"/Users/woohyuk/Documents/Claude/01_study/운동 기록/app\\\" && npm run build 2>&1\",\"timeout\":30000,\"description\":\"Build project\"}",
+  "error": "Exit code 2\n\n> app@0.0.0 build\n> tsc -b && vite build\n\nsrc/pages/StatsPage.tsx(5,1): error TS6133: 'MuscleGroup' is declared but its value is never read.\nsrc/pages/StatsPage.tsx(195,57): error TS18048: 'percent' is possibly 'undefined'.\nsrc/pages/StatsPage.tsx(203,15): error TS2322: Type '(value: number) => string' is not assignable to type 'Formatter<ValueType, NameType> & ((value: ValueType, name: NameType, item: TooltipPayloadEntry, index: number, payload: TooltipPayload) => ReactNode | [...]...",
+  "timestamp": "2026-04-01T06:03:40.373Z",
+  "retry_count": 1
+}
