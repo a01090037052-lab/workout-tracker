@@ -26,10 +26,19 @@
       "status": "completed",
       "completed_at": "2026-04-02T04:05:00.657Z",
       "duration_ms": 311608
+    },
+    {
+      "agent_id": "a06611c512ef08f9e",
+      "agent_type": "oh-my-claudecode:document-specialist",
+      "started_at": "2026-04-02T06:52:45.613Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-04-02T07:06:23.384Z",
+      "duration_ms": 817771
     }
   ],
-  "total_spawned": 3,
-  "total_completed": 3,
+  "total_spawned": 4,
+  "total_completed": 4,
   "total_failed": 0,
-  "last_updated": "2026-04-02T04:05:00.759Z"
+  "last_updated": "2026-04-02T07:06:23.486Z"
 }
