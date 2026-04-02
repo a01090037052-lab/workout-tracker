@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { programTemplates } from '../data/programs';
-import type { ProgramTemplate, WeekPlan } from '../data/programs';
+import type { ProgramTemplate, WeekPlan, DayPlan } from '../data/programs';
 
 export default function ProgramPage() {
+  const navigate = useNavigate();
   const [selectedProgram, setSelectedProgram] = useState<ProgramTemplate | null>(null);
   const [currentWeek, setCurrentWeek] = useState(1);
   const [oneRepMaxes, setOneRepMaxes] = useState<Record<string, number>>({});
@@ -121,6 +123,25 @@ export default function ProgramPage() {
     );
   }
 
+  const startDayWorkout = async (day: DayPlan) => {
+    const allExercises = await db.exercises.toArray();
+    const nameMap = new Map(allExercises.map((e) => [e.name, e.id!]));
+
+    const exercises = day.exercises
+      .map((ex, i) => {
+        // 보조 표시 제거하여 매칭 (예: "벤치프레스 (보조)" → "벤치프레스")
+        const cleanName = ex.exerciseName.replace(/\s*\(보조\)$/, '');
+        const id = nameMap.get(cleanName) || nameMap.get(ex.exerciseName);
+        if (!id) return null;
+        return { exerciseId: id, sets: ex.sets.length, order: i };
+      })
+      .filter((e): e is NonNullable<typeof e> => e !== null);
+
+    if (exercises.length > 0) {
+      navigate('/workout', { state: { exercises } });
+    }
+  };
+
   // 주차별 플랜 화면
   const weekPlan: WeekPlan = selectedProgram.getWeekPlan(currentWeek, oneRepMaxes);
 
@@ -180,7 +201,15 @@ export default function ProgramPage() {
       <div className="space-y-3">
         {weekPlan.days.map((day, di) => (
           <div key={di} className="bg-surface rounded-xl p-4 border border-border">
-            <h3 className="font-semibold mb-3">{day.label}</h3>
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="font-semibold">{day.label}</h3>
+              <button
+                onClick={() => startDayWorkout(day)}
+                className="text-xs px-3 py-1.5 bg-primary text-white rounded-lg font-medium active:scale-95 transition-transform"
+              >
+                운동 시작
+              </button>
+            </div>
             {day.exercises.map((ex, ei) => (
               <div key={ei} className="mb-3 last:mb-0">
                 <div className="text-sm font-medium text-primary-light mb-1.5">{ex.exerciseName}</div>

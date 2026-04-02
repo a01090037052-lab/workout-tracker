@@ -65,9 +65,8 @@ export function getRepRange(goal: TrainingGoal): { min: number; max: number; lab
 }
 
 // 증량 단위 결정
-function getIncrement(weight: number, isCompound: boolean): number {
-  if (isCompound) return weight >= 40 ? 2.5 : 1.25;
-  return weight >= 20 ? 2.5 : 1.25;
+function getIncrement(_weight: number, _isCompound: boolean): number {
+  return 2.5; // 대부분의 헬스장 최소 원판이 2.5kg
 }
 
 /**

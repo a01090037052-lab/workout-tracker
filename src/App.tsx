@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { seedExercises } from './db/seed';
+import { WorkoutProvider } from './hooks/WorkoutContext';
 import BottomNav from './components/common/BottomNav';
 import HomePage from './pages/HomePage';
 import WorkoutPage from './pages/WorkoutPage';
@@ -17,21 +18,23 @@ function App() {
 
   return (
     <HashRouter>
-      <div className="flex flex-col min-h-[100dvh]">
-        <main className="flex-1 pb-16 overflow-y-auto">
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/workout" element={<WorkoutPage />} />
-            <Route path="/routines" element={<RoutinePage />} />
-            <Route path="/programs" element={<ProgramPage />} />
-            <Route path="/history" element={<HistoryPage />} />
-            <Route path="/stats" element={<StatsPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </main>
-        <BottomNav />
-      </div>
+      <WorkoutProvider>
+        <div className="flex flex-col min-h-[100dvh]">
+          <main className="flex-1 pb-16 overflow-y-auto">
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/workout" element={<WorkoutPage />} />
+              <Route path="/routines" element={<RoutinePage />} />
+              <Route path="/programs" element={<ProgramPage />} />
+              <Route path="/history" element={<HistoryPage />} />
+              <Route path="/stats" element={<StatsPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </main>
+          <BottomNav />
+        </div>
+      </WorkoutProvider>
     </HashRouter>
   );
 }

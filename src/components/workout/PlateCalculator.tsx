@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 const DEFAULT_BAR = 20;
-const DEFAULT_PLATES = [20, 15, 10, 5, 2.5, 1.25];
+const DEFAULT_PLATES = [20, 15, 10, 5, 2.5];
 
 function calculatePlates(targetWeight: number, barWeight: number, availablePlates: number[]): number[] {
   let remaining = (targetWeight - barWeight) / 2;

@@ -361,16 +361,106 @@ const gzclp: ProgramTemplate = {
   },
 };
 
+// 근비대 전신 3일 (초보~중급)
+const fullBody3Day: ProgramTemplate = {
+  id: 'fullbody3',
+  name: '전신 운동 (Full Body)',
+  description: '주 3일. 매일 전신을 골고루 훈련. 초보자의 근비대에 가장 효율적',
+  type: 'hypertrophy',
+  daysPerWeek: 3,
+  durationWeeks: 8,
+  exercises: ['스쿼트', '벤치프레스', '바벨 로우', '오버헤드 프레스', '루마니안 데드리프트', '랫풀다운'],
+  getWeekPlan(week: number, oneRepMaxes: Record<string, number>): WeekPlan {
+    const int = Math.min(0.65 + (week - 1) * 0.02, 0.78);
+    function make(exName: string, sets: number, reps: number) {
+      const orm = oneRepMaxes[exName] || 0;
+      const w = orm > 0 ? roundToPlate(orm * int) : 0;
+      return { exerciseName: exName, sets: Array.from({ length: sets }, () => ({
+        percentage: Math.round(int * 100), reps, weight: w || undefined,
+      }))};
+    }
+    const ex = this.exercises;
+    const days: DayPlan[] = [
+      { label: 'Day A (월)', exercises: [make(ex[0], 3, 10), make(ex[1], 3, 10), make(ex[5], 3, 10)] },
+      { label: 'Day B (수)', exercises: [make(ex[4], 3, 10), make(ex[3], 3, 10), make(ex[2], 3, 10)] },
+      { label: 'Day C (금)', exercises: [make(ex[0], 3, 10), make(ex[1], 3, 10), make(ex[2], 3, 10)] },
+    ];
+    return { label: `Week ${week} (${Math.round(int * 100)}%)`, days };
+  },
+};
+
+// 맨몸 운동 프로그램 (주3일, 기능성)
+const calisthenics: ProgramTemplate = {
+  id: 'calisthenics',
+  name: '맨몸 운동 (Calisthenics)',
+  description: '주 3일. 장비 없이 전신 훈련. 근력+기능성+유연성 동시 향상',
+  type: 'hypertrophy',
+  daysPerWeek: 3,
+  durationWeeks: 8,
+  exercises: ['푸시업', '풀업', '딥스', '맨몸 스쿼트', '플랭크', '레그레이즈'],
+  getWeekPlan(week: number, _oneRepMaxes: Record<string, number>): WeekPlan {
+    // 맨몸은 1RM 없이 횟수/세트 증가로 과부하
+    const baseReps = 8 + Math.min(week - 1, 6) * 2; // 8→20
+    const sets = Math.min(3 + Math.floor((week - 1) / 2), 5); // 3→5
+    function make(exName: string, reps?: number) {
+      const r = reps || baseReps;
+      return { exerciseName: exName, sets: Array.from({ length: sets }, () => ({
+        percentage: 0, reps: r, weight: undefined,
+      }))};
+    }
+    const ex = this.exercises;
+    const days: DayPlan[] = [
+      { label: 'Push Day (월)', exercises: [make(ex[0]), make(ex[2]), make(ex[4], 30 + week * 5)] },
+      { label: 'Pull Day (수)', exercises: [make(ex[1]), make(ex[5]), make(ex[4], 30 + week * 5)] },
+      { label: 'Legs+Core (금)', exercises: [make(ex[3], baseReps + 5), make(ex[5]), make(ex[0])] },
+    ];
+    return { label: `Week ${week} (${sets}세트 × ${baseReps}회)`, days };
+  },
+};
+
+// PHAT (주5일, 고급 근비대)
+const phat: ProgramTemplate = {
+  id: 'phat',
+  name: 'PHAT (Layne Norton)',
+  description: '주 5일. 파워 2일 + 근비대 3일. Layne Norton의 과학 기반 고급 프로그램',
+  type: 'hypertrophy',
+  daysPerWeek: 5,
+  durationWeeks: 8,
+  exercises: ['벤치프레스', '바벨 로우', '스쿼트', '오버헤드 프레스', '데드리프트', '덤벨 벤치프레스', '랫풀다운', '레그프레스'],
+  getWeekPlan(week: number, oneRepMaxes: Record<string, number>): WeekPlan {
+    const powerInt = Math.min(0.82 + (week - 1) * 0.015, 0.92);
+    const hyperInt = Math.min(0.62 + (week - 1) * 0.02, 0.75);
+    function make(exName: string, intensity: number, sets: number, reps: number) {
+      const orm = oneRepMaxes[exName] || 0;
+      const w = orm > 0 ? roundToPlate(orm * intensity) : 0;
+      return { exerciseName: exName, sets: Array.from({ length: sets }, () => ({
+        percentage: Math.round(intensity * 100), reps, weight: w || undefined,
+      }))};
+    }
+    const days: DayPlan[] = [
+      { label: '상체 파워 (월)', exercises: [make('벤치프레스', powerInt, 4, 5), make('바벨 로우', powerInt, 4, 5)] },
+      { label: '하체 파워 (화)', exercises: [make('스쿼트', powerInt, 4, 5), make('데드리프트', powerInt, 3, 5)] },
+      { label: '등+어깨 근비대 (목)', exercises: [make('랫풀다운', hyperInt, 4, 12), make('오버헤드 프레스', hyperInt, 3, 12)] },
+      { label: '하체 근비대 (금)', exercises: [make('레그프레스', hyperInt, 4, 15), make('스쿼트', hyperInt, 3, 12)] },
+      { label: '가슴+팔 근비대 (토)', exercises: [make('덤벨 벤치프레스', hyperInt, 4, 12), make('벤치프레스', hyperInt, 3, 12)] },
+    ];
+    return { label: `Week ${week} (P:${Math.round(powerInt*100)}% H:${Math.round(hyperInt*100)}%)`, days };
+  },
+};
+
 export const programTemplates: ProgramTemplate[] = [
   // 주 3일
   strongLifts5x5,
   gzclp,
   linearProgression,
+  fullBody3Day,
+  calisthenics,
   // 주 4일
   phul,
   upperLower,
   nsuns,
   wendler531,
-  // 주 6일
+  // 주 5~6일
+  phat,
   pplHypertrophy,
 ];

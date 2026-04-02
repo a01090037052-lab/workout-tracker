@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { getLocalDate } from '../hooks/useLocalDate';
+import { useWorkoutContext } from '../hooks/WorkoutContext';
 
 function getStreak(dates: string[]): number {
   if (dates.length === 0) return 0;
@@ -37,6 +38,7 @@ const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const { isActive: workoutActive, exercises: workoutExercises, duration: workoutDuration } = useWorkoutContext();
   const today = getLocalDate();
 
   const todaySessions = useLiveQuery(
@@ -117,13 +119,25 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* 빠른 시작 */}
-      <button
-        onClick={() => navigate('/workout')}
-        className="w-full bg-gradient-to-r from-primary to-primary-dark hover:from-primary-dark hover:to-primary text-white font-semibold py-4 rounded-xl text-lg transition-all shadow-lg shadow-primary/25 active:scale-[0.98] mb-4"
-      >
-        운동 시작하기
-      </button>
+      {/* 빠른 시작 / 이어하기 */}
+      {workoutActive ? (
+        <button
+          onClick={() => navigate('/workout')}
+          className="w-full bg-gradient-to-r from-success to-green-600 text-white font-semibold py-4 rounded-xl text-lg transition-all shadow-lg shadow-success/25 active:scale-[0.98] mb-4"
+        >
+          <div className="flex items-center justify-center gap-2">
+            <span className="w-2.5 h-2.5 bg-white rounded-full animate-pulse" />
+            운동 이어하기 ({Math.floor(workoutDuration / 60)}분 · {workoutExercises.length}종목)
+          </div>
+        </button>
+      ) : (
+        <button
+          onClick={() => navigate('/workout')}
+          className="w-full bg-gradient-to-r from-primary to-primary-dark hover:from-primary-dark hover:to-primary text-white font-semibold py-4 rounded-xl text-lg transition-all shadow-lg shadow-primary/25 active:scale-[0.98] mb-4"
+        >
+          운동 시작하기
+        </button>
+      )}
 
       {/* 오늘의 운동 */}
       <section className="mb-6">

@@ -1,7 +1,7 @@
 {
   "tool_name": "Bash",
   "tool_input_preview": "{\"command\":\"cd \\\"/Users/woohyuk/Documents/Claude/01_study/운동 기록/app\\\" && npm run build 2>&1\",\"timeout\":30000,\"description\":\"Build project\"}",
-  "error": "Exit code 2\n\n> app@0.0.0 build\n> tsc -b && vite build\n\nsrc/hooks/useSmartInsight.ts(12,3): error TS2322: Type 'SmartInsight | null | undefined' is not assignable to type 'SmartInsight | null'.\n  Type 'undefined' is not assignable to type 'SmartInsight | null'.",
-  "timestamp": "2026-04-01T08:52:03.745Z",
-  "retry_count": 2
+  "error": "Exit code 2\n\n> app@0.0.0 build\n> tsc -b && vite build\n\nsrc/components/common/BottomNav.tsx(15,9): error TS6133: 'isActive' is declared but its value is never read.\nsrc/data/programs.ts(401,29): error TS6133: 'oneRepMaxes' is declared but its value is never read.",
+  "timestamp": "2026-04-02T03:30:13.409Z",
+  "retry_count": 1
 }

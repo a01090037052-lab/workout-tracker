@@ -1,7 +1,7 @@
 import { db } from './index';
 import { defaultExercises } from '../data/exercises';
 
-const SEED_VERSION = 2; // 운동 목록 버전. 추가 시 올리면 기존 사용자도 업데이트
+const SEED_VERSION = 3; // 운동 목록 버전. 추가 시 올리면 기존 사용자도 업데이트
 
 export async function seedExercises() {
   const versionKey = await db.settings.get('seedVersion');

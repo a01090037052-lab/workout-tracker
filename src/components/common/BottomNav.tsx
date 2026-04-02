@@ -1,4 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useWorkoutContext } from '../../hooks/WorkoutContext';
 
 const tabs = [
   { path: '/', label: '홈', icon: '🏠' },
@@ -11,6 +12,7 @@ const tabs = [
 export default function BottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { isActive: workoutIsActive } = useWorkoutContext();
 
   return (
     <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-surface/80 backdrop-blur-xl border-t border-border/50">
@@ -27,7 +29,12 @@ export default function BottomNav() {
                   : 'text-text-secondary active:scale-95'
               }`}
             >
-              <span className={`text-xl transition-transform ${isActive ? 'scale-110' : ''}`}>{tab.icon}</span>
+              <span className="relative">
+                <span className={`text-xl transition-transform ${workoutIsActive && tab.path === '/workout' ? 'scale-110' : ''}`}>{tab.icon}</span>
+                {workoutIsActive && tab.path === '/workout' && (
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-success rounded-full animate-pulse" />
+                )}
+              </span>
               <span className={`text-[10px] font-medium ${isActive ? 'text-primary-light' : ''}`}>{tab.label}</span>
               {isActive && (
                 <div className="w-4 h-0.5 bg-primary-light rounded-full mt-0.5" />

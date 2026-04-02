@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useWorkout } from '../hooks/useWorkout';
+import { useWorkoutContext } from '../hooks/WorkoutContext';
 import ExerciseCard from '../components/workout/ExerciseCard';
 import ExercisePicker from '../components/workout/ExercisePicker';
 import RestTimer from '../components/timer/RestTimer';
@@ -22,7 +22,7 @@ function formatTime(seconds: number) {
 export default function WorkoutPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const workout = useWorkout();
+  const workout = useWorkoutContext();
   const [showPicker, setShowPicker] = useState(false);
   const [showFinishConfirm, setShowFinishConfirm] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);

@@ -21,6 +21,10 @@ export const defaultExercises: Omit<Exercise, 'id'>[] = [
   // 맨몸
   { name: '딥스', muscleGroup: '가슴', secondaryMuscle: ['삼두'], equipmentType: '맨몸', description: '평행봉에서 몸을 내렸다 올리는 운동', isCustom: false },
   { name: '푸시업', muscleGroup: '가슴', secondaryMuscle: ['삼두', '어깨'], equipmentType: '맨몸', description: '엎드려 팔로 밀어올리는 기본 가슴 운동', isCustom: false },
+  { name: '인클라인 푸시업', muscleGroup: '가슴', secondaryMuscle: ['삼두'], equipmentType: '맨몸', description: '손을 높은 곳에 올려 하는 쉬운 푸시업 (아랫가슴)', isCustom: false },
+  { name: '디클라인 푸시업', muscleGroup: '가슴', secondaryMuscle: ['삼두', '어깨'], equipmentType: '맨몸', description: '발을 높은 곳에 올려 하는 어려운 푸시업 (윗가슴)', isCustom: false },
+  { name: '다이아몬드 푸시업', muscleGroup: '가슴', secondaryMuscle: ['삼두'], equipmentType: '맨몸', description: '손을 모아 삼각형 만들고 하는 푸시업 (안쪽 가슴+삼두)', isCustom: false },
+  { name: '와이드 푸시업', muscleGroup: '가슴', secondaryMuscle: [], equipmentType: '맨몸', description: '넓은 간격으로 하는 푸시업 (가슴 바깥쪽)', isCustom: false },
 
   // ===== 등 =====
   // 바벨
@@ -44,6 +48,8 @@ export const defaultExercises: Omit<Exercise, 'id'>[] = [
   // 맨몸
   { name: '풀업', muscleGroup: '등', secondaryMuscle: ['이두'], equipmentType: '맨몸', description: '철봉에 매달려 몸을 끌어올리는 운동', isCustom: false },
   { name: '친업', muscleGroup: '등', secondaryMuscle: ['이두'], equipmentType: '맨몸', description: '언더그립으로 철봉에서 당기는 운동', isCustom: false },
+  { name: '인버티드 로우', muscleGroup: '등', secondaryMuscle: ['이두'], equipmentType: '맨몸', description: '바 아래에 누워 몸을 당겨올리는 운동', isCustom: false },
+  { name: '슈퍼맨', muscleGroup: '등', secondaryMuscle: ['코어'], equipmentType: '맨몸', description: '엎드려 팔다리를 동시에 들어올리는 등 운동', isCustom: false },
 
   // ===== 어깨 =====
   // 바벨
@@ -64,6 +70,9 @@ export const defaultExercises: Omit<Exercise, 'id'>[] = [
   { name: '페이스 풀', muscleGroup: '어깨', secondaryMuscle: [], equipmentType: '케이블', description: '케이블을 얼굴 높이로 당기는 운동 (후면 삼각근)', isCustom: false },
   { name: '케이블 레터럴 레이즈', muscleGroup: '어깨', secondaryMuscle: [], equipmentType: '케이블', description: '케이블로 팔을 옆으로 올리는 운동', isCustom: false },
   { name: '케이블 프론트 레이즈', muscleGroup: '어깨', secondaryMuscle: [], equipmentType: '케이블', description: '케이블로 팔을 앞으로 올리는 운동', isCustom: false },
+  // 맨몸
+  { name: '파이크 푸시업', muscleGroup: '어깨', secondaryMuscle: ['삼두'], equipmentType: '맨몸', description: '엉덩이를 높이 들고 하는 푸시업 (어깨 집중)', isCustom: false },
+  { name: '핸드스탠드 푸시업', muscleGroup: '어깨', secondaryMuscle: ['삼두'], equipmentType: '맨몸', description: '물구나무 서서 밀어올리는 고급 어깨 운동', isCustom: false },
 
   // ===== 이두 =====
   // 바벨
@@ -95,6 +104,8 @@ export const defaultExercises: Omit<Exercise, 'id'>[] = [
   { name: '트라이셉 푸시다운', muscleGroup: '삼두', secondaryMuscle: [], equipmentType: '케이블', description: '케이블을 아래로 밀어내는 삼두 운동', isCustom: false },
   { name: '케이블 오버헤드 익스텐션', muscleGroup: '삼두', secondaryMuscle: [], equipmentType: '케이블', description: '케이블을 머리 위로 펴는 삼두 운동', isCustom: false },
   { name: '로프 푸시다운', muscleGroup: '삼두', secondaryMuscle: [], equipmentType: '케이블', description: '로프 어태치먼트로 삼두를 밀어내는 운동', isCustom: false },
+  // 맨몸
+  { name: '벤치 딥스', muscleGroup: '삼두', secondaryMuscle: ['가슴'], equipmentType: '맨몸', description: '벤치에 손을 짚고 몸을 내렸다 올리는 삼두 운동', isCustom: false },
 
   // ===== 하체 =====
   // 바벨
@@ -125,6 +136,12 @@ export const defaultExercises: Omit<Exercise, 'id'>[] = [
   // 맨몸
   { name: '맨몸 스쿼트', muscleGroup: '하체', secondaryMuscle: ['코어'], equipmentType: '맨몸', description: '무게 없이 앉았다 일어나는 기본 스쿼트', isCustom: false },
   { name: '점프 스쿼트', muscleGroup: '하체', secondaryMuscle: ['코어'], equipmentType: '맨몸', description: '스쿼트 후 점프하는 폭발적 운동', isCustom: false },
+  { name: '피스톨 스쿼트', muscleGroup: '하체', secondaryMuscle: ['코어'], equipmentType: '맨몸', description: '한 다리로 앉았다 일어나는 고급 맨몸 운동', isCustom: false },
+  { name: '맨몸 런지', muscleGroup: '하체', secondaryMuscle: ['코어'], equipmentType: '맨몸', description: '무게 없이 한 발씩 내딛는 운동', isCustom: false },
+  { name: '글루트 브릿지', muscleGroup: '하체', secondaryMuscle: [], equipmentType: '맨몸', description: '누워서 엉덩이를 들어올리는 운동', isCustom: false },
+  { name: '스텝업', muscleGroup: '하체', secondaryMuscle: ['코어'], equipmentType: '맨몸', description: '높은 곳에 한 발씩 올라서는 운동', isCustom: false },
+  { name: '월 싯', muscleGroup: '하체', secondaryMuscle: [], equipmentType: '맨몸', description: '벽에 등을 대고 앉은 자세로 버티는 운동', isCustom: false },
+  { name: '카프 레이즈 (맨몸)', muscleGroup: '하체', secondaryMuscle: [], equipmentType: '맨몸', description: '맨몸으로 까치발 들기', isCustom: false },
 
   // ===== 코어 =====
   // 맨몸
@@ -137,6 +154,10 @@ export const defaultExercises: Omit<Exercise, 'id'>[] = [
   { name: '마운틴 클라이머', muscleGroup: '코어', secondaryMuscle: [], equipmentType: '맨몸', description: '플랭크 자세에서 무릎을 교대로 당기는 운동', isCustom: false },
   { name: 'V업', muscleGroup: '코어', secondaryMuscle: [], equipmentType: '맨몸', description: '누워서 상체와 다리를 동시에 올리는 운동', isCustom: false },
   { name: '러시안 트위스트', muscleGroup: '코어', secondaryMuscle: [], equipmentType: '맨몸', description: '앉아서 상체를 좌우로 비트는 복사근 운동', isCustom: false },
+  { name: '데드 버그', muscleGroup: '코어', secondaryMuscle: [], equipmentType: '맨몸', description: '누워서 반대쪽 팔다리를 교대로 뻗는 코어 안정화 운동', isCustom: false },
+  { name: '버드독', muscleGroup: '코어', secondaryMuscle: ['등'], equipmentType: '맨몸', description: '네 발 자세에서 반대쪽 팔다리를 뻗는 코어 운동', isCustom: false },
+  { name: '할로우 바디 홀드', muscleGroup: '코어', secondaryMuscle: [], equipmentType: '맨몸', description: '누워서 팔다리를 떠서 버티는 전신 코어 운동', isCustom: false },
+  { name: '버피', muscleGroup: '코어', secondaryMuscle: ['가슴', '하체'], equipmentType: '맨몸', description: '전신 복합 운동. 스쿼트+푸시업+점프', isCustom: false },
   // 케이블
   { name: '케이블 크런치', muscleGroup: '코어', secondaryMuscle: [], equipmentType: '케이블', description: '케이블을 이용한 복근 운동', isCustom: false },
   { name: '케이블 우드챱', muscleGroup: '코어', secondaryMuscle: [], equipmentType: '케이블', description: '케이블을 대각선으로 당기는 복사근 운동', isCustom: false },

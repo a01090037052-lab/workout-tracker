@@ -16,10 +16,15 @@ export default function PRNotification({ exerciseName, weight, reps, estimated1R
     const timer = setTimeout(() => {
       setVisible(false);
       setTimeout(onClose, 300);
-    }, 3000);
+    }, 5000);
     if ('vibrate' in navigator) navigator.vibrate([100, 50, 100, 50, 200]);
     return () => clearTimeout(timer);
   }, [onClose]);
+
+  const handleClose = () => {
+    setVisible(false);
+    setTimeout(onClose, 300);
+  };
 
   return (
     <div
@@ -27,7 +32,8 @@ export default function PRNotification({ exerciseName, weight, reps, estimated1R
         visible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'
       }`}
     >
-      <div className="bg-gradient-to-r from-yellow-500 to-orange-500 rounded-xl p-4 shadow-lg">
+      <div className="bg-gradient-to-r from-yellow-500 to-orange-500 rounded-xl p-4 shadow-lg relative">
+        <button onClick={handleClose} className="absolute top-2 right-3 text-white/70 text-lg">&times;</button>
         <div className="text-center">
           <div className="text-2xl mb-1">🏆 새로운 PR!</div>
           <div className="font-bold text-white text-lg">{exerciseName}</div>
