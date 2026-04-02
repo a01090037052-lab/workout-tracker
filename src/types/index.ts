@@ -5,6 +5,8 @@ export interface Exercise {
   secondaryMuscle: MuscleGroup[];
   equipmentType: EquipmentType;
   description: string;
+  guide?: string;    // 단계별 수행 방법
+  tips?: string;     // 주의사항/팁
   isCustom: boolean;
 }
 

@@ -156,6 +156,8 @@ export default function ExercisePicker({ onSelect, onClose }: Props) {
                     name={ex.name}
                     equipmentType={ex.equipmentType}
                     description={ex.description}
+                    guide={ex.guide}
+                    tips={ex.tips}
                     onSelect={() => { onSelect(ex.id!); onClose(); }}
                   />
                 ))}
@@ -191,26 +193,58 @@ export default function ExercisePicker({ onSelect, onClose }: Props) {
   );
 }
 
-function ExerciseItem({ name, equipmentType, description, onSelect }: {
+function ExerciseItem({ name, equipmentType, description, guide, tips, onSelect }: {
   name: string;
   equipmentType: string;
   description: string;
+  guide?: string;
+  tips?: string;
   onSelect: () => void;
 }) {
+  const [showDetail, setShowDetail] = useState(false);
+
   return (
-    <button
-      onClick={onSelect}
-      className="w-full text-left p-3 rounded-xl hover:bg-surface-light active:bg-surface-light active:scale-[0.98] transition-all mb-0.5"
-    >
-      <div className="flex justify-between items-start">
-        <div className="font-medium text-sm">{name}</div>
-        <span className="text-[10px] text-text-secondary bg-surface-light px-1.5 py-0.5 rounded ml-2 whitespace-nowrap">
-          {equipmentType}
-        </span>
+    <div className="mb-0.5">
+      <div className="flex items-center gap-1">
+        <button
+          onClick={onSelect}
+          className="flex-1 text-left p-3 rounded-xl hover:bg-surface-light active:bg-surface-light active:scale-[0.98] transition-all"
+        >
+          <div className="flex justify-between items-start">
+            <div className="font-medium text-sm">{name}</div>
+            <span className="text-[10px] text-text-secondary bg-surface-light px-1.5 py-0.5 rounded ml-2 whitespace-nowrap">
+              {equipmentType}
+            </span>
+          </div>
+          {description && (
+            <div className="text-[11px] text-text-secondary mt-0.5 line-clamp-1">{description}</div>
+          )}
+        </button>
+        {(guide || tips) && (
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowDetail(!showDetail); }}
+            className="w-8 h-8 flex items-center justify-center text-text-secondary/50 hover:text-primary text-xs rounded-lg"
+          >
+            ℹ️
+          </button>
+        )}
       </div>
-      {description && (
-        <div className="text-[11px] text-text-secondary mt-0.5 line-clamp-1">{description}</div>
+      {showDetail && (
+        <div className="mx-2 mb-2 p-3 bg-surface-light/50 rounded-lg text-xs text-text-secondary space-y-2">
+          {guide && (
+            <div>
+              <div className="font-semibold text-text mb-1">수행 방법</div>
+              <div className="whitespace-pre-line">{guide}</div>
+            </div>
+          )}
+          {tips && (
+            <div>
+              <div className="font-semibold text-text mb-1">주의사항</div>
+              <div className="whitespace-pre-line">{tips}</div>
+            </div>
+          )}
+        </div>
       )}
-    </button>
+    </div>
   );
 }
