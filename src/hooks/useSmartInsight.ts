@@ -60,7 +60,7 @@ export function useSmartInsight(exerciseId: number): SmartInsight | null | undef
     if (history.length >= 5) {
       let consecutiveIncrease = 0;
       for (let i = 0; i < history.length - 1; i++) {
-        if (history[i].totalVolume >= history[i + 1].totalVolume) {
+        if (history[i].totalVolume > history[i + 1].totalVolume) {
           consecutiveIncrease++;
         } else break;
       }

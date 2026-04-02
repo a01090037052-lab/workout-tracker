@@ -44,12 +44,13 @@ export default function WorkoutPage() {
     const state = location.state as { exercises?: { exerciseId: number; sets: number; order: number }[] } | null;
     if (state?.exercises && !workout.isActive) {
       workout.startWorkout();
-      const sorted = [...state.exercises].sort((a, b) => a.order - b.order);
-      setTimeout(() => {
+      // React 배치 업데이트 이후에 종목 추가 (race condition 방지)
+      requestAnimationFrame(() => {
+        const sorted = [...state.exercises!].sort((a, b) => a.order - b.order);
         for (const ex of sorted) {
           workout.addExercise(ex.exerciseId, ex.sets);
         }
-      }, 0);
+      });
       navigate('/workout', { replace: true, state: null });
     }
   }, [location.state]);
@@ -203,6 +204,7 @@ export default function WorkoutPage() {
           onRemoveExercise={() => workout.removeExercise(ex.exerciseId)}
           onMoveExercise={(dir) => workout.moveExercise(index, dir)}
           onSetCompleted={() => setShowRestTimer(true)}
+          onAddWarmupSets={(sets) => workout.addWarmupSets(ex.exerciseId, sets)}
         />
       ))}
 

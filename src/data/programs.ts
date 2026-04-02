@@ -85,7 +85,7 @@ const linearProgression: ProgramTemplate = {
         exercises: [exercises[0], exercises[1], exercises[4]].map((exName) => {
           const orm = oneRepMaxes[exName] || 0;
           const baseWeight = orm > 0 ? roundToPlate(orm * 0.7) : 0;
-          const weekWeight = baseWeight > 0 ? roundToPlate(baseWeight + (week - 1) * 2.5) : 0;
+          const weekWeight = baseWeight > 0 ? Math.min(roundToPlate(baseWeight + (week - 1) * 2.5), roundToPlate(orm * 0.95)) : 0;
           return {
             exerciseName: exName,
             sets: Array.from({ length: 5 }, () => ({
@@ -101,7 +101,7 @@ const linearProgression: ProgramTemplate = {
         exercises: [exercises[0], exercises[3], exercises[2]].map((exName) => {
           const orm = oneRepMaxes[exName] || 0;
           const baseWeight = orm > 0 ? roundToPlate(orm * 0.7) : 0;
-          const weekWeight = baseWeight > 0 ? roundToPlate(baseWeight + (week - 1) * 2.5) : 0;
+          const weekWeight = baseWeight > 0 ? Math.min(roundToPlate(baseWeight + (week - 1) * 2.5), roundToPlate(orm * 0.95)) : 0;
           return {
             exerciseName: exName,
             sets: Array.from({ length: exName === exercises[2] ? 1 : 5 }, () => ({
@@ -185,7 +185,7 @@ const strongLifts5x5: ProgramTemplate = {
     function calc(exName: string, session: number) {
       const orm = oneRepMaxes[exName] || 0;
       const base = orm > 0 ? roundToPlate(orm * 0.5) : 0;
-      const w = base > 0 ? roundToPlate(base + session * 2.5) : 0;
+      const w = base > 0 ? Math.min(roundToPlate(base + session * 2.5), roundToPlate(orm * 0.95)) : 0;
       return { exerciseName: exName, sets: Array.from({ length: exName === ex[4] ? 1 : 5 }, () => ({
         percentage: orm > 0 ? Math.round((w / orm) * 100) : 0, reps: 5, weight: w || undefined,
       }))};
@@ -303,13 +303,12 @@ const nsuns: ProgramTemplate = {
     function t2Sets(exName: string, weekNum: number) {
       const orm = oneRepMaxes[exName] || 0;
       const tm = orm > 0 ? roundToPlate(orm * 0.9 + (weekNum - 1) * 2.5) : 0;
-      const base = tm * 0.5;
       return { exerciseName: `${exName} (보조)`, sets: Array.from({ length: 8 }, (_, i) => {
         const pct = 0.50 + i * 0.025;
         return {
           percentage: Math.round(pct * 100),
           reps: i < 5 ? 5 : 8,
-          weight: base > 0 ? roundToPlate(tm * pct) : undefined,
+          weight: tm > 0 ? roundToPlate(tm * pct) : undefined,
         };
       })};
     }

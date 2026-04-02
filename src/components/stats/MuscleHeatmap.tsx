@@ -42,7 +42,7 @@ export default function MuscleHeatmap({ volumes }: Props) {
             <rect x="90" y="52" width="20" height="15" rx="4" fill="#475569" />
 
             {/* 어깨 */}
-            <ellipse cx="55" cy="80" rx="22" ry="16" fill={color('어깨')} rx-orig="22" />
+            <ellipse cx="55" cy="80" rx="22" ry="16" fill={color('어깨')} />
             <ellipse cx="145" cy="80" rx="22" ry="16" fill={color('어깨')} />
 
             {/* 가슴 */}

@@ -415,7 +415,7 @@ function WeeklyStats({ sessions, exercises, personalRecords }: { sessions: any[]
           {Object.entries(muscleVolume)
             .sort(([, a], [, b]) => b - a)
             .map(([muscle, vol], i) => {
-              const maxVol = Math.max(...Object.values(muscleVolume));
+              const maxVol = Math.max(...Object.values(muscleVolume), 1);
               return (
                 <div key={muscle} className="mb-2">
                   <div className="flex justify-between text-sm mb-1">

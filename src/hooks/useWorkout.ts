@@ -111,6 +111,20 @@ export function useWorkout() {
     });
   }, []);
 
+  const addWarmupSets = useCallback((exerciseId: number, warmups: { weight: number; reps: number }[]) => {
+    setExercises((prev) =>
+      prev.map((ex) => {
+        if (ex.exerciseId !== exerciseId) return ex;
+        const warmupSets: WorkoutSet[] = warmups.map((w, i) => ({
+          setNumber: i + 1, weight: w.weight, reps: w.reps,
+          setType: 'warmup' as const, isCompleted: false, isPR: false,
+        }));
+        const existingSets = ex.sets.map((s, i) => ({ ...s, setNumber: warmups.length + i + 1 }));
+        return { ...ex, sets: [...warmupSets, ...existingSets] };
+      })
+    );
+  }, []);
+
   const addSet = useCallback((exerciseId: number) => {
     setExercises((prev) =>
       prev.map((ex) => {
@@ -234,7 +248,7 @@ export function useWorkout() {
     isActive, exercises, duration, condition, trainingGoal, prAlert, setPRAlert,
     setCondition, setTrainingGoal,
     startWorkout, addExercise, removeExercise, moveExercise,
-    addSet, removeSet, updateSet, completeSet,
+    addWarmupSets, addSet, removeSet, updateSet, completeSet,
     finishWorkout, cancelWorkout,
   };
 }

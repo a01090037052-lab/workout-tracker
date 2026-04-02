@@ -2,3 +2,5 @@
 {"t":0,"agent":"a8e0d7b","agent_type":"architect","event":"agent_stop","success":true,"duration_ms":193882}
 {"t":0,"agent":"a8dc435","agent_type":"architect","event":"agent_start","parent_mode":"none"}
 {"t":0,"agent":"a8dc435","agent_type":"architect","event":"agent_stop","success":true,"duration_ms":380121}
+{"t":0,"agent":"ae7d558","agent_type":"code-reviewer","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"ae7d558","agent_type":"code-reviewer","event":"agent_stop","success":true,"duration_ms":311608}
