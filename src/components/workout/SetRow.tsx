@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { WorkoutSet, TrainingGoal, Condition } from '../../types';
 import { getTrainingZone, checkGoalMismatch, suggestForSet } from '../../hooks/useTrainingGuide';
 
@@ -19,33 +20,25 @@ export default function SetRow({
   estimated1RM, trainingGoal, condition,
   onUpdate, onComplete, onRemove,
 }: Props) {
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
   const zone = set.isCompleted && estimated1RM
     ? getTrainingZone(set.weight, set.reps, estimated1RM)
     : null;
 
   const mismatch = zone && trainingGoal ? checkGoalMismatch(trainingGoal, zone) : null;
 
-  // 무게 추천 on/off 설정
   const weightSuggestionEnabled = localStorage.getItem('weightSuggestion') !== 'off';
-
-  // 새 추천 시스템
   const suggestion = weightSuggestionEnabled && !set.isCompleted && trainingGoal
-    ? suggestForSet({
-        goal: trainingGoal,
-        setIndex,
-        currentSets,
-        previousSessionSets,
-        estimated1RM,
-        condition,
-      })
+    ? suggestForSet({ goal: trainingGoal, setIndex, currentSets, previousSessionSets, estimated1RM, condition })
     : null;
 
   const hasSuggestion = suggestion && suggestion.weight > 0;
   const previousSet = previousSessionSets?.[setIndex];
 
   return (
-    <div className="mb-1">
-      <div className={`flex items-center gap-2 py-2.5 px-3 rounded-xl transition-all duration-200 ${
+    <div className="mb-1.5">
+      <div className={`flex items-center gap-2 py-3 px-3 rounded-xl transition-all duration-200 ${
         set.isCompleted
           ? 'bg-gradient-to-r from-primary/15 to-primary/5 border border-primary/20'
           : 'hover:bg-surface-light/50'
@@ -58,64 +51,58 @@ export default function SetRow({
         </span>
 
         {/* 이전 기록 */}
-        <div className="w-[72px] text-xs text-text-secondary text-center font-mono">
+        <div className="w-16 text-xs text-text-secondary text-center font-mono">
           {previousSet ? `${previousSet.weight}×${previousSet.reps}` : '-'}
         </div>
 
         {/* 무게 입력 */}
-        <div className="relative w-[68px]">
+        <div className="relative flex-1 min-w-[80px]">
           <input
             type="number"
+            inputMode="decimal"
             value={set.weight || ''}
             onChange={(e) => onUpdate({ weight: Math.max(0, Number(e.target.value)) })}
             min="0"
             max="999"
             placeholder={hasSuggestion ? `${suggestion.weight}` : '0'}
-            className={`w-full rounded-lg px-2 py-2 text-center text-sm font-mono font-semibold outline-none transition-all ${
+            className={`w-full rounded-xl px-3 py-2.5 text-center text-base font-mono font-semibold outline-none transition-all ${
               set.isCompleted
                 ? 'bg-primary/10 text-primary-light'
                 : 'bg-surface-light focus:ring-2 focus:ring-primary focus:bg-surface'
             }`}
           />
-          <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px] text-text-secondary">kg</span>
+          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-text-secondary">kg</span>
         </div>
 
         {/* 횟수 입력 */}
-        <div className="relative w-[56px]">
+        <div className="relative flex-1 min-w-[70px]">
           <input
             type="number"
+            inputMode="numeric"
             value={set.reps || ''}
             onChange={(e) => onUpdate({ reps: Math.max(0, Math.floor(Number(e.target.value))) })}
             min="0"
             max="999"
             placeholder={hasSuggestion ? `${suggestion.reps}` : '0'}
-            className={`w-full rounded-lg px-2 py-2 text-center text-sm font-mono font-semibold outline-none transition-all ${
+            className={`w-full rounded-xl px-3 py-2.5 text-center text-base font-mono font-semibold outline-none transition-all ${
               set.isCompleted
                 ? 'bg-primary/10 text-primary-light'
                 : 'bg-surface-light focus:ring-2 focus:ring-primary focus:bg-surface'
             }`}
           />
-          <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px] text-text-secondary">회</span>
+          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-text-secondary">회</span>
         </div>
 
-        {/* 완료 체크 */}
+        {/* 완료 체크 - 44px 터치 타겟 */}
         <button
           onClick={onComplete}
-          className={`w-9 h-9 rounded-full flex items-center justify-center text-sm transition-all duration-200 ${
+          className={`w-11 h-11 rounded-full flex items-center justify-center text-base transition-all duration-200 ${
             set.isCompleted
               ? 'bg-gradient-to-br from-success to-green-600 text-white shadow-md shadow-success/30 scale-105'
               : 'bg-surface-light text-text-secondary hover:bg-border active:scale-95'
           }`}
         >
           ✓
-        </button>
-
-        {/* 삭제 */}
-        <button
-          onClick={onRemove}
-          className="text-text-secondary/50 text-xs hover:text-danger transition-colors w-5 text-center"
-        >
-          ✕
         </button>
       </div>
 
@@ -128,7 +115,7 @@ export default function SetRow({
         </div>
       )}
 
-      {/* 무게 추천 (미완료 시, 항상 표시) */}
+      {/* 무게 추천 (미완료 시) */}
       {suggestion && !set.isCompleted && (
         <div className="flex items-center gap-2 px-4 py-1">
           <span className="text-xs text-primary-light/80 flex-1">{suggestion.message}</span>
@@ -140,6 +127,24 @@ export default function SetRow({
               적용
             </button>
           )}
+        </div>
+      )}
+
+      {/* 삭제 확인 */}
+      {showDeleteConfirm ? (
+        <div className="flex items-center gap-2 px-4 py-1.5 bg-danger/10 rounded-lg mx-1 mt-1">
+          <span className="text-xs text-danger flex-1">이 세트를 삭제할까요?</span>
+          <button onClick={() => setShowDeleteConfirm(false)} className="text-xs px-2 py-1 bg-surface-light rounded">취소</button>
+          <button onClick={() => { onRemove(); setShowDeleteConfirm(false); }} className="text-xs px-2 py-1 bg-danger text-white rounded">삭제</button>
+        </div>
+      ) : (
+        <div className="flex justify-end px-3">
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="text-[10px] text-text-secondary/40 hover:text-danger py-0.5 px-2"
+          >
+            세트 삭제
+          </button>
         </div>
       )}
     </div>

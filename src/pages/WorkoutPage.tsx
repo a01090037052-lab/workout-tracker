@@ -19,6 +19,13 @@ function formatTime(seconds: number) {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
+interface WorkoutSummary {
+  duration: number;
+  exerciseCount: number;
+  totalSets: number;
+  totalVolume: number;
+}
+
 export default function WorkoutPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -30,13 +37,13 @@ export default function WorkoutPage() {
   const [showPlateCalc, setShowPlateCalc] = useState(false);
   const [showInjuryLog, setShowInjuryLog] = useState(false);
   const [toast, setToast] = useState('');
+  const [summary, setSummary] = useState<WorkoutSummary | null>(null);
 
-  // 루틴으로 운동 시작
+  // 루틴/프로그램으로 운동 시작
   useEffect(() => {
-    const state = location.state as { routineId?: number; exercises?: { exerciseId: number; sets: number; order: number }[] } | null;
+    const state = location.state as { exercises?: { exerciseId: number; sets: number; order: number }[] } | null;
     if (state?.exercises && !workout.isActive) {
       workout.startWorkout();
-      // 루틴의 세트 수를 반영하여 운동 추가
       const sorted = [...state.exercises].sort((a, b) => a.order - b.order);
       setTimeout(() => {
         for (const ex of sorted) {
@@ -46,6 +53,55 @@ export default function WorkoutPage() {
       navigate('/workout', { replace: true, state: null });
     }
   }, [location.state]);
+
+  // 운동 완료 요약 화면
+  if (summary) {
+    return (
+      <div className="p-4">
+        <div className="text-center py-8">
+          <div className="text-5xl mb-4">🎉</div>
+          <h1 className="text-2xl font-bold mb-2">운동 완료!</h1>
+          <p className="text-text-secondary">수고했어요</p>
+        </div>
+
+        <div className="bg-surface rounded-2xl p-6 mb-4">
+          <div className="grid grid-cols-2 gap-4 text-center">
+            <div>
+              <div className="text-2xl font-bold font-mono">{formatTime(summary.duration)}</div>
+              <div className="text-xs text-text-secondary mt-1">운동 시간</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold font-mono">{summary.exerciseCount}</div>
+              <div className="text-xs text-text-secondary mt-1">종목</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold font-mono">{summary.totalSets}</div>
+              <div className="text-xs text-text-secondary mt-1">세트</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold font-mono">{summary.totalVolume.toLocaleString()}</div>
+              <div className="text-xs text-text-secondary mt-1">총 볼륨 (kg)</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            onClick={() => { setSummary(null); navigate('/history'); }}
+            className="flex-1 py-3 bg-surface rounded-xl font-semibold transition-colors"
+          >
+            기록 보기
+          </button>
+          <button
+            onClick={() => { setSummary(null); navigate('/'); }}
+            className="flex-1 py-3 bg-primary text-white rounded-xl font-semibold transition-colors"
+          >
+            홈으로
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // 운동 시작 전 화면
   if (!workout.isActive) {
@@ -76,8 +132,7 @@ export default function WorkoutPage() {
 
   const totalSets = workout.exercises.reduce((acc, ex) => acc + ex.sets.filter((s) => s.isCompleted).length, 0);
   const totalVolume = workout.exercises.reduce(
-    (acc, ex) => acc + ex.sets.filter((s) => s.isCompleted).reduce((sum, s) => sum + s.weight * s.reps, 0),
-    0
+    (acc, ex) => acc + ex.sets.filter((s) => s.isCompleted).reduce((sum, s) => sum + s.weight * s.reps, 0), 0
   );
 
   return (
@@ -114,23 +169,31 @@ export default function WorkoutPage() {
       <div className="flex gap-2 mb-4">
         <button
           onClick={() => setShowPlateCalc(true)}
-          className="flex-1 py-2 bg-surface rounded-lg text-sm text-text-secondary hover:text-primary transition-colors"
+          className="flex-1 py-2.5 bg-surface rounded-lg text-sm text-text-secondary hover:text-primary transition-colors"
         >
           🔢 플레이트 계산
         </button>
         <button
-          onClick={() => setShowInjuryLog(true)}
-          className="flex-1 py-2 bg-surface rounded-lg text-sm text-text-secondary hover:text-danger transition-colors"
+          onClick={() => setShowRestTimer(true)}
+          className="flex-1 py-2.5 bg-surface rounded-lg text-sm text-text-secondary hover:text-primary transition-colors"
         >
-          🩹 통증 기록
+          ⏱️ 휴식 타이머
+        </button>
+        <button
+          onClick={() => setShowInjuryLog(true)}
+          className="flex-1 py-2.5 bg-surface rounded-lg text-sm text-text-secondary hover:text-danger transition-colors"
+        >
+          🩹 통증
         </button>
       </div>
 
       {/* 운동 목록 */}
-      {workout.exercises.map((ex) => (
+      {workout.exercises.map((ex, index) => (
         <ExerciseCard
           key={ex.exerciseId}
           exercise={ex}
+          exerciseIndex={index}
+          totalExercises={workout.exercises.length}
           trainingGoal={workout.trainingGoal}
           condition={workout.condition}
           onAddSet={() => workout.addSet(ex.exerciseId)}
@@ -138,6 +201,7 @@ export default function WorkoutPage() {
           onUpdateSet={(i, updates) => workout.updateSet(ex.exerciseId, i, updates)}
           onCompleteSet={(i) => workout.completeSet(ex.exerciseId, i)}
           onRemoveExercise={() => workout.removeExercise(ex.exerciseId)}
+          onMoveExercise={(dir) => workout.moveExercise(index, dir)}
           onSetCompleted={() => setShowRestTimer(true)}
         />
       ))}
@@ -145,7 +209,7 @@ export default function WorkoutPage() {
       {/* 운동 추가 버튼 */}
       <button
         onClick={() => setShowPicker(true)}
-        className="w-full py-3 border-2 border-dashed border-border rounded-xl text-text-secondary hover:border-primary hover:text-primary transition-colors"
+        className="w-full py-4 border-2 border-dashed border-border rounded-xl text-text-secondary hover:border-primary hover:text-primary transition-colors text-base"
       >
         + 운동 추가
       </button>
@@ -200,13 +264,20 @@ export default function WorkoutPage() {
               </button>
               <button
                 onClick={async () => {
-                  const id = await workout.finishWorkout();
-                  if (id) {
-                    navigate('/');
+                  const result = await workout.finishWorkout();
+                  setShowFinishConfirm(false);
+                  if (result) {
+                    const { session, validExercises } = result;
+                    setSummary({
+                      duration: session.duration,
+                      exerciseCount: validExercises.length,
+                      totalSets: validExercises.reduce((a, e) => a + e.sets.length, 0),
+                      totalVolume: validExercises.reduce((a, e) =>
+                        a + e.sets.reduce((s, set) => s + set.weight * set.reps, 0), 0),
+                    });
                   } else {
-                    setShowFinishConfirm(false);
-                    setToast('완료된 세트가 없어요. 무게와 횟수를 입력하고 체크해주세요.');
-                    setTimeout(() => setToast(''), 3000);
+                    setToast('완료된 세트가 없어요. 무게와 횟수를 입력 후 ✓ 버튼을 눌러주세요.');
+                    setTimeout(() => setToast(''), 4000);
                   }
                 }}
                 className="flex-1 py-2.5 bg-success text-white rounded-lg text-sm font-semibold"
@@ -249,7 +320,7 @@ export default function WorkoutPage() {
 
       {/* 토스트 */}
       {toast && (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-surface-light px-4 py-2 rounded-lg text-sm shadow-lg z-[60] max-w-[90%] text-center">
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-surface-light px-4 py-2.5 rounded-lg text-sm shadow-lg z-[60] max-w-[90%] text-center">
           {toast}
         </div>
       )}

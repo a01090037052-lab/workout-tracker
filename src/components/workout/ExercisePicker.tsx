@@ -64,7 +64,6 @@ export default function ExercisePicker({ onSelect, onClose }: Props) {
             placeholder="운동 이름 검색..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            autoFocus
             className="w-full bg-surface-light rounded-xl px-4 py-2.5 text-text placeholder:text-text-secondary outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
