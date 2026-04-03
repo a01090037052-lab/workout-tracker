@@ -129,16 +129,20 @@ export default function ProgramPage() {
 
     const exercises = day.exercises
       .map((ex, i) => {
-        // 보조 표시 제거하여 매칭 (예: "벤치프레스 (보조)" → "벤치프레스")
-        const cleanName = ex.exerciseName.replace(/\s*\(보조\)$/, '');
+        const cleanName = ex.exerciseName.replace(/\s*\(보조\)$/, '').replace(/\s*\(AMRAP\)$/, '');
         const id = nameMap.get(cleanName) || nameMap.get(ex.exerciseName);
         if (!id) return null;
-        return { exerciseId: id, sets: ex.sets.length, order: i };
+        return {
+          exerciseId: id,
+          sets: ex.sets.length,
+          order: i,
+          setsDetail: ex.sets.map((s) => ({ weight: s.weight || 0, reps: s.reps })),
+        };
       })
       .filter((e): e is NonNullable<typeof e> => e !== null);
 
     if (exercises.length > 0) {
-      navigate('/workout', { state: { exercises } });
+      navigate('/workout', { state: { exercises, fromProgram: true } });
     }
   };
 

@@ -87,11 +87,28 @@ export function useWorkout() {
     }, 1000);
   }, []);
 
-  const addExercise = useCallback((exerciseId: number, numSets: number = 1) => {
+  const addExercise = useCallback(async (exerciseId: number, numSets: number = 1) => {
+    // 이전 기록에서 무게/횟수 가져오기
+    let prevSets: { weight: number; reps: number }[] = [];
+    try {
+      const sessions = await db.sessions.orderBy('date').reverse().toArray();
+      for (const session of sessions) {
+        const ex = session.exercises.find((e) => e.exerciseId === exerciseId);
+        if (ex && ex.sets.some((s) => s.isCompleted)) {
+          prevSets = ex.sets.filter((s) => s.isCompleted).map((s) => ({ weight: s.weight, reps: s.reps }));
+          break;
+        }
+      }
+    } catch {}
+
     setExercises((prev) => {
       if (prev.some((e) => e.exerciseId === exerciseId)) return prev;
-      const sets: WorkoutSet[] = Array.from({ length: numSets }, (_, i) => ({
-        setNumber: i + 1, weight: 0, reps: 0, setType: 'normal', isCompleted: false, isPR: false,
+      const actualSets = Math.max(numSets, prevSets.length || numSets);
+      const sets: WorkoutSet[] = Array.from({ length: actualSets }, (_, i) => ({
+        setNumber: i + 1,
+        weight: prevSets[i]?.weight || prevSets[0]?.weight || 0,
+        reps: prevSets[i]?.reps || prevSets[0]?.reps || 0,
+        setType: 'normal', isCompleted: false, isPR: false,
       }));
       return [...prev, { exerciseId, order: prev.length, sets }];
     });
@@ -174,15 +191,33 @@ export function useWorkout() {
       const ex = prev.find((e) => e.exerciseId === exerciseId);
       const set = ex?.sets[setIndex];
       if (!set) return prev;
-      if (!set.isCompleted && (set.weight <= 0 || set.reps <= 0)) return prev;
+
+      // 완료 전환 시 무게/횟수 검증
+      const togglingToComplete = !set.isCompleted;
+      if (togglingToComplete && (set.weight <= 0 || set.reps <= 0)) return prev;
+
       const updated = prev.map((e) => {
         if (e.exerciseId !== exerciseId) return e;
         return { ...e, sets: e.sets.map((s, i) => (i === setIndex ? { ...s, isCompleted: !s.isCompleted } : s)) };
       });
-      if (!set.isCompleted) checkPR(exerciseId, set.weight, set.reps);
+
+      // PR 체크: 완료로 전환될 때, 현재 세트의 값 사용
+      if (togglingToComplete) {
+        checkPR(exerciseId, set.weight, set.reps);
+      }
+
+      // 즉시 localStorage 저장 (세트 완료 상태 보존)
+      saveToStorage({
+        isActive: true,
+        exercises: updated,
+        startTime: startTimeRef.current,
+        condition,
+        trainingGoal,
+      });
+
       return updated;
     });
-  }, [checkPR]);
+  }, [checkPR, condition, trainingGoal]);
 
   const finishWorkout = useCallback(async () => {
     if (timerRef.current) clearInterval(timerRef.current);

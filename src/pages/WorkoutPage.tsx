@@ -41,14 +41,25 @@ export default function WorkoutPage() {
 
   // 루틴/프로그램으로 운동 시작
   useEffect(() => {
-    const state = location.state as { exercises?: { exerciseId: number; sets: number; order: number }[] } | null;
+    const state = location.state as {
+      exercises?: { exerciseId: number; sets: number; order: number; setsDetail?: { weight: number; reps: number }[] }[];
+      fromProgram?: boolean;
+    } | null;
     if (state?.exercises && !workout.isActive) {
       workout.startWorkout();
-      // React 배치 업데이트 이후에 종목 추가 (race condition 방지)
-      requestAnimationFrame(() => {
+      requestAnimationFrame(async () => {
         const sorted = [...state.exercises!].sort((a, b) => a.order - b.order);
         for (const ex of sorted) {
-          workout.addExercise(ex.exerciseId, ex.sets);
+          await workout.addExercise(ex.exerciseId, ex.sets);
+          // 프로그램에서 무게/횟수 세팅
+          if (state.fromProgram && ex.setsDetail) {
+            for (let i = 0; i < ex.setsDetail.length; i++) {
+              const detail = ex.setsDetail[i];
+              if (detail.weight > 0) {
+                workout.updateSet(ex.exerciseId, i, { weight: detail.weight, reps: detail.reps });
+              }
+            }
+          }
         }
       });
       navigate('/workout', { replace: true, state: null });

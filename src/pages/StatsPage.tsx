@@ -14,6 +14,16 @@ export default function StatsPage() {
   const sessions = useLiveQuery(() => db.sessions.orderBy('date').toArray());
   const personalRecords = useLiveQuery(() => db.personalRecords.orderBy('date').toArray());
 
+  // 로딩 중 가드
+  if (!exercises || !sessions || !personalRecords) {
+    return (
+      <div className="p-4">
+        <h1 className="text-2xl font-bold mb-4">통계</h1>
+        <div className="bg-surface rounded-xl p-8 text-center text-text-secondary">로딩 중...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-4">통계</h1>
