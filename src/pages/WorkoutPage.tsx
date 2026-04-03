@@ -50,16 +50,10 @@ export default function WorkoutPage() {
       requestAnimationFrame(async () => {
         const sorted = [...state.exercises!].sort((a, b) => a.order - b.order);
         for (const ex of sorted) {
-          await workout.addExercise(ex.exerciseId, ex.sets);
-          // 프로그램에서 무게/횟수 세팅
-          if (state.fromProgram && ex.setsDetail) {
-            for (let i = 0; i < ex.setsDetail.length; i++) {
-              const detail = ex.setsDetail[i];
-              if (detail.weight > 0) {
-                workout.updateSet(ex.exerciseId, i, { weight: detail.weight, reps: detail.reps });
-              }
-            }
-          }
+          // 프로그램: initialSets로 무게/횟수 직접 전달 (race condition 방지)
+          // 루틴: initialSets 없이 이전 기록 자동 채우기
+          const initialSets = (state.fromProgram && ex.setsDetail) ? ex.setsDetail : undefined;
+          await workout.addExercise(ex.exerciseId, ex.sets, initialSets);
         }
       });
       navigate('/workout', { replace: true, state: null });

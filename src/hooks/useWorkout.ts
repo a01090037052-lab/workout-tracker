@@ -38,15 +38,16 @@ function clearStorage() {
 }
 
 export function useWorkout() {
-  const saved = loadFromStorage();
+  // lazy initializer로 최초 1회만 파싱
+  const [initialState] = useState(() => loadFromStorage());
 
-  const [isActive, setIsActive] = useState(saved?.isActive || false);
-  const [exercises, setExercises] = useState<WorkoutExercise[]>(saved?.exercises || []);
+  const [isActive, setIsActive] = useState(initialState?.isActive || false);
+  const [exercises, setExercises] = useState<WorkoutExercise[]>(initialState?.exercises || []);
   const [duration, setDuration] = useState(0);
-  const [condition, setCondition] = useState<Condition>(saved?.condition || 'normal');
-  const [trainingGoal, setTrainingGoal] = useState<TrainingGoal>(saved?.trainingGoal || 'hypertrophy');
+  const [condition, setCondition] = useState<Condition>(initialState?.condition || 'normal');
+  const [trainingGoal, setTrainingGoal] = useState<TrainingGoal>(initialState?.trainingGoal || 'hypertrophy');
   const [prAlert, setPRAlert] = useState<PRAlert | null>(null);
-  const startTimeRef = useRef<number>(saved?.startTime || 0);
+  const startTimeRef = useRef<number>(initialState?.startTime || 0);
   const timerRef = useRef<number | null>(null);
 
   // 타이머 복구 및 시작
@@ -62,7 +63,7 @@ export function useWorkout() {
     };
   }, [isActive]);
 
-  // 자동 저장 (exercises, condition, trainingGoal 변경 시)
+  // 자동 저장
   useEffect(() => {
     if (isActive) {
       saveToStorage({ isActive, exercises, startTime: startTimeRef.current, condition, trainingGoal });
@@ -87,27 +88,36 @@ export function useWorkout() {
     }, 1000);
   }, []);
 
-  const addExercise = useCallback(async (exerciseId: number, numSets: number = 1) => {
-    // 이전 기록에서 무게/횟수 가져오기
+  // initialSets가 주어지면 이전 기록 무시하고 해당 값 사용
+  const addExercise = useCallback(async (
+    exerciseId: number,
+    numSets: number = 1,
+    initialSets?: { weight: number; reps: number }[],
+  ) => {
+    // 이전 기록에서 무게/횟수 가져오기 (initialSets가 없을 때만)
     let prevSets: { weight: number; reps: number }[] = [];
-    try {
-      const sessions = await db.sessions.orderBy('date').reverse().toArray();
-      for (const session of sessions) {
-        const ex = session.exercises.find((e) => e.exerciseId === exerciseId);
-        if (ex && ex.sets.some((s) => s.isCompleted)) {
-          prevSets = ex.sets.filter((s) => s.isCompleted).map((s) => ({ weight: s.weight, reps: s.reps }));
-          break;
+    if (!initialSets) {
+      try {
+        const sessions = await db.sessions.orderBy('date').reverse().toArray();
+        for (const session of sessions) {
+          const ex = session.exercises.find((e) => e.exerciseId === exerciseId);
+          if (ex && ex.sets.some((s) => s.isCompleted)) {
+            prevSets = ex.sets.filter((s) => s.isCompleted).map((s) => ({ weight: s.weight, reps: s.reps }));
+            break;
+          }
         }
-      }
-    } catch {}
+      } catch {}
+    }
+
+    const source = initialSets || prevSets;
+    const actualSets = initialSets ? initialSets.length : Math.max(numSets, prevSets.length || numSets);
 
     setExercises((prev) => {
       if (prev.some((e) => e.exerciseId === exerciseId)) return prev;
-      const actualSets = Math.max(numSets, prevSets.length || numSets);
       const sets: WorkoutSet[] = Array.from({ length: actualSets }, (_, i) => ({
         setNumber: i + 1,
-        weight: prevSets[i]?.weight || prevSets[0]?.weight || 0,
-        reps: prevSets[i]?.reps || prevSets[0]?.reps || 0,
+        weight: source[i]?.weight || source[0]?.weight || 0,
+        reps: source[i]?.reps || source[0]?.reps || 0,
         setType: 'normal', isCompleted: false, isPR: false,
       }));
       return [...prev, { exerciseId, order: prev.length, sets }];
@@ -192,7 +202,6 @@ export function useWorkout() {
       const set = ex?.sets[setIndex];
       if (!set) return prev;
 
-      // 완료 전환 시 무게/횟수 검증
       const togglingToComplete = !set.isCompleted;
       if (togglingToComplete && (set.weight <= 0 || set.reps <= 0)) return prev;
 
@@ -201,23 +210,14 @@ export function useWorkout() {
         return { ...e, sets: e.sets.map((s, i) => (i === setIndex ? { ...s, isCompleted: !s.isCompleted } : s)) };
       });
 
-      // PR 체크: 완료로 전환될 때, 현재 세트의 값 사용
       if (togglingToComplete) {
         checkPR(exerciseId, set.weight, set.reps);
       }
 
-      // 즉시 localStorage 저장 (세트 완료 상태 보존)
-      saveToStorage({
-        isActive: true,
-        exercises: updated,
-        startTime: startTimeRef.current,
-        condition,
-        trainingGoal,
-      });
-
       return updated;
+      // useEffect 자동 저장에 의존 (이중 저장 방지)
     });
-  }, [checkPR, condition, trainingGoal]);
+  }, [checkPR]);
 
   const finishWorkout = useCallback(async () => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -227,9 +227,7 @@ export function useWorkout() {
       .map((ex) => ({ ...ex, sets: ex.sets.filter((s) => s.isCompleted && s.weight > 0 && s.reps > 0) }))
       .filter((ex) => ex.sets.length > 0);
 
-    if (validExercises.length === 0) {
-      return null;
-    }
+    if (validExercises.length === 0) return null;
 
     const session: WorkoutSession = {
       date: getLocalDate(),
