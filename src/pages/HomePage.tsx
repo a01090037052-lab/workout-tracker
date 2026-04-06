@@ -79,7 +79,13 @@ export default function HomePage() {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold">운동 기록</h1>
-          <p className="text-sm text-text-secondary mt-0.5">{today}</p>
+          <p className="text-sm text-text-secondary mt-0.5">
+            {(() => {
+              const [y, m, d] = today.split('-');
+              const dayOfWeek = ['일', '월', '화', '수', '목', '금', '토'][new Date(Number(y), Number(m) - 1, Number(d)).getDay()];
+              return `${y}년 ${Number(m)}월 ${Number(d)}일 (${dayOfWeek})`;
+            })()}
+          </p>
         </div>
         {streak > 0 && (
           <div className="bg-gradient-to-br from-orange-500 to-red-500 rounded-xl px-3 py-2 text-center">

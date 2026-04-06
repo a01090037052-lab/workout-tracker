@@ -7,7 +7,7 @@ import MuscleHeatmap from '../components/stats/MuscleHeatmap';
 const COLORS = ['#6366F1', '#22C55E', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4'];
 
 export default function StatsPage() {
-  const [tab, setTab] = useState<'exercise' | 'muscle' | 'heatmap' | 'weekly'>('exercise');
+  const [tab, setTab] = useState<'exercise' | 'muscle' | 'heatmap' | 'weekly' | 'monthly'>('exercise');
   const [selectedExerciseId, setSelectedExerciseId] = useState<number | null>(null);
 
   const exercises = useLiveQuery(() => db.exercises.toArray());
@@ -35,6 +35,7 @@ export default function StatsPage() {
           { key: 'muscle', label: '근육군' },
           { key: 'heatmap', label: '히트맵' },
           { key: 'weekly', label: '주간' },
+          { key: 'monthly', label: '월별' },
         ] as const).map((t) => (
           <button
             key={t.key}
@@ -60,6 +61,7 @@ export default function StatsPage() {
       {tab === 'muscle' && <MuscleStats sessions={sessions || []} exercises={exercises || []} />}
       {tab === 'heatmap' && <HeatmapTab sessions={sessions || []} exercises={exercises || []} />}
       {tab === 'weekly' && <WeeklyStats sessions={sessions || []} exercises={exercises || []} personalRecords={personalRecords || []} />}
+      {tab === 'monthly' && <MonthlyStats sessions={sessions || []} exercises={exercises || []} personalRecords={personalRecords || []} />}
     </div>
   );
 }
@@ -449,6 +451,187 @@ function WeeklyStats({ sessions, exercises, personalRecords }: { sessions: any[]
 
       {thisWeek.length === 0 && lastWeek.length === 0 && (
         <div className="bg-surface rounded-xl p-6 text-center text-text-secondary">아직 운동 기록이 없어요</div>
+      )}
+    </div>
+  );
+}
+
+// === 월별 통계 ===
+function MonthlyStats({ sessions, exercises, personalRecords }: { sessions: any[]; exercises: any[]; personalRecords: any[] }) {
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
+
+  const exerciseMap = new Map(exercises.map((e: any) => [e.id, e]));
+
+  const changeMonth = (delta: number) => {
+    const [y, m] = selectedMonth.split('-').map(Number);
+    const d = new Date(y, m - 1 + delta, 1);
+    setSelectedMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  };
+
+  const [year, month] = selectedMonth.split('-').map(Number);
+  const monthSessions = sessions.filter((s) => s.date.startsWith(selectedMonth));
+
+  // 이전 달
+  const prevMonthDate = new Date(year, month - 2, 1);
+  const prevMonthKey = `${prevMonthDate.getFullYear()}-${String(prevMonthDate.getMonth() + 1).padStart(2, '0')}`;
+  const prevMonthSessions = sessions.filter((s) => s.date.startsWith(prevMonthKey));
+
+  const calcStats = (ss: any[]) => {
+    const totalVolume = ss.reduce((acc, s) => acc + s.exercises.reduce((a: number, e: any) =>
+      a + e.sets.filter((set: any) => set.isCompleted).reduce((sum: number, set: any) => sum + set.weight * set.reps, 0), 0), 0);
+    const totalDuration = ss.reduce((acc, s) => acc + s.duration, 0);
+    const totalSets = ss.reduce((acc, s) => acc + s.exercises.reduce((a: number, e: any) =>
+      a + e.sets.filter((set: any) => set.isCompleted).length, 0), 0);
+    return { count: ss.length, totalVolume, totalDuration, totalSets };
+  };
+
+  const current = calcStats(monthSessions);
+  const prev = calcStats(prevMonthSessions);
+  const volumeChange = prev.totalVolume > 0 ? ((current.totalVolume - prev.totalVolume) / prev.totalVolume * 100) : 0;
+
+  // 월간 PR
+  const monthPRs = personalRecords.filter((pr: any) => pr.date.startsWith(selectedMonth));
+
+  // 부위별 볼륨
+  const muscleVolume: Record<string, number> = {};
+  for (const session of monthSessions) {
+    for (const ex of session.exercises) {
+      const info = exerciseMap.get(ex.exerciseId);
+      if (!info) continue;
+      const vol = ex.sets
+        .filter((s: any) => s.isCompleted)
+        .reduce((acc: number, s: any) => acc + s.weight * s.reps, 0);
+      muscleVolume[info.muscleGroup] = (muscleVolume[info.muscleGroup] || 0) + vol;
+    }
+  }
+
+  // 주차별 볼륨 (그래프용)
+  const weeklyData: { week: string; volume: number; count: number }[] = [];
+  const daysInMonth = new Date(year, month, 0).getDate();
+  for (let w = 0; w < Math.ceil(daysInMonth / 7); w++) {
+    const startDay = w * 7 + 1;
+    const endDay = Math.min(startDay + 6, daysInMonth);
+    const weekSessions = monthSessions.filter((s) => {
+      const day = Number(s.date.split('-')[2]);
+      return day >= startDay && day <= endDay;
+    });
+    const vol = weekSessions.reduce((acc, s) => acc + s.exercises.reduce((a: number, e: any) =>
+      a + e.sets.filter((set: any) => set.isCompleted).reduce((sum: number, set: any) => sum + set.weight * set.reps, 0), 0), 0);
+    weeklyData.push({ week: `${startDay}-${endDay}일`, volume: vol, count: weekSessions.length });
+  }
+
+  return (
+    <div>
+      {/* 월 선택 */}
+      <div className="flex items-center justify-between bg-surface rounded-xl p-3 mb-4">
+        <button onClick={() => changeMonth(-1)} className="px-3 py-1 text-text-secondary">&lt;</button>
+        <span className="font-bold">{year}년 {month}월</span>
+        <button onClick={() => changeMonth(1)} className="px-3 py-1 text-text-secondary">&gt;</button>
+      </div>
+
+      {monthSessions.length === 0 ? (
+        <div className="bg-surface rounded-xl p-8 text-center border border-border border-dashed">
+          <div className="text-3xl mb-2">📊</div>
+          <p className="text-text-secondary text-sm">이 달의 운동 기록이 없어요</p>
+        </div>
+      ) : (
+        <>
+          {/* 월간 요약 */}
+          <div className="bg-surface rounded-xl p-4 mb-4">
+            <h3 className="text-sm font-semibold mb-3">{month}월 요약</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-surface-light rounded-lg p-3 text-center">
+                <div className="text-2xl font-bold font-mono">{current.count}</div>
+                <div className="text-xs text-text-secondary">운동 횟수</div>
+                <div className="text-xs mt-1">
+                  {current.count > prev.count ? <span className="text-success">▲ {current.count - prev.count}</span>
+                    : current.count < prev.count ? <span className="text-danger">▼ {prev.count - current.count}</span>
+                    : <span className="text-text-secondary">-</span>}
+                </div>
+              </div>
+              <div className="bg-surface-light rounded-lg p-3 text-center">
+                <div className="text-2xl font-bold font-mono">{(current.totalVolume / 1000).toFixed(1)}</div>
+                <div className="text-xs text-text-secondary">총 볼륨 (톤)</div>
+                <div className="text-xs mt-1">
+                  {volumeChange > 0 ? <span className="text-success">▲ {volumeChange.toFixed(1)}%</span>
+                    : volumeChange < 0 ? <span className="text-danger">▼ {Math.abs(volumeChange).toFixed(1)}%</span>
+                    : <span className="text-text-secondary">-</span>}
+                </div>
+              </div>
+              <div className="bg-surface-light rounded-lg p-3 text-center">
+                <div className="text-2xl font-bold font-mono">{Math.floor(current.totalDuration / 60)}</div>
+                <div className="text-xs text-text-secondary">총 운동 시간 (분)</div>
+              </div>
+              <div className="bg-surface-light rounded-lg p-3 text-center">
+                <div className="text-2xl font-bold font-mono">{current.totalSets}</div>
+                <div className="text-xs text-text-secondary">총 세트</div>
+              </div>
+            </div>
+          </div>
+
+          {/* 주차별 볼륨 그래프 */}
+          <div className="bg-surface rounded-xl p-4 mb-4">
+            <h3 className="text-sm font-semibold mb-3">주차별 볼륨</h3>
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={weeklyData}>
+                <XAxis dataKey="week" tick={{ fontSize: 10, fill: '#94A3B8' }} />
+                <YAxis tick={{ fontSize: 10, fill: '#94A3B8' }} />
+                <Tooltip
+                  contentStyle={{ background: '#1E293B', border: 'none', borderRadius: 8, fontSize: 12 }}
+                  formatter={(value) => `${Number(value).toLocaleString()}kg`}
+                />
+                <Bar dataKey="volume" fill="#6366F1" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* PR 달성 */}
+          {monthPRs.length > 0 && (
+            <div className="bg-surface rounded-xl p-4 mb-4">
+              <h3 className="text-sm font-semibold mb-3">🏆 {month}월 PR ({monthPRs.length}개)</h3>
+              {monthPRs.map((pr: any, i: number) => {
+                const ex = exerciseMap.get(pr.exerciseId);
+                return (
+                  <div key={i} className="flex justify-between items-center py-2 border-b border-border last:border-b-0">
+                    <span className="text-sm">{ex?.name || '알 수 없음'}</span>
+                    <span className="text-sm text-primary-light font-mono">
+                      {pr.maxWeight}kg × {pr.maxReps}회 (1RM: {Math.round(pr.estimated1RM)}kg)
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* 부위별 볼륨 */}
+          {Object.keys(muscleVolume).length > 0 && (
+            <div className="bg-surface rounded-xl p-4">
+              <h3 className="text-sm font-semibold mb-3">부위별 볼륨</h3>
+              {Object.entries(muscleVolume)
+                .sort(([, a], [, b]) => b - a)
+                .map(([muscle, vol], i) => {
+                  const maxVol = Math.max(...Object.values(muscleVolume), 1);
+                  return (
+                    <div key={muscle} className="mb-2">
+                      <div className="flex justify-between text-sm mb-1">
+                        <span>{muscle}</span>
+                        <span className="text-text-secondary font-mono">{(vol / 1000).toFixed(1)}톤</span>
+                      </div>
+                      <div className="h-2 bg-surface-light rounded-full overflow-hidden">
+                        <div className="h-full rounded-full" style={{
+                          width: `${(vol / maxVol) * 100}%`,
+                          background: COLORS[i % COLORS.length],
+                        }} />
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
