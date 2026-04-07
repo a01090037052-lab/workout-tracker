@@ -1,7 +1,7 @@
 {
   "tool_name": "Read",
-  "tool_input_preview": "{\"file_path\":\"/Users/woohyuk/Documents/Claude/01_study/운동 기록/app/src/data/programs.ts\"}",
-  "error": "File content (12977 tokens) exceeds maximum allowed tokens (10000). Use offset and limit parameters to read specific portions of the file, or search for specific content instead of reading the whole file.",
-  "timestamp": "2026-04-03T06:38:48.745Z",
-  "retry_count": 1
+  "tool_input_preview": "{\"file_path\":\"/Users/woohyuk/Documents/Claude/01_study/운동 기록/app/src/types.ts\"}",
+  "error": "File does not exist. Note: your current working directory is /Users/woohyuk/Documents/Claude/01_study/운동 기록/app. Did you mean types?",
+  "timestamp": "2026-04-07T02:27:37.379Z",
+  "retry_count": 4
 }

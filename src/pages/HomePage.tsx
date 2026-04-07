@@ -14,10 +14,11 @@ function getStreak(dates: string[]): number {
 
   let streak = 1;
   for (let i = 1; i < sorted.length; i++) {
-    const prev = new Date(sorted[i - 1]);
-    const curr = new Date(sorted[i]);
-    const diff = (prev.getTime() - curr.getTime()) / 86400000;
-    if (diff === 1) streak++;
+    // 날짜 문자열 기반 비교 (DST 영향 없음)
+    const prevDate = new Date(sorted[i - 1] + 'T12:00:00');
+    prevDate.setDate(prevDate.getDate() - 1);
+    const expectedPrev = getLocalDate(prevDate);
+    if (sorted[i] === expectedPrev) streak++;
     else break;
   }
   return streak;

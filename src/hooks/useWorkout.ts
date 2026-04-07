@@ -197,6 +197,9 @@ export function useWorkout() {
   }, []);
 
   const completeSet = useCallback((exerciseId: number, setIndex: number) => {
+    let shouldCheckPR = false;
+    let prWeight = 0, prReps = 0;
+
     setExercises((prev) => {
       const ex = prev.find((e) => e.exerciseId === exerciseId);
       const set = ex?.sets[setIndex];
@@ -205,18 +208,22 @@ export function useWorkout() {
       const togglingToComplete = !set.isCompleted;
       if (togglingToComplete && (set.weight <= 0 || set.reps <= 0)) return prev;
 
-      const updated = prev.map((e) => {
+      if (togglingToComplete) {
+        shouldCheckPR = true;
+        prWeight = set.weight;
+        prReps = set.reps;
+      }
+
+      return prev.map((e) => {
         if (e.exerciseId !== exerciseId) return e;
         return { ...e, sets: e.sets.map((s, i) => (i === setIndex ? { ...s, isCompleted: !s.isCompleted } : s)) };
       });
-
-      if (togglingToComplete) {
-        checkPR(exerciseId, set.weight, set.reps);
-      }
-
-      return updated;
-      // useEffect 자동 저장에 의존 (이중 저장 방지)
     });
+
+    // setState 밖에서 사이드 이펙트 실행 (React StrictMode 안전)
+    if (shouldCheckPR) {
+      checkPR(exerciseId, prWeight, prReps);
+    }
   }, [checkPR]);
 
   const finishWorkout = useCallback(async () => {
