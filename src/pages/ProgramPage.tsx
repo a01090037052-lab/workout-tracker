@@ -1,16 +1,41 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { programTemplates } from '../data/programs';
 import type { ProgramTemplate, WeekPlan, DayPlan } from '../data/programs';
 
+const PROG_STORAGE_KEY = 'programProgress';
+
+interface ProgramProgress {
+  programId: string;
+  currentWeek: number;
+  oneRepMaxes: Record<string, number>;
+}
+
+function saveProgress(data: ProgramProgress) {
+  try { localStorage.setItem(PROG_STORAGE_KEY, JSON.stringify(data)); } catch {}
+}
+
+function loadProgress(): ProgramProgress | null {
+  try {
+    const raw = localStorage.getItem(PROG_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
 export default function ProgramPage() {
   const navigate = useNavigate();
-  const [selectedProgram, setSelectedProgram] = useState<ProgramTemplate | null>(null);
-  const [currentWeek, setCurrentWeek] = useState(1);
-  const [oneRepMaxes, setOneRepMaxes] = useState<Record<string, number>>({});
+  const [savedProgress] = useState(() => loadProgress());
+
+  const [selectedProgram, setSelectedProgram] = useState<ProgramTemplate | null>(() => {
+    if (savedProgress) return programTemplates.find((p) => p.id === savedProgress.programId) || null;
+    return null;
+  });
+  const [currentWeek, setCurrentWeek] = useState(savedProgress?.currentWeek || 1);
+  const [oneRepMaxes, setOneRepMaxes] = useState<Record<string, number>>(savedProgress?.oneRepMaxes || {});
   const [setupMode, setSetupMode] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
 
   // PR에서 1RM 자동 로드
   const prs = useLiveQuery(async () => {
@@ -27,7 +52,22 @@ export default function ProgramPage() {
     return best;
   });
 
+  // 진행 상태 자동 저장
+  useEffect(() => {
+    if (selectedProgram && !setupMode) {
+      saveProgress({ programId: selectedProgram.id, currentWeek, oneRepMaxes });
+    }
+  }, [selectedProgram, currentWeek, oneRepMaxes, setupMode]);
+
   const handleSelectProgram = (prog: ProgramTemplate) => {
+    // 이전에 같은 프로그램을 했으면 저장된 1RM/주차 복원
+    if (savedProgress?.programId === prog.id) {
+      setSelectedProgram(prog);
+      setCurrentWeek(savedProgress.currentWeek);
+      setOneRepMaxes(savedProgress.oneRepMaxes);
+      setSetupMode(false);
+      return;
+    }
     setSelectedProgram(prog);
     setCurrentWeek(1);
     setSetupMode(true);
@@ -37,6 +77,13 @@ export default function ProgramPage() {
       if (prs?.[exName]) auto[exName] = prs[exName];
     }
     setOneRepMaxes(auto);
+  };
+
+  const handleResetProgram = () => {
+    localStorage.removeItem(PROG_STORAGE_KEY);
+    setSelectedProgram(null);
+    setSetupMode(false);
+    setShowGuide(false);
   };
 
   // 프로그램 선택 화면
@@ -52,15 +99,22 @@ export default function ProgramPage() {
             <button
               key={prog.id}
               onClick={() => handleSelectProgram(prog)}
-              className="w-full bg-surface rounded-xl p-4 text-left active:bg-surface-light transition-colors border border-border"
+              className={`w-full bg-surface rounded-xl p-4 text-left active:bg-surface-light transition-colors border ${
+                savedProgress?.programId === prog.id ? 'border-primary' : 'border-border'
+              }`}
             >
               <div className="flex justify-between items-start mb-1">
                 <h3 className="font-bold">{prog.name}</h3>
-                <span className={`text-[10px] px-2 py-0.5 rounded-full ${
-                  prog.type === 'strength' ? 'bg-red-500/20 text-red-400' : 'bg-orange-500/20 text-orange-400'
-                }`}>
-                  {prog.type === 'strength' ? '스트렝스' : '근비대'}
-                </span>
+                <div className="flex gap-1">
+                  {savedProgress?.programId === prog.id && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/20 text-primary-light">진행 중</span>
+                  )}
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+                    prog.type === 'strength' ? 'bg-red-500/20 text-red-400' : 'bg-orange-500/20 text-orange-400'
+                  }`}>
+                    {prog.type === 'strength' ? '스트렝스' : '근비대'}
+                  </span>
+                </div>
               </div>
               <p className="text-xs text-text-secondary mb-2">{prog.description}</p>
               <div className="flex gap-3 text-xs text-text-secondary">
@@ -77,13 +131,14 @@ export default function ProgramPage() {
 
   // 1RM 설정 화면
   if (setupMode) {
+    const allFilled = selectedProgram.exercises.some((ex) => oneRepMaxes[ex] > 0);
     return (
       <div className="p-4">
         <button onClick={() => { setSelectedProgram(null); setSetupMode(false); }} className="text-text-secondary text-sm mb-4">
           ← 프로그램 선택
         </button>
         <h1 className="text-2xl font-bold mb-1">{selectedProgram.name}</h1>
-        <p className="text-sm text-text-secondary mb-4">각 종목의 1RM(최대 무게)을 입력하세요</p>
+        <p className="text-sm text-text-secondary mb-4">각 종목의 1RM(최대 무게)을 입력하세요. PR 기록이 있으면 자동으로 채워집니다.</p>
 
         <div className="space-y-3 mb-6">
           {selectedProgram.exercises.map((exName) => (
@@ -92,6 +147,7 @@ export default function ProgramPage() {
               <div className="flex items-center gap-2">
                 <input
                   type="number"
+                  inputMode="decimal"
                   value={oneRepMaxes[exName] || ''}
                   onChange={(e) => setOneRepMaxes({ ...oneRepMaxes, [exName]: Math.max(0, Number(e.target.value)) })}
                   placeholder="1RM (kg)"
@@ -102,7 +158,11 @@ export default function ProgramPage() {
                 {prs?.[exName] && (
                   <button
                     onClick={() => setOneRepMaxes({ ...oneRepMaxes, [exName]: prs[exName] })}
-                    className="text-[10px] px-2 py-1 bg-primary/20 text-primary-light rounded-full whitespace-nowrap"
+                    className={`text-[10px] px-2 py-1 rounded-full whitespace-nowrap ${
+                      oneRepMaxes[exName] === prs[exName]
+                        ? 'bg-success/20 text-success'
+                        : 'bg-primary/20 text-primary-light'
+                    }`}
                   >
                     PR: {prs[exName]}kg
                   </button>
@@ -112,13 +172,32 @@ export default function ProgramPage() {
           ))}
         </div>
 
+        {/* 전체 PR 자동 채우기 */}
+        {prs && Object.keys(prs).length > 0 && (
+          <button
+            onClick={() => {
+              const auto: Record<string, number> = { ...oneRepMaxes };
+              for (const exName of selectedProgram.exercises) {
+                if (prs[exName] && !auto[exName]) auto[exName] = prs[exName];
+              }
+              setOneRepMaxes(auto);
+            }}
+            className="w-full mb-3 py-2.5 bg-surface text-primary-light rounded-xl text-sm font-medium"
+          >
+            PR로 전체 자동 채우기
+          </button>
+        )}
+
         <button
           onClick={() => setSetupMode(false)}
-          disabled={Object.values(oneRepMaxes).every((v) => !v)}
+          disabled={!allFilled}
           className="w-full py-3 bg-primary hover:bg-primary-dark disabled:opacity-40 text-white rounded-xl font-semibold transition-colors"
         >
           프로그램 시작
         </button>
+        {!allFilled && (
+          <p className="text-xs text-text-secondary text-center mt-2">최소 1개 종목의 1RM을 입력하세요</p>
+        )}
       </div>
     );
   }
@@ -133,9 +212,7 @@ export default function ProgramPage() {
         const id = nameMap.get(cleanName) || nameMap.get(ex.exerciseName);
         if (!id) return null;
         return {
-          exerciseId: id,
-          sets: ex.sets.length,
-          order: i,
+          exerciseId: id, sets: ex.sets.length, order: i,
           setsDetail: ex.sets.map((s) => ({ weight: s.weight || 0, reps: s.reps })),
         };
       })
@@ -151,18 +228,41 @@ export default function ProgramPage() {
 
   return (
     <div className="p-4">
-      <button onClick={() => { setSelectedProgram(null); setSetupMode(false); }} className="text-text-secondary text-sm mb-4">
-        ← 프로그램 선택
-      </button>
-
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-xl font-bold">{selectedProgram.name}</h1>
-        <button
-          onClick={() => setSetupMode(true)}
-          className="text-xs text-primary-light"
-        >
-          1RM 수정
+      <div className="flex items-center gap-2 mb-4">
+        <button onClick={handleResetProgram} className="text-text-secondary text-sm">
+          ← 프로그램 선택
         </button>
+      </div>
+
+      <div className="flex justify-between items-center mb-3">
+        <h1 className="text-xl font-bold">{selectedProgram.name}</h1>
+        <div className="flex gap-2">
+          <button onClick={() => setShowGuide(!showGuide)} className="text-xs text-primary-light px-2 py-1 bg-primary/10 rounded-lg">
+            {showGuide ? '가이드 접기' : '📖 가이드'}
+          </button>
+          <button onClick={() => setSetupMode(true)} className="text-xs text-text-secondary px-2 py-1 bg-surface-light rounded-lg">
+            1RM 수정
+          </button>
+        </div>
+      </div>
+
+      {/* 프로그램 가이드 */}
+      {showGuide && (
+        <div className="bg-surface rounded-xl p-4 mb-4 border border-primary/20">
+          <div className="text-sm whitespace-pre-line text-text-secondary leading-relaxed">
+            {selectedProgram.guide}
+          </div>
+        </div>
+      )}
+
+      {/* 현재 1RM 요약 */}
+      <div className="flex gap-2 mb-4 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+        {selectedProgram.exercises.map((exName) => (
+          <div key={exName} className="bg-surface rounded-lg px-3 py-1.5 flex-shrink-0">
+            <span className="text-[10px] text-text-secondary">{exName}</span>
+            <span className="text-xs font-mono font-bold ml-1">{oneRepMaxes[exName] || '?'}kg</span>
+          </div>
+        ))}
       </div>
 
       {/* 주차 선택 */}
@@ -171,33 +271,24 @@ export default function ProgramPage() {
           onClick={() => setCurrentWeek(Math.max(1, currentWeek - 1))}
           disabled={currentWeek <= 1}
           className="px-3 py-1 text-text-secondary disabled:opacity-30"
-        >
-          ◀
-        </button>
+        >◀</button>
         <div className="text-center">
           <div className="font-bold">{weekPlan.label}</div>
-          <div className="text-xs text-text-secondary">
-            {currentWeek} / {selectedProgram.durationWeeks}주
-          </div>
+          <div className="text-xs text-text-secondary">{currentWeek} / {selectedProgram.durationWeeks}주</div>
         </div>
         <button
           onClick={() => setCurrentWeek(Math.min(selectedProgram.durationWeeks, currentWeek + 1))}
           disabled={currentWeek >= selectedProgram.durationWeeks}
           className="px-3 py-1 text-text-secondary disabled:opacity-30"
-        >
-          ▶
-        </button>
+        >▶</button>
       </div>
 
       {/* 주간 진행 바 */}
       <div className="flex gap-1 mb-4">
         {Array.from({ length: selectedProgram.durationWeeks }, (_, i) => (
-          <div
-            key={i}
-            className={`h-1.5 flex-1 rounded-full transition-colors ${
-              i + 1 <= currentWeek ? 'bg-primary' : 'bg-surface-light'
-            }`}
-          />
+          <div key={i} className={`h-1.5 flex-1 rounded-full transition-colors ${
+            i + 1 <= currentWeek ? 'bg-primary' : 'bg-surface-light'
+          }`} />
         ))}
       </div>
 
