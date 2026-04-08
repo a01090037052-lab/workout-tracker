@@ -97,13 +97,24 @@ export default function HistoryPage() {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
+  const [filterExerciseId, setFilterExerciseId] = useState<number | null>(null);
+
+  const exercises = useLiveQuery(() => db.exercises.toArray());
 
   const sessions = useLiveQuery(async () => {
     const all = await db.sessions.orderBy('date').reverse().toArray();
-    return all.filter((s) => s.date.startsWith(selectedMonth));
-  }, [selectedMonth]);
+    let filtered = all.filter((s) => s.date.startsWith(selectedMonth));
+    if (filterExerciseId) {
+      filtered = filtered.filter((s) => s.exercises.some((e) => e.exerciseId === filterExerciseId));
+    }
+    return filtered;
+  }, [selectedMonth, filterExerciseId]);
 
   const allSessions = useLiveQuery(() => db.sessions.orderBy('date').reverse().toArray());
+
+  // 기록에 있는 종목만 추출
+  const usedExerciseIds = new Set(allSessions?.flatMap((s) => s.exercises.map((e) => e.exerciseId)) || []);
+  const usedExercises = exercises?.filter((e) => usedExerciseIds.has(e.id!)) || [];
 
   // 사용 가능한 월 목록
   const months = [...new Set(allSessions?.map((s) => s.date.substring(0, 7)) || [])].sort().reverse();
@@ -159,6 +170,29 @@ export default function HistoryPage() {
           })}
         </div>
       </div>
+
+      {/* 종목 필터 */}
+      {usedExercises.length > 0 && (
+        <div className="mb-3">
+          <div className="flex gap-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+            <button
+              onClick={() => setFilterExerciseId(null)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
+                !filterExerciseId ? 'bg-primary text-white' : 'bg-surface text-text-secondary'
+              }`}
+            >전체</button>
+            {usedExercises.map((ex) => (
+              <button
+                key={ex.id}
+                onClick={() => setFilterExerciseId(filterExerciseId === ex.id! ? null : ex.id!)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
+                  filterExerciseId === ex.id! ? 'bg-primary text-white' : 'bg-surface text-text-secondary'
+                }`}
+              >{ex.name}</button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 기록 리스트 */}
       <div className="space-y-2">

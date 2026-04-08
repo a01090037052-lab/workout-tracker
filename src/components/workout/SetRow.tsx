@@ -55,23 +55,32 @@ export default function SetRow({
           {previousSet ? `${previousSet.weight}×${previousSet.reps}` : '-'}
         </div>
 
-        {/* 무게 입력 */}
-        <div className="relative flex-1 min-w-[80px]">
-          <input
-            type="number"
-            inputMode="decimal"
-            value={set.weight || ''}
-            onChange={(e) => onUpdate({ weight: Math.max(0, Number(e.target.value)) })}
-            min="0"
-            max="999"
-            placeholder={hasSuggestion ? `${suggestion.weight}` : '0'}
-            className={`w-full rounded-xl px-3 py-2.5 text-center text-base font-mono font-semibold outline-none transition-all ${
-              set.isCompleted
-                ? 'bg-primary/10 text-primary-light'
-                : 'bg-surface-light focus:ring-2 focus:ring-primary focus:bg-surface'
-            }`}
-          />
-          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-text-secondary">kg</span>
+        {/* 무게 입력 + 스텝 버튼 */}
+        <div className="flex-1 min-w-[80px]">
+          <div className="flex items-center gap-0.5">
+            <button
+              onClick={() => onUpdate({ weight: Math.max(0, (set.weight || 0) - 2.5) })}
+              className="w-7 h-10 rounded-l-xl bg-surface-light text-text-secondary text-xs active:bg-border"
+            >-</button>
+            <div className="relative flex-1">
+              <input
+                type="number"
+                inputMode="decimal"
+                value={set.weight || ''}
+                onChange={(e) => onUpdate({ weight: Math.max(0, Number(e.target.value)) })}
+                min="0" max="999"
+                placeholder={hasSuggestion ? `${suggestion.weight}` : '0'}
+                className={`w-full py-2.5 text-center text-base font-mono font-semibold outline-none transition-all ${
+                  set.isCompleted ? 'bg-primary/10 text-primary-light' : 'bg-surface-light focus:ring-2 focus:ring-primary focus:bg-surface'
+                }`}
+              />
+              <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[9px] text-text-secondary">kg</span>
+            </div>
+            <button
+              onClick={() => onUpdate({ weight: Math.min(999, (set.weight || 0) + 2.5) })}
+              className="w-7 h-10 rounded-r-xl bg-surface-light text-text-secondary text-xs active:bg-border"
+            >+</button>
+          </div>
         </div>
 
         {/* 횟수 입력 */}

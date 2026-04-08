@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useWorkoutContext } from '../hooks/WorkoutContext';
+import { db } from '../db';
 import ExerciseCard from '../components/workout/ExerciseCard';
 import ExercisePicker from '../components/workout/ExercisePicker';
 import RestTimer from '../components/timer/RestTimer';
@@ -24,6 +25,7 @@ interface WorkoutSummary {
   exerciseCount: number;
   totalSets: number;
   totalVolume: number;
+  exercises: { name: string; sets: { weight: number; reps: number }[] }[];
 }
 
 export default function WorkoutPage() {
@@ -92,6 +94,25 @@ export default function WorkoutPage() {
             </div>
           </div>
         </div>
+
+        {/* 종목별 상세 */}
+        {summary.exercises.length > 0 && (
+          <div className="bg-surface rounded-2xl p-4 mb-4">
+            <h3 className="text-sm font-semibold mb-3">종목별 기록</h3>
+            {summary.exercises.map((ex, i) => (
+              <div key={i} className="mb-3 last:mb-0">
+                <div className="text-sm font-medium text-primary-light mb-1">{ex.name}</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {ex.sets.map((s, j) => (
+                    <span key={j} className="text-xs font-mono bg-surface-light px-2 py-1 rounded-lg">
+                      {s.weight}kg×{s.reps}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="flex gap-2">
           <button
@@ -277,12 +298,19 @@ export default function WorkoutPage() {
                   setShowFinishConfirm(false);
                   if (result) {
                     const { session, validExercises } = result;
+                    // 종목 이름 조회
+                    const exNames = await db.exercises.toArray();
+                    const nameMap = new Map(exNames.map((e) => [e.id!, e.name]));
                     setSummary({
                       duration: session.duration,
                       exerciseCount: validExercises.length,
                       totalSets: validExercises.reduce((a, e) => a + e.sets.length, 0),
                       totalVolume: validExercises.reduce((a, e) =>
                         a + e.sets.reduce((s, set) => s + set.weight * set.reps, 0), 0),
+                      exercises: validExercises.map((e) => ({
+                        name: nameMap.get(e.exerciseId) || '알 수 없음',
+                        sets: e.sets.map((s) => ({ weight: s.weight, reps: s.reps })),
+                      })),
                     });
                   } else {
                     setToast('완료된 세트가 없어요. 무게와 횟수를 입력 후 ✓ 버튼을 눌러주세요.');

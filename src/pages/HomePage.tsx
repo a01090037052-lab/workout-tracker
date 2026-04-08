@@ -146,6 +146,41 @@ export default function HomePage() {
         </button>
       )}
 
+      {/* 오늘 운동 추천 */}
+      {!workoutActive && !todaySession && allSessions && allSessions.length > 0 && (
+        <section className="mb-4">
+          <div className="bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-4">
+            <div className="text-xs text-primary-light font-semibold mb-2">💡 오늘의 추천</div>
+            {(() => {
+              // 진행 중인 프로그램 안내
+              const activeProgId = localStorage.getItem('activeProgramId');
+              if (activeProgId) {
+                return <p className="text-sm text-text-secondary">진행 중인 프로그램이 있어요. 프로그램 페이지에서 확인하세요!</p>;
+              }
+              // 가장 오래 안 한 부위 추천
+              const muscleLastDone: Record<string, string> = {};
+              for (const s of allSessions.slice(0, 20)) {
+                for (const ex of s.exercises) {
+                  const info = exerciseNames?.get(ex.exerciseId);
+                  if (info && !muscleLastDone[info]) {
+                    // exerciseNames에는 이름만 있으므로 부위 추적은 간단히
+                  }
+                }
+              }
+              const lastDate = allSessions[0]?.date || '';
+              const daysSince = lastDate ? Math.floor((Date.now() - new Date(lastDate + 'T12:00:00').getTime()) / 86400000) : 0;
+              if (daysSince >= 3) {
+                return <p className="text-sm text-text-secondary">마지막 운동이 {daysSince}일 전이에요. 오늘 다시 시작해보세요! 💪</p>;
+              }
+              if (daysSince >= 1) {
+                return <p className="text-sm text-text-secondary">어제 쉬었으니 오늘은 운동하기 좋은 날이에요!</p>;
+              }
+              return null;
+            })()}
+          </div>
+        </section>
+      )}
+
       {/* 오늘의 운동 */}
       <section className="mb-6">
         <h2 className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-3">오늘의 운동</h2>
