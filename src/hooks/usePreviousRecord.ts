@@ -4,7 +4,8 @@ import type { WorkoutSet } from '../types';
 
 export function usePreviousRecord(exerciseId: number): WorkoutSet[] | undefined {
   return useLiveQuery(async () => {
-    const sessions = await db.sessions.orderBy('date').reverse().toArray();
+    // 최근 30개 세션만 검색 (성능 최적화)
+    const sessions = await db.sessions.orderBy('date').reverse().limit(30).toArray();
     for (const session of sessions) {
       const exercise = session.exercises.find((e) => e.exerciseId === exerciseId);
       if (exercise && exercise.sets.some((s) => s.isCompleted)) {

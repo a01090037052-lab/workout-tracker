@@ -80,30 +80,42 @@ function ExerciseStats({
   selectedId: number | null;
   onSelectId: (id: number) => void;
 }) {
-  // 기록이 있는 종목만 표시
+  const [period, setPeriod] = useState<'1m' | '3m' | '6m' | 'all'>('all');
+
   const exercisedIds = new Set(sessions.flatMap((s: any) => s.exercises.map((e: any) => e.exerciseId)));
   const availableExercises = exercises.filter((e) => exercisedIds.has(e.id));
-
   const selected = selectedId || availableExercises[0]?.id;
 
-  // 1RM 진행 데이터
-  const rmData = personalRecords
-    .filter((pr: any) => pr.exerciseId === selected)
-    .map((pr: any) => ({
-      date: pr.date,
-      '1RM': Math.round(pr.estimated1RM),
-    }));
+  // 기간 필터
+  const cutoffDate = (() => {
+    if (period === 'all') return null;
+    const now = new Date();
+    const months = period === '1m' ? 1 : period === '3m' ? 3 : 6;
+    return new Date(now.getFullYear(), now.getMonth() - months, now.getDate()).toISOString().split('T')[0];
+  })();
 
-  // 볼륨 진행 데이터
-  const volumeData = sessions
-    .filter((s: any) => s.exercises.some((e: any) => e.exerciseId === selected))
-    .map((s: any) => {
-      const ex = s.exercises.find((e: any) => e.exerciseId === selected);
-      const volume = ex?.sets
-        .filter((set: any) => set.isCompleted)
-        .reduce((acc: number, set: any) => acc + set.weight * set.reps, 0) || 0;
-      return { date: s.date, volume };
-    });
+  const filteredPRs = personalRecords.filter((pr: any) =>
+    pr.exerciseId === selected && (!cutoffDate || pr.date >= cutoffDate)
+  );
+  const rmData = filteredPRs.map((pr: any) => ({ date: pr.date, '1RM': Math.round(pr.estimated1RM) }));
+
+  const filteredSessions = sessions.filter((s: any) =>
+    s.exercises.some((e: any) => e.exerciseId === selected) && (!cutoffDate || s.date >= cutoffDate)
+  );
+  const volumeData = filteredSessions.map((s: any) => {
+    const ex = s.exercises.find((e: any) => e.exerciseId === selected);
+    const volume = ex?.sets.filter((set: any) => set.isCompleted)
+      .reduce((acc: number, set: any) => acc + set.weight * set.reps, 0) || 0;
+    return { date: s.date, volume };
+  });
+
+  // 성장률 계산
+  const allPRsForEx = personalRecords.filter((pr: any) => pr.exerciseId === selected);
+  const first1RM = filteredPRs.length > 0 ? filteredPRs[0]?.['1RM'] || filteredPRs[0]?.estimated1RM : 0;
+  const last1RM = filteredPRs.length > 0 ? filteredPRs[filteredPRs.length - 1]?.estimated1RM : 0;
+  const growth1RM = first1RM > 0 ? Math.round(last1RM - first1RM) : 0;
+  const growthPct = first1RM > 0 ? Math.round((growth1RM / first1RM) * 100) : 0;
+  const current1RM = allPRsForEx.length > 0 ? Math.round(allPRsForEx[allPRsForEx.length - 1]?.estimated1RM || 0) : 0;
 
   if (availableExercises.length === 0) {
     return <div className="bg-surface rounded-xl p-6 text-center text-text-secondary">아직 운동 기록이 없어요</div>;
@@ -115,12 +127,48 @@ function ExerciseStats({
       <select
         value={selected || ''}
         onChange={(e) => onSelectId(Number(e.target.value))}
-        className="w-full bg-surface rounded-lg px-4 py-2.5 text-text outline-none mb-4"
+        className="w-full bg-surface rounded-lg px-4 py-2.5 text-text outline-none mb-3"
       >
         {availableExercises.map((ex: any) => (
           <option key={ex.id} value={ex.id}>{ex.name}</option>
         ))}
       </select>
+
+      {/* 기간 필터 */}
+      <div className="flex gap-2 mb-3">
+        {([
+          { key: '1m', label: '1개월' },
+          { key: '3m', label: '3개월' },
+          { key: '6m', label: '6개월' },
+          { key: 'all', label: '전체' },
+        ] as const).map((p) => (
+          <button
+            key={p.key}
+            onClick={() => setPeriod(p.key)}
+            className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              period === p.key ? 'bg-primary/20 text-primary-light border border-primary/30' : 'bg-surface text-text-secondary'
+            }`}
+          >{p.label}</button>
+        ))}
+      </div>
+
+      {/* 성장률 요약 */}
+      {current1RM > 0 && (
+        <div className="bg-surface rounded-xl p-4 mb-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <div className="text-xs text-text-secondary">현재 추정 1RM</div>
+              <div className="text-2xl font-bold font-mono">{current1RM}kg</div>
+            </div>
+            {growth1RM !== 0 && filteredPRs.length >= 2 && (
+              <div className={`text-right ${growth1RM > 0 ? 'text-success' : 'text-danger'}`}>
+                <div className="text-lg font-bold font-mono">{growth1RM > 0 ? '+' : ''}{growth1RM}kg</div>
+                <div className="text-xs">{growthPct > 0 ? '+' : ''}{growthPct}% {period !== 'all' ? `(${period === '1m' ? '1개월' : period === '3m' ? '3개월' : '6개월'})` : ''}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* 1RM 그래프 */}
       {rmData.length > 0 && (

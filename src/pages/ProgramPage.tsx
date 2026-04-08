@@ -12,6 +12,7 @@ interface ProgramProgress {
   programId: string;
   currentWeek: number;
   oneRepMaxes: Record<string, number>;
+  startOneRepMaxes: Record<string, number>; // 시작 시점 1RM (성과 비교용)
   completedDays: { week: number; dayIndex: number; date: string }[];
 }
 
@@ -103,7 +104,7 @@ export default function ProgramPage() {
     for (const exName of prog.exercises) {
       if (prs?.[exName]) auto[exName] = prs[exName];
     }
-    setProgress({ programId: prog.id, currentWeek: 1, oneRepMaxes: auto, completedDays: [] });
+    setProgress({ programId: prog.id, currentWeek: 1, oneRepMaxes: auto, startOneRepMaxes: { ...auto }, completedDays: [] });
   };
 
   const handleResetProgram = () => {
@@ -377,13 +378,52 @@ export default function ProgramPage() {
 
       {/* 프로그램 완료 */}
       {isLastWeek && weekCompletedCount() >= weekPlan.days.length && (
-        <div className="mt-4 bg-gradient-to-br from-success/20 to-success/5 border border-success/30 rounded-xl p-4 text-center">
-          <div className="text-3xl mb-2">🎉</div>
-          <h3 className="font-bold text-lg mb-1">프로그램 완료!</h3>
-          <p className="text-sm text-text-secondary mb-3">{selectedProgram.name} {selectedProgram.durationWeeks}주를 마쳤습니다</p>
+        <div className="mt-4 bg-gradient-to-br from-success/20 to-success/5 border border-success/30 rounded-xl p-6">
+          <div className="text-center mb-4">
+            <div className="text-4xl mb-2">🎉</div>
+            <h3 className="font-bold text-xl mb-1">프로그램 완료!</h3>
+            <p className="text-sm text-text-secondary">{selectedProgram.name} {selectedProgram.durationWeeks}주를 마쳤습니다</p>
+          </div>
+
+          {/* 1RM 성과 비교 */}
+          {progress.startOneRepMaxes && (
+            <div className="bg-surface rounded-xl p-4 mb-4">
+              <h4 className="text-sm font-semibold mb-3 text-center">📊 1RM 성장 비교</h4>
+              <div className="space-y-2">
+                {selectedProgram.exercises.map((exName) => {
+                  const start = progress.startOneRepMaxes?.[exName] || 0;
+                  const end = progress.oneRepMaxes[exName] || 0;
+                  const diff = end - start;
+                  const pct = start > 0 ? Math.round((diff / start) * 100) : 0;
+                  return (
+                    <div key={exName} className="flex items-center justify-between py-1.5 border-b border-border last:border-b-0">
+                      <span className="text-sm">{exName}</span>
+                      <div className="flex items-center gap-2 font-mono text-sm">
+                        <span className="text-text-secondary">{start || '?'}kg</span>
+                        <span className="text-text-secondary">→</span>
+                        <span className="font-bold">{end || '?'}kg</span>
+                        {diff > 0 && <span className="text-success text-xs">+{diff}kg ({pct}%↑)</span>}
+                        {diff === 0 && start > 0 && <span className="text-text-secondary text-xs">유지</span>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {(() => {
+                const totalStart = Object.values(progress.startOneRepMaxes || {}).reduce((a, b) => a + b, 0);
+                const totalEnd = selectedProgram.exercises.reduce((a, ex) => a + (progress.oneRepMaxes[ex] || 0), 0);
+                const totalDiff = totalEnd - totalStart;
+                if (totalDiff > 0) {
+                  return <p className="text-center text-success text-sm font-semibold mt-3">총 +{totalDiff}kg 성장! 💪</p>;
+                }
+                return null;
+              })()}
+            </div>
+          )}
+
           <button
             onClick={() => { setActiveId(null); setSelectedProgram(null); }}
-            className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium"
+            className="w-full px-4 py-3 bg-primary text-white rounded-xl text-sm font-semibold"
           >다음 프로그램 선택하기</button>
         </div>
       )}

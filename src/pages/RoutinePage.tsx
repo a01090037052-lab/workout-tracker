@@ -10,7 +10,10 @@ export default function RoutinePage() {
   const [showEditor, setShowEditor] = useState(false);
   const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
 
-  const routines = useLiveQuery(() => db.routines.toArray());
+  const routines = useLiveQuery(async () => {
+    const all = await db.routines.toArray();
+    return all.sort((a, b) => (b.lastUsed || '').localeCompare(a.lastUsed || ''));
+  });
 
   const handleSave = async (routine: Omit<Routine, 'id'> & { id?: number }) => {
     if (routine.id) {
@@ -26,7 +29,13 @@ export default function RoutinePage() {
     await db.routines.delete(id);
   };
 
-  const handleStartWithRoutine = (routine: Routine) => {
+  const handleStartWithRoutine = async (routine: Routine) => {
+    // lastUsed 업데이트
+    if (routine.id) {
+      const now = new Date();
+      const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+      await db.routines.update(routine.id, { lastUsed: dateStr });
+    }
     navigate('/workout', { state: { routineId: routine.id, exercises: routine.exercises } });
   };
 
