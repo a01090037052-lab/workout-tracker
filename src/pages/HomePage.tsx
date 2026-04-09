@@ -216,6 +216,29 @@ export default function HomePage() {
         </button>
       )}
 
+      {/* 온보딩 (첫 사용자) */}
+      {!workoutActive && allSessions && allSessions.length === 0 && (
+        <section className="mb-4">
+          <div className="bg-gradient-to-br from-primary/15 to-primary/5 border border-primary/20 rounded-xl p-5">
+            <div className="text-center mb-3">
+              <div className="text-3xl mb-2">🏋️</div>
+              <h3 className="font-bold text-lg">첫 운동을 시작해보세요!</h3>
+            </div>
+            <p className="text-sm text-text-secondary text-center mb-4">
+              벤치프레스, 스쿼트, 데드리프트부터 시작하는 걸 추천해요
+            </p>
+            <div className="flex gap-2">
+              <button onClick={() => navigate('/workout')} className="flex-1 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold">
+                바로 시작
+              </button>
+              <button onClick={() => navigate('/programs')} className="flex-1 py-2.5 bg-surface text-text rounded-xl text-sm font-semibold">
+                프로그램 선택
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* 오늘 운동 추천 */}
       {!workoutActive && !todaySession && allSessions && allSessions.length > 0 && (
         <section className="mb-4">
