@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
+import { formatDateKr } from '../hooks/useLocalDate';
 import type { WorkoutSession } from '../types';
 
 function formatDuration(seconds: number) {
@@ -33,7 +34,7 @@ function SessionDetail({ session, onClose }: { session: WorkoutSession; onClose:
         {/* 헤더 */}
         <div className="flex justify-between items-center p-4 border-b border-border">
           <div>
-            <h2 className="text-lg font-bold">{session.date}</h2>
+            <h2 className="text-lg font-bold">{formatDateKr(session.date)}</h2>
             <span className="text-xs text-text-secondary">
               {formatDuration(session.duration)} · {totalSets}세트 · {totalVolume.toLocaleString()}kg
             </span>
@@ -98,17 +99,21 @@ export default function HistoryPage() {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
   const [filterExerciseId, setFilterExerciseId] = useState<number | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   const exercises = useLiveQuery(() => db.exercises.toArray());
 
   const sessions = useLiveQuery(async () => {
     const all = await db.sessions.orderBy('date').reverse().toArray();
     let filtered = all.filter((s) => s.date.startsWith(selectedMonth));
+    if (selectedDate) {
+      filtered = filtered.filter((s) => s.date === selectedDate);
+    }
     if (filterExerciseId) {
       filtered = filtered.filter((s) => s.exercises.some((e) => e.exerciseId === filterExerciseId));
     }
     return filtered;
-  }, [selectedMonth, filterExerciseId]);
+  }, [selectedMonth, filterExerciseId, selectedDate]);
 
   const allSessions = useLiveQuery(() => db.sessions.orderBy('date').reverse().toArray());
 
@@ -121,6 +126,7 @@ export default function HistoryPage() {
   if (!months.includes(selectedMonth)) months.unshift(selectedMonth);
 
   const changeMonth = (delta: number) => {
+    setSelectedDate(null);
     const [y, m] = selectedMonth.split('-').map(Number);
     const d = new Date(y, m - 1 + delta, 1);
     setSelectedMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
@@ -158,14 +164,23 @@ export default function HistoryPage() {
             const day = i + 1;
             const hasWorkout = workoutDates.has(day);
             return (
-              <span
+              <button
                 key={day}
-                className={`py-1.5 rounded-lg ${
-                  hasWorkout ? 'bg-primary text-white font-semibold' : 'text-text-secondary'
+                onClick={() => {
+                  if (!hasWorkout) return;
+                  const dateStr = `${selectedMonth}-${String(day).padStart(2, '0')}`;
+                  setSelectedDate(selectedDate === dateStr ? null : dateStr);
+                }}
+                className={`py-1.5 rounded-lg transition-all ${
+                  hasWorkout
+                    ? selectedDate === `${selectedMonth}-${String(day).padStart(2, '0')}`
+                      ? 'bg-primary text-white font-semibold ring-2 ring-primary-light scale-110'
+                      : 'bg-primary text-white font-semibold active:scale-95'
+                    : 'text-text-secondary'
                 }`}
               >
                 {day}
-              </span>
+              </button>
             );
           })}
         </div>
@@ -211,7 +226,7 @@ export default function HistoryPage() {
                 className="w-full bg-surface rounded-xl p-4 text-left active:bg-surface-light transition-colors"
               >
                 <div className="flex justify-between items-center mb-1">
-                  <span className="font-medium">{session.date}</span>
+                  <span className="font-medium">{formatDateKr(session.date)}</span>
                   <span className="text-xs text-text-secondary">{formatDuration(session.duration)}</span>
                 </div>
                 <div className="text-sm text-text-secondary">

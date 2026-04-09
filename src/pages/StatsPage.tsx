@@ -28,20 +28,20 @@ export default function StatsPage() {
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-4">통계</h1>
 
-      {/* 탭 */}
-      <div className="flex gap-1 bg-surface rounded-xl p-1 mb-4">
+      {/* 탭 (스크롤 가능) */}
+      <div className="flex gap-2 mb-4 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
         {([
-          { key: 'exercise', label: '종목별' },
-          { key: 'muscle', label: '근육군' },
-          { key: 'heatmap', label: '히트맵' },
-          { key: 'weekly', label: '주간' },
-          { key: 'monthly', label: '월별' },
+          { key: 'exercise', label: '📈 종목별' },
+          { key: 'muscle', label: '🥧 근육군' },
+          { key: 'heatmap', label: '🔥 히트맵' },
+          { key: 'weekly', label: '📅 주간' },
+          { key: 'monthly', label: '📊 월별' },
         ] as const).map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
-              tab === t.key ? 'bg-primary text-white' : 'text-text-secondary'
+            className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
+              tab === t.key ? 'bg-primary text-white shadow-sm' : 'bg-surface text-text-secondary active:scale-95'
             }`}
           >
             {t.label}

@@ -166,8 +166,8 @@ export default function WorkoutPage() {
 
   return (
     <div className="p-4">
-      {/* 상단 운동 정보 */}
-      <div className="flex justify-between items-center mb-4">
+      {/* 상단 운동 정보 (sticky) */}
+      <div className="flex justify-between items-center mb-4 sticky top-0 z-10 bg-bg py-2 -mx-4 px-4">
         <div>
           <div className="text-2xl font-bold font-mono">{formatTime(workout.duration)}</div>
           <div className="text-xs text-text-secondary mt-1">

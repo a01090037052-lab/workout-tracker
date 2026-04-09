@@ -1,7 +1,7 @@
 {
   "tool_name": "Read",
   "tool_input_preview": "{\"file_path\":\"/Users/woohyuk/Documents/Claude/01_study/운동 기록/app/src/data/exercises.ts\",\"limit\":100}",
-  "error": "File content (19606 tokens) exceeds maximum allowed tokens (10000). Use offset and limit parameters to read specific portions of the file, or search for specific content instead of reading the whole file.",
-  "timestamp": "2026-04-08T08:17:18.433Z",
-  "retry_count": 3
+  "error": "File content (19558 tokens) exceeds maximum allowed tokens (10000). Use offset and limit parameters to read specific portions of the file, or search for specific content instead of reading the whole file.",
+  "timestamp": "2026-04-09T02:58:43.326Z",
+  "retry_count": 2
 }

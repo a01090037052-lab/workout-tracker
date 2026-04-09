@@ -57,13 +57,6 @@ export default function ExerciseCard({
   const estimated1RM = currentPR?.estimated1RM;
   const insight = useSmartInsight(exercise.exerciseId);
 
-  const handleComplete = (setIndex: number) => {
-    const set = exercise.sets[setIndex];
-    const canComplete = isBodyweight ? set.reps > 0 : (set.weight > 0 && set.reps > 0);
-    if (!set.isCompleted && canComplete) onSetCompleted?.();
-    onCompleteSet(setIndex, isBodyweight);
-  };
-
   if (!exerciseInfo) return null;
 
   const completedSets = exercise.sets.filter((s) => s.isCompleted).length;
@@ -71,6 +64,13 @@ export default function ExerciseCard({
   const colorClass = muscleColors[exerciseInfo.muscleGroup] || 'from-surface to-surface-light border-border';
   const dotClass = muscleDots[exerciseInfo.muscleGroup] || 'bg-text-secondary';
   const isBodyweight = exerciseInfo.equipmentType === '맨몸';
+
+  const handleComplete = (setIndex: number) => {
+    const set = exercise.sets[setIndex];
+    const canComplete = isBodyweight ? set.reps > 0 : (set.weight > 0 && set.reps > 0);
+    if (!set.isCompleted && canComplete) onSetCompleted?.();
+    onCompleteSet(setIndex, isBodyweight);
+  };
 
   // 워밍업 제안 조건: 바벨 운동이고, 첫 세트에 무게가 입력된 경우
   const firstSetWeight = exercise.sets[0]?.weight || 0;
@@ -100,12 +100,12 @@ export default function ExerciseCard({
           <button
             onClick={() => onMoveExercise('up')}
             disabled={exerciseIndex === 0}
-            className="w-8 h-8 flex items-center justify-center text-text-secondary disabled:opacity-20 active:scale-90"
+            className="w-10 h-10 flex items-center justify-center text-text-secondary disabled:opacity-20 active:scale-90 rounded-lg active:bg-surface-light"
           >▲</button>
           <button
             onClick={() => onMoveExercise('down')}
             disabled={exerciseIndex === totalExercises - 1}
-            className="w-8 h-8 flex items-center justify-center text-text-secondary disabled:opacity-20 active:scale-90"
+            className="w-10 h-10 flex items-center justify-center text-text-secondary disabled:opacity-20 active:scale-90 rounded-lg active:bg-surface-light"
           >▼</button>
           <span className="text-xs text-text-secondary font-mono mx-1">{completedSets}/{totalSets}</span>
         </div>
@@ -161,6 +161,7 @@ export default function ExerciseCard({
           trainingGoal={trainingGoal}
           condition={condition}
           isBodyweight={isBodyweight}
+          equipmentType={exerciseInfo.equipmentType}
           onUpdate={(updates) => onUpdateSet(i, updates)}
           onComplete={() => handleComplete(i)}
           onRemove={() => onRemoveSet(i)}

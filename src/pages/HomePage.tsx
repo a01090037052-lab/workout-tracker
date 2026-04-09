@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
-import { getLocalDate } from '../hooks/useLocalDate';
+import { getLocalDate, formatDateKr } from '../hooks/useLocalDate';
 import { useWorkoutContext } from '../hooks/WorkoutContext';
 
 function getStreak(dates: string[]): number {
@@ -152,20 +152,9 @@ export default function HomePage() {
           <div className="bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-4">
             <div className="text-xs text-primary-light font-semibold mb-2">💡 오늘의 추천</div>
             {(() => {
-              // 진행 중인 프로그램 안내
               const activeProgId = localStorage.getItem('activeProgramId');
               if (activeProgId) {
-                return <p className="text-sm text-text-secondary">진행 중인 프로그램이 있어요. 프로그램 페이지에서 확인하세요!</p>;
-              }
-              // 가장 오래 안 한 부위 추천
-              const muscleLastDone: Record<string, string> = {};
-              for (const s of allSessions.slice(0, 20)) {
-                for (const ex of s.exercises) {
-                  const info = exerciseNames?.get(ex.exerciseId);
-                  if (info && !muscleLastDone[info]) {
-                    // exerciseNames에는 이름만 있으므로 부위 추적은 간단히
-                  }
-                }
+                return <p className="text-sm text-text-secondary">진행 중인 프로그램이 있어요. 운동 탭 → 프로그램 보기에서 확인하세요!</p>;
               }
               const lastDate = allSessions[0]?.date || '';
               const daysSince = lastDate ? Math.floor((Date.now() - new Date(lastDate + 'T12:00:00').getTime()) / 86400000) : 0;
@@ -238,7 +227,7 @@ export default function HomePage() {
                   className="bg-surface rounded-xl p-4 border border-border hover:border-primary/30 transition-colors"
                 >
                   <div className="flex justify-between items-start mb-1.5">
-                    <span className="font-medium">{session.date}</span>
+                    <span className="font-medium">{formatDateKr(session.date)}</span>
                     <span className="text-xs text-text-secondary bg-surface-light px-2 py-0.5 rounded-full">
                       {Math.floor(session.duration / 60)}분
                     </span>

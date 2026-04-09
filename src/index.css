@@ -121,6 +121,14 @@ main > * {
   height: 0;
 }
 
+/* 모바일 키보드 시 입력 필드가 보이도록 */
+input:focus {
+  scroll-margin-bottom: 200px;
+}
+input[type="number"]:focus {
+  scroll-margin-bottom: 200px;
+}
+
 /* 선택 하이라이트 방지 */
 button, a {
   -webkit-tap-highlight-color: transparent;

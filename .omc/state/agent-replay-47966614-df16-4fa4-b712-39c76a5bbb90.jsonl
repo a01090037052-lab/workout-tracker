@@ -12,3 +12,5 @@
 {"t":0,"agent":"a4349f5","agent_type":"code-reviewer","event":"agent_stop","success":true,"duration_ms":152235}
 {"t":0,"agent":"acb7f5c","agent_type":"architect","event":"agent_start","parent_mode":"none"}
 {"t":0,"agent":"acb7f5c","agent_type":"architect","event":"agent_stop","success":true,"duration_ms":243045}
+{"t":0,"agent":"aa315fb","agent_type":"architect","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"aa315fb","agent_type":"architect","event":"agent_stop","success":true,"duration_ms":164629}

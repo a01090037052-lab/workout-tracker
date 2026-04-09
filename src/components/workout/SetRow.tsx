@@ -11,6 +11,7 @@ interface Props {
   trainingGoal?: TrainingGoal;
   condition?: Condition;
   isBodyweight?: boolean;
+  equipmentType?: string;
   onUpdate: (updates: Partial<WorkoutSet>) => void;
   onComplete: () => void;
   onRemove: () => void;
@@ -18,7 +19,7 @@ interface Props {
 
 export default function SetRow({
   set, setIndex, currentSets, previousSessionSets,
-  estimated1RM, trainingGoal, condition, isBodyweight,
+  estimated1RM, trainingGoal, condition, isBodyweight, equipmentType,
   onUpdate, onComplete, onRemove,
 }: Props) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -37,6 +38,9 @@ export default function SetRow({
   const hasSuggestion = suggestion && suggestion.weight > 0;
   const previousSet = previousSessionSets?.[setIndex];
 
+  // 장비별 무게 증감 단위
+  const weightStep = equipmentType === '머신' ? 5 : equipmentType === '덤벨' ? 2 : equipmentType === '맨몸' ? 1 : 2.5;
+
   return (
     <div className="mb-1.5">
       <div className={`flex items-center gap-2 py-3 px-3 rounded-xl transition-all duration-200 ${
@@ -44,12 +48,20 @@ export default function SetRow({
           ? 'bg-gradient-to-r from-primary/15 to-primary/5 border border-primary/20'
           : 'hover:bg-surface-light/50'
       }`}>
-        {/* 세트 번호 */}
-        <span className={`text-sm w-7 text-center font-mono font-bold ${
-          set.isCompleted ? 'text-primary-light' : 'text-text-secondary'
-        }`}>
+        {/* 세트 번호 (길게 누르면 삭제) */}
+        <button
+          onContextMenu={(e) => { e.preventDefault(); setShowDeleteConfirm(true); }}
+          onTouchStart={() => {
+            const t = setTimeout(() => setShowDeleteConfirm(true), 600);
+            (window as any).__longPressTimer = t;
+          }}
+          onTouchEnd={() => clearTimeout((window as any).__longPressTimer)}
+          className={`text-sm w-7 text-center font-mono font-bold ${
+            set.isCompleted ? 'text-primary-light' : 'text-text-secondary'
+          } ${showDeleteConfirm ? 'text-danger' : ''}`}
+        >
           {set.setNumber}
-        </span>
+        </button>
 
         {/* 이전 기록 */}
         <div className="w-16 text-xs text-text-secondary text-center font-mono">
@@ -65,7 +77,7 @@ export default function SetRow({
           <div className="flex-1 min-w-[80px]">
             <div className="flex items-center gap-0.5">
               <button
-                onClick={() => onUpdate({ weight: Math.max(0, (set.weight || 0) - 2.5) })}
+                onClick={() => onUpdate({ weight: Math.max(0, (set.weight || 0) - weightStep) })}
                 className="w-7 h-10 rounded-l-xl bg-surface-light text-text-secondary text-xs active:bg-border"
               >-</button>
               <div className="relative flex-1">
@@ -83,7 +95,7 @@ export default function SetRow({
                 <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[9px] text-text-secondary">kg</span>
               </div>
               <button
-                onClick={() => onUpdate({ weight: Math.min(999, (set.weight || 0) + 2.5) })}
+                onClick={() => onUpdate({ weight: Math.min(999, (set.weight || 0) + weightStep) })}
                 className="w-7 h-10 rounded-r-xl bg-surface-light text-text-secondary text-xs active:bg-border"
               >+</button>
             </div>
@@ -163,21 +175,12 @@ export default function SetRow({
         </div>
       )}
 
-      {/* 삭제 확인 */}
-      {showDeleteConfirm ? (
+      {/* 삭제 확인 (확인 모드일 때만 표시) */}
+      {showDeleteConfirm && (
         <div className="flex items-center gap-2 px-4 py-1.5 bg-danger/10 rounded-lg mx-1 mt-1">
           <span className="text-xs text-danger flex-1">이 세트를 삭제할까요?</span>
           <button onClick={() => setShowDeleteConfirm(false)} className="text-xs px-2 py-1 bg-surface-light rounded">취소</button>
           <button onClick={() => { onRemove(); setShowDeleteConfirm(false); }} className="text-xs px-2 py-1 bg-danger text-white rounded">삭제</button>
-        </div>
-      ) : (
-        <div className="flex justify-end px-3">
-          <button
-            onClick={() => setShowDeleteConfirm(true)}
-            className="text-[10px] text-text-secondary/40 hover:text-danger py-0.5 px-2"
-          >
-            세트 삭제
-          </button>
         </div>
       )}
     </div>
