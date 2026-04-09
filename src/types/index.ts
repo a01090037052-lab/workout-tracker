@@ -71,6 +71,13 @@ export interface InjuryLog {
   isResolved: boolean;
 }
 
+export interface BodyWeightLog {
+  id?: number;
+  date: string;
+  weight: number;
+  bodyFat?: number;
+}
+
 export interface UserSettings {
   key: string;
   value: string | number | boolean | number[];

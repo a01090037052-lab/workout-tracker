@@ -1,8 +1,78 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { getLocalDate, formatDateKr } from '../hooks/useLocalDate';
 import { useWorkoutContext } from '../hooks/WorkoutContext';
+
+function BodyWeightWidget() {
+  const today = getLocalDate();
+  const [inputWeight, setInputWeight] = useState('');
+  const [showInput, setShowInput] = useState(false);
+
+  const todayLog = useLiveQuery(() => db.bodyWeightLogs.where('date').equals(today).first());
+  const recentLogs = useLiveQuery(() => db.bodyWeightLogs.orderBy('date').reverse().limit(7).toArray());
+
+  const handleSave = async () => {
+    const w = Number(inputWeight);
+    if (w <= 0) return;
+    if (todayLog) {
+      await db.bodyWeightLogs.update(todayLog.id!, { weight: w });
+    } else {
+      await db.bodyWeightLogs.add({ date: today, weight: w });
+    }
+    setShowInput(false);
+    setInputWeight('');
+  };
+
+  const prevWeight = recentLogs && recentLogs.length >= 2 ? recentLogs.find((l) => l.date !== today)?.weight : null;
+  const diff = todayLog && prevWeight ? todayLog.weight - prevWeight : null;
+
+  return (
+    <section className="mb-4">
+      <div className="bg-surface rounded-xl p-4 border border-border">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold">체중</span>
+            {todayLog ? (
+              <div className="flex items-center gap-1.5">
+                <span className="text-lg font-bold font-mono">{todayLog.weight}kg</span>
+                {diff !== null && diff !== 0 && (
+                  <span className={`text-xs font-mono ${diff > 0 ? 'text-danger' : 'text-success'}`}>
+                    {diff > 0 ? '+' : ''}{diff.toFixed(1)}
+                  </span>
+                )}
+              </div>
+            ) : (
+              <span className="text-xs text-text-secondary">오늘 기록 없음</span>
+            )}
+          </div>
+          <button
+            onClick={() => { setShowInput(!showInput); setInputWeight(todayLog ? String(todayLog.weight) : ''); }}
+            className="text-xs px-3 py-1.5 bg-primary/10 text-primary-light rounded-lg"
+          >
+            {todayLog ? '수정' : '기록'}
+          </button>
+        </div>
+        {showInput && (
+          <div className="flex gap-2 mt-3">
+            <input
+              type="number"
+              inputMode="decimal"
+              value={inputWeight}
+              onChange={(e) => setInputWeight(e.target.value)}
+              placeholder="체중 (kg)"
+              className="flex-1 bg-surface-light rounded-lg px-3 py-2 text-text font-mono outline-none focus:ring-2 focus:ring-primary"
+            />
+            <button onClick={handleSave} className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium">
+              저장
+            </button>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
 
 function getStreak(dates: string[]): number {
   if (dates.length === 0) return 0;
@@ -169,6 +239,9 @@ export default function HomePage() {
           </div>
         </section>
       )}
+
+      {/* 체중 기록 */}
+      <BodyWeightWidget />
 
       {/* 오늘의 운동 */}
       <section className="mb-6">

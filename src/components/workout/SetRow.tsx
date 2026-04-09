@@ -48,19 +48,26 @@ export default function SetRow({
           ? 'bg-gradient-to-r from-primary/15 to-primary/5 border border-primary/20'
           : 'hover:bg-surface-light/50'
       }`}>
-        {/* 세트 번호 (길게 누르면 삭제) */}
+        {/* 세트 번호 + 타입 (탭: 타입 전환, 길게 누르기: 삭제) */}
         <button
+          onClick={() => {
+            const types: ('normal' | 'warmup' | 'dropset')[] = ['normal', 'warmup', 'dropset'];
+            const idx = types.indexOf(set.setType || 'normal');
+            onUpdate({ setType: types[(idx + 1) % types.length] });
+          }}
           onContextMenu={(e) => { e.preventDefault(); setShowDeleteConfirm(true); }}
           onTouchStart={() => {
             const t = setTimeout(() => setShowDeleteConfirm(true), 600);
             (window as any).__longPressTimer = t;
           }}
           onTouchEnd={() => clearTimeout((window as any).__longPressTimer)}
-          className={`text-sm w-7 text-center font-mono font-bold ${
-            set.isCompleted ? 'text-primary-light' : 'text-text-secondary'
+          className={`text-[10px] w-8 text-center font-mono font-bold rounded ${
+            set.setType === 'warmup' ? 'bg-yellow-500/20 text-yellow-400'
+            : set.setType === 'dropset' ? 'bg-purple-500/20 text-purple-400'
+            : set.isCompleted ? 'text-primary-light' : 'text-text-secondary'
           } ${showDeleteConfirm ? 'text-danger' : ''}`}
         >
-          {set.setNumber}
+          {set.setType === 'warmup' ? 'W' : set.setType === 'dropset' ? 'D' : set.setNumber}
         </button>
 
         {/* 이전 기록 */}

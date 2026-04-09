@@ -23,6 +23,7 @@ export default function SettingsPage() {
       routines: await db.routines.toArray(),
       personalRecords: await db.personalRecords.toArray(),
       injuryLogs: await db.injuryLogs.toArray(),
+      bodyWeightLogs: await db.bodyWeightLogs.toArray(),
       settings: { weightSuggestion: localStorage.getItem('weightSuggestion') || 'on' },
       exportDate: new Date().toISOString(),
     };
@@ -60,10 +61,12 @@ export default function SettingsPage() {
           routines: await db.routines.toArray(),
           personalRecords: await db.personalRecords.toArray(),
           injuryLogs: await db.injuryLogs.toArray(),
+          bodyWeightLogs: await db.bodyWeightLogs.toArray(),
         };
 
         try {
           await db.sessions.clear();
+          await db.bodyWeightLogs.clear();
           await db.routines.clear();
           await db.personalRecords.clear();
           await db.injuryLogs.clear();
@@ -74,6 +77,7 @@ export default function SettingsPage() {
           if (data.routines?.length) await db.routines.bulkAdd(data.routines);
           if (data.personalRecords?.length) await db.personalRecords.bulkAdd(data.personalRecords);
           if (data.injuryLogs?.length) await db.injuryLogs.bulkAdd(data.injuryLogs);
+          if (data.bodyWeightLogs?.length) await db.bodyWeightLogs.bulkAdd(data.bodyWeightLogs);
 
           // settings 복원
           if (data.settings?.weightSuggestion) {
@@ -93,6 +97,7 @@ export default function SettingsPage() {
           if (backup.routines.length) await db.routines.bulkAdd(backup.routines);
           if (backup.personalRecords.length) await db.personalRecords.bulkAdd(backup.personalRecords);
           if (backup.injuryLogs.length) await db.injuryLogs.bulkAdd(backup.injuryLogs);
+          if (backup.bodyWeightLogs.length) await db.bodyWeightLogs.bulkAdd(backup.bodyWeightLogs);
           showToast('복원 실패. 기존 데이터를 유지합니다.');
         }
       } catch {

@@ -234,8 +234,9 @@ export function useWorkout() {
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = null;
 
+    // 맨몸 운동은 weight 0 허용, 모든 완료 세트 저장
     const validExercises = exercises
-      .map((ex) => ({ ...ex, sets: ex.sets.filter((s) => s.isCompleted && s.weight > 0 && s.reps > 0) }))
+      .map((ex) => ({ ...ex, sets: ex.sets.filter((s) => s.isCompleted && s.reps > 0) }))
       .filter((ex) => ex.sets.length > 0);
 
     if (validExercises.length === 0) return null;
@@ -253,8 +254,10 @@ export function useWorkout() {
     const id = await db.sessions.add(session);
 
     for (const ex of validExercises) {
+      // PR 계산: 워밍업 제외, weight > 0인 일반/드롭세트만
       let bestSet: { weight: number; reps: number; estimated1RM: number } | null = null;
       for (const set of ex.sets) {
+        if (set.setType === 'warmup' || set.weight <= 0) continue;
         const estimated1RM = set.weight * (1 + set.reps / 30);
         if (!bestSet || estimated1RM > bestSet.estimated1RM) {
           bestSet = { weight: set.weight, reps: set.reps, estimated1RM };

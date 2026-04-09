@@ -76,9 +76,32 @@ function SessionDetail({ session, onClose }: { session: WorkoutSession; onClose:
           <button
             onClick={async () => {
               if (session.id) {
-                // 관련 PR도 삭제
+                // 삭제할 세션의 종목 ID 수집
+                const exerciseIds = session.exercises.map((e) => e.exerciseId);
+                // 세션과 관련 PR 삭제
                 await db.personalRecords.where('sessionId').equals(session.id).delete();
                 await db.sessions.delete(session.id);
+                // 해당 종목들의 PR 재계산
+                for (const exId of exerciseIds) {
+                  const remaining = await db.sessions.toArray();
+                  let best: { estimated1RM: number; maxWeight: number; maxReps: number; date: string; sessionId: number } | null = null;
+                  for (const s of remaining) {
+                    const ex = s.exercises.find((e) => e.exerciseId === exId);
+                    if (!ex) continue;
+                    for (const set of ex.sets) {
+                      if (!set.isCompleted || set.weight <= 0 || set.setType === 'warmup') continue;
+                      const est = set.weight * (1 + set.reps / 30);
+                      if (!best || est > best.estimated1RM) {
+                        best = { estimated1RM: est, maxWeight: set.weight, maxReps: set.reps, date: s.date, sessionId: s.id! };
+                      }
+                    }
+                  }
+                  // 기존 PR 전부 삭제 후 best만 추가
+                  await db.personalRecords.where('exerciseId').equals(exId).delete();
+                  if (best) {
+                    await db.personalRecords.add({ exerciseId: exId, ...best });
+                  }
+                }
                 onClose();
               }
             }}

@@ -3,6 +3,17 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
 import type { MuscleGroup, EquipmentType } from '../../types';
 
+// 근육군 → 부상 부위 매핑
+const muscleToInjuryParts: Record<MuscleGroup, string[]> = {
+  '가슴': ['가슴', '어깨'],
+  '등': ['등', '허리'],
+  '어깨': ['어깨', '목'],
+  '이두': ['팔꿈치', '손목'],
+  '삼두': ['팔꿈치', '손목'],
+  '하체': ['무릎', '발목', '고관절', '허리'],
+  '코어': ['허리'],
+};
+
 const muscleGroups: MuscleGroup[] = ['가슴', '등', '어깨', '이두', '삼두', '하체', '코어'];
 const equipmentTypes: EquipmentType[] = ['바벨', '덤벨', '머신', '케이블', '맨몸'];
 
@@ -22,6 +33,19 @@ export default function ExercisePicker({ onSelect, onClose }: Props) {
   const [selectedEquip, setSelectedEquip] = useState<EquipmentType | null>(null);
 
   const exercises = useLiveQuery(() => db.exercises.toArray(), []);
+
+  // 미해결 부상 조회
+  const activeInjuries = useLiveQuery(() =>
+    db.injuryLogs.where('isResolved').equals(0).toArray()
+  );
+
+  const getInjuryWarning = (muscleGroup: MuscleGroup): string | null => {
+    if (!activeInjuries || activeInjuries.length === 0) return null;
+    const relatedParts = muscleToInjuryParts[muscleGroup] || [];
+    const found = activeInjuries.find((inj) => relatedParts.includes(inj.bodyPart));
+    if (found) return `⚠️ ${found.bodyPart} 통증 기록 있음 (${found.severity === 'severe' ? '심함' : found.severity === 'moderate' ? '보통' : '가벼움'})`;
+    return null;
+  };
 
   const filtered = exercises?.filter((ex) => {
     if (selectedGroup && ex.muscleGroup !== selectedGroup) return false;
@@ -158,6 +182,7 @@ export default function ExercisePicker({ onSelect, onClose }: Props) {
                     description={ex.description}
                     guide={ex.guide}
                     tips={ex.tips}
+                    injuryWarning={getInjuryWarning(ex.muscleGroup)}
                     onSelect={() => { onSelect(ex.id!); onClose(); }}
                   />
                 ))}
@@ -171,6 +196,9 @@ export default function ExercisePicker({ onSelect, onClose }: Props) {
                 name={ex.name}
                 equipmentType={ex.equipmentType}
                 description={ex.description}
+                guide={ex.guide}
+                tips={ex.tips}
+                injuryWarning={getInjuryWarning(ex.muscleGroup)}
                 onSelect={() => { onSelect(ex.id!); onClose(); }}
               />
             ))
@@ -193,12 +221,13 @@ export default function ExercisePicker({ onSelect, onClose }: Props) {
   );
 }
 
-function ExerciseItem({ name, equipmentType, description, guide, tips, onSelect }: {
+function ExerciseItem({ name, equipmentType, description, guide, tips, injuryWarning, onSelect }: {
   name: string;
   equipmentType: string;
   description: string;
   guide?: string;
   tips?: string;
+  injuryWarning?: string | null;
   onSelect: () => void;
 }) {
   const [showDetail, setShowDetail] = useState(false);
@@ -218,6 +247,9 @@ function ExerciseItem({ name, equipmentType, description, guide, tips, onSelect 
           </div>
           {description && (
             <div className="text-[11px] text-text-secondary mt-0.5 line-clamp-1">{description}</div>
+          )}
+          {injuryWarning && (
+            <div className="text-[10px] text-warning mt-0.5">{injuryWarning}</div>
           )}
         </button>
         {(guide || tips) && (

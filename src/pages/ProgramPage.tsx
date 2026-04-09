@@ -421,10 +421,33 @@ export default function ProgramPage() {
             </div>
           )}
 
+          {/* 다음 사이클 (TM 자동 증량) */}
+          <button
+            onClick={() => {
+              const upperExercises = ['벤치프레스', '오버헤드 프레스', '덤벨 숄더 프레스', '덤벨 벤치프레스'];
+              const newMaxes: Record<string, number> = {};
+              for (const exName of selectedProgram.exercises) {
+                const current = progress.oneRepMaxes[exName] || 0;
+                const increment = upperExercises.includes(exName) ? 2.5 : 5;
+                newMaxes[exName] = current > 0 ? current + increment : current;
+              }
+              const newProgress: ProgramProgress = {
+                ...progress,
+                currentWeek: 1,
+                oneRepMaxes: newMaxes,
+                startOneRepMaxes: { ...newMaxes },
+                completedDays: [],
+              };
+              setProgress(newProgress);
+              saveProgress(newProgress);
+            }}
+            className="w-full px-4 py-3 bg-success text-white rounded-xl text-sm font-semibold mb-2"
+          >🔄 다음 사이클 시작 (상체 +2.5 / 하체 +5kg)</button>
+
           <button
             onClick={() => { setActiveId(null); setSelectedProgram(null); }}
-            className="w-full px-4 py-3 bg-primary text-white rounded-xl text-sm font-semibold"
-          >다음 프로그램 선택하기</button>
+            className="w-full px-4 py-3 bg-surface text-text-secondary rounded-xl text-sm font-semibold"
+          >다른 프로그램 선택하기</button>
         </div>
       )}
     </div>

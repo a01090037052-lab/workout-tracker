@@ -8,8 +8,8 @@ export function usePreviousRecord(exerciseId: number): WorkoutSet[] | undefined 
     const sessions = await db.sessions.orderBy('date').reverse().limit(30).toArray();
     for (const session of sessions) {
       const exercise = session.exercises.find((e) => e.exerciseId === exerciseId);
-      if (exercise && exercise.sets.some((s) => s.isCompleted)) {
-        return exercise.sets.filter((s) => s.isCompleted);
+      if (exercise && exercise.sets.some((s) => s.isCompleted && s.setType !== 'warmup')) {
+        return exercise.sets.filter((s) => s.isCompleted && s.setType !== 'warmup');
       }
     }
     return undefined;
