@@ -228,7 +228,7 @@ export default function WorkoutPage() {
           onAddSet={() => workout.addSet(ex.exerciseId)}
           onRemoveSet={(i) => workout.removeSet(ex.exerciseId, i)}
           onUpdateSet={(i, updates) => workout.updateSet(ex.exerciseId, i, updates)}
-          onCompleteSet={(i) => workout.completeSet(ex.exerciseId, i)}
+          onCompleteSet={(i, isBw) => workout.completeSet(ex.exerciseId, i, isBw)}
           onRemoveExercise={() => workout.removeExercise(ex.exerciseId)}
           onMoveExercise={(dir) => workout.moveExercise(index, dir)}
           onSetCompleted={() => setShowRestTimer(true)}

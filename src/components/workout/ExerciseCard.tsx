@@ -32,7 +32,7 @@ interface Props {
   onAddSet: () => void;
   onRemoveSet: (setIndex: number) => void;
   onUpdateSet: (setIndex: number, updates: Partial<WorkoutSet>) => void;
-  onCompleteSet: (setIndex: number) => void;
+  onCompleteSet: (setIndex: number, isBodyweight?: boolean) => void;
   onRemoveExercise: () => void;
   onMoveExercise: (direction: 'up' | 'down') => void;
   onSetCompleted?: () => void;
@@ -59,8 +59,9 @@ export default function ExerciseCard({
 
   const handleComplete = (setIndex: number) => {
     const set = exercise.sets[setIndex];
-    if (!set.isCompleted && set.weight > 0 && set.reps > 0) onSetCompleted?.();
-    onCompleteSet(setIndex);
+    const canComplete = isBodyweight ? set.reps > 0 : (set.weight > 0 && set.reps > 0);
+    if (!set.isCompleted && canComplete) onSetCompleted?.();
+    onCompleteSet(setIndex, isBodyweight);
   };
 
   if (!exerciseInfo) return null;
@@ -69,6 +70,7 @@ export default function ExerciseCard({
   const totalSets = exercise.sets.length;
   const colorClass = muscleColors[exerciseInfo.muscleGroup] || 'from-surface to-surface-light border-border';
   const dotClass = muscleDots[exerciseInfo.muscleGroup] || 'bg-text-secondary';
+  const isBodyweight = exerciseInfo.equipmentType === '맨몸';
 
   // 워밍업 제안 조건: 바벨 운동이고, 첫 세트에 무게가 입력된 경우
   const firstSetWeight = exercise.sets[0]?.weight || 0;
@@ -138,7 +140,11 @@ export default function ExerciseCard({
       <div className="flex items-center gap-2 px-3 mb-1 text-[10px] text-text-secondary uppercase tracking-wider font-medium">
         <span className="w-7 text-center">세트</span>
         <span className="w-16 text-center">이전</span>
-        <span className="flex-1 min-w-[80px] text-center">무게</span>
+        {!isBodyweight ? (
+          <span className="flex-1 min-w-[80px] text-center">무게</span>
+        ) : (
+          <span className="flex-1 min-w-[60px] text-center">+무게</span>
+        )}
         <span className="flex-1 min-w-[70px] text-center">횟수</span>
         <span className="w-11"></span>
       </div>
@@ -154,6 +160,7 @@ export default function ExerciseCard({
           estimated1RM={estimated1RM}
           trainingGoal={trainingGoal}
           condition={condition}
+          isBodyweight={isBodyweight}
           onUpdate={(updates) => onUpdateSet(i, updates)}
           onComplete={() => handleComplete(i)}
           onRemove={() => onRemoveSet(i)}

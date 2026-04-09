@@ -196,7 +196,7 @@ export function useWorkout() {
     }
   }, []);
 
-  const completeSet = useCallback((exerciseId: number, setIndex: number) => {
+  const completeSet = useCallback((exerciseId: number, setIndex: number, isBodyweight: boolean = false) => {
     let shouldCheckPR = false;
     let prWeight = 0, prReps = 0;
 
@@ -206,7 +206,11 @@ export function useWorkout() {
       if (!set) return prev;
 
       const togglingToComplete = !set.isCompleted;
-      if (togglingToComplete && (set.weight <= 0 || set.reps <= 0)) return prev;
+      // 맨몸 운동은 횟수만 있으면 완료 가능, 일반 운동은 무게+횟수 필요
+      if (togglingToComplete) {
+        if (isBodyweight && set.reps <= 0) return prev;
+        if (!isBodyweight && (set.weight <= 0 || set.reps <= 0)) return prev;
+      }
 
       if (togglingToComplete) {
         shouldCheckPR = true;

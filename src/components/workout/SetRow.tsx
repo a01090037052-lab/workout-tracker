@@ -10,6 +10,7 @@ interface Props {
   estimated1RM?: number;
   trainingGoal?: TrainingGoal;
   condition?: Condition;
+  isBodyweight?: boolean;
   onUpdate: (updates: Partial<WorkoutSet>) => void;
   onComplete: () => void;
   onRemove: () => void;
@@ -17,7 +18,7 @@ interface Props {
 
 export default function SetRow({
   set, setIndex, currentSets, previousSessionSets,
-  estimated1RM, trainingGoal, condition,
+  estimated1RM, trainingGoal, condition, isBodyweight,
   onUpdate, onComplete, onRemove,
 }: Props) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -52,36 +53,59 @@ export default function SetRow({
 
         {/* 이전 기록 */}
         <div className="w-16 text-xs text-text-secondary text-center font-mono">
-          {previousSet ? `${previousSet.weight}×${previousSet.reps}` : '-'}
+          {previousSet
+            ? isBodyweight
+              ? `${previousSet.reps}회`
+              : `${previousSet.weight}×${previousSet.reps}`
+            : '-'}
         </div>
 
-        {/* 무게 입력 + 스텝 버튼 */}
-        <div className="flex-1 min-w-[80px]">
-          <div className="flex items-center gap-0.5">
-            <button
-              onClick={() => onUpdate({ weight: Math.max(0, (set.weight || 0) - 2.5) })}
-              className="w-7 h-10 rounded-l-xl bg-surface-light text-text-secondary text-xs active:bg-border"
-            >-</button>
-            <div className="relative flex-1">
+        {/* 무게 입력 (맨몸이 아닐 때) / 추가 무게 (맨몸일 때) */}
+        {!isBodyweight ? (
+          <div className="flex-1 min-w-[80px]">
+            <div className="flex items-center gap-0.5">
+              <button
+                onClick={() => onUpdate({ weight: Math.max(0, (set.weight || 0) - 2.5) })}
+                className="w-7 h-10 rounded-l-xl bg-surface-light text-text-secondary text-xs active:bg-border"
+              >-</button>
+              <div className="relative flex-1">
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  value={set.weight || ''}
+                  onChange={(e) => onUpdate({ weight: Math.max(0, Number(e.target.value)) })}
+                  min="0" max="999"
+                  placeholder={hasSuggestion ? `${suggestion.weight}` : '0'}
+                  className={`w-full py-2.5 text-center text-base font-mono font-semibold outline-none transition-all ${
+                    set.isCompleted ? 'bg-primary/10 text-primary-light' : 'bg-surface-light focus:ring-2 focus:ring-primary focus:bg-surface'
+                  }`}
+                />
+                <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[9px] text-text-secondary">kg</span>
+              </div>
+              <button
+                onClick={() => onUpdate({ weight: Math.min(999, (set.weight || 0) + 2.5) })}
+                className="w-7 h-10 rounded-r-xl bg-surface-light text-text-secondary text-xs active:bg-border"
+              >+</button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex-1 min-w-[60px]">
+            <div className="relative">
               <input
                 type="number"
                 inputMode="decimal"
                 value={set.weight || ''}
                 onChange={(e) => onUpdate({ weight: Math.max(0, Number(e.target.value)) })}
                 min="0" max="999"
-                placeholder={hasSuggestion ? `${suggestion.weight}` : '0'}
-                className={`w-full py-2.5 text-center text-base font-mono font-semibold outline-none transition-all ${
+                placeholder="0"
+                className={`w-full rounded-xl py-2.5 text-center text-sm font-mono outline-none transition-all ${
                   set.isCompleted ? 'bg-primary/10 text-primary-light' : 'bg-surface-light focus:ring-2 focus:ring-primary focus:bg-surface'
                 }`}
               />
-              <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[9px] text-text-secondary">kg</span>
+              <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[8px] text-text-secondary">+kg</span>
             </div>
-            <button
-              onClick={() => onUpdate({ weight: Math.min(999, (set.weight || 0) + 2.5) })}
-              className="w-7 h-10 rounded-r-xl bg-surface-light text-text-secondary text-xs active:bg-border"
-            >+</button>
           </div>
-        </div>
+        )}
 
         {/* 횟수 입력 */}
         <div className="relative flex-1 min-w-[70px]">
