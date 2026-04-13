@@ -428,7 +428,7 @@ export default function ProgramPage() {
               const newMaxes: Record<string, number> = {};
               for (const exName of selectedProgram.exercises) {
                 const current = progress.oneRepMaxes[exName] || 0;
-                const increment = upperExercises.includes(exName) ? 2.5 : 5;
+                const increment = upperExercises.includes(exName) ? 5 : 10;
                 newMaxes[exName] = current > 0 ? current + increment : current;
               }
               const newProgress: ProgramProgress = {
@@ -442,7 +442,7 @@ export default function ProgramPage() {
               saveProgress(newProgress);
             }}
             className="w-full px-4 py-3 bg-success text-white rounded-xl text-sm font-semibold mb-2"
-          >🔄 다음 사이클 시작 (상체 +2.5 / 하체 +5kg)</button>
+          >🔄 다음 사이클 시작 (상체 +5 / 하체 +10kg)</button>
 
           <button
             onClick={() => { setActiveId(null); setSelectedProgram(null); }}

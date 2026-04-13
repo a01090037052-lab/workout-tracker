@@ -26,7 +26,7 @@ export interface ExercisePlan {
 }
 
 function roundToPlate(weight: number): number {
-  return Math.round(weight / 2.5) * 2.5;
+  return Math.round(weight / 5) * 5; // 바벨 최소 증량 5kg (5kg 원판 × 양쪽)
 }
 
 // 5/3/1 (웬들러)
@@ -34,7 +34,7 @@ const wendler531: ProgramTemplate = {
   id: '531',
   name: '5/3/1 (웬들러)',
   description: '4주 주기. 주요 복합운동의 점진적 과부하 프로그램. TM(Training Max) = 1RM의 90%',
-  guide: '【원리】 Training Max(TM = 1RM의 90%)를 기준으로 매주 다른 반복 구성으로 훈련합니다.\n【진행법】 Week1: 5/5/5+ | Week2: 3/3/3+ | Week3: 5/3/1+ | Week4: 디로드(40~60%)\n마지막 세트(+)는 가능한 많이 반복(AMRAP)합니다.\n【증량】 4주 사이클 완료 후 상체 +2.5kg, 하체 +5kg으로 TM을 올립니다.\n【주의】 TM은 실제 1RM이 아닌 90%입니다. 욕심내서 올리면 프로그램이 무너집니다.',
+  guide: '【원리】 Training Max(TM = 1RM의 90%)를 기준으로 매주 다른 반복 구성으로 훈련합니다.\n【진행법】 Week1: 5/5/5+ | Week2: 3/3/3+ | Week3: 5/3/1+ | Week4: 디로드(40~60%)\n마지막 세트(+)는 가능한 많이 반복(AMRAP)합니다.\n【증량】 4주 사이클 완료 후 상체 +5kg, 하체 +5kg으로 TM을 올립니다.\n【주의】 TM은 실제 1RM이 아닌 90%입니다. 욕심내서 올리면 프로그램이 무너집니다.',
   type: 'strength',
   daysPerWeek: 4,
   durationWeeks: 4,
@@ -74,8 +74,8 @@ const wendler531: ProgramTemplate = {
 const linearProgression: ProgramTemplate = {
   id: 'linear',
   name: '리니어 프로그레션',
-  description: '매주 2.5kg씩 증량. 초보자에게 가장 효과적인 프로그램',
-  guide: '【원리】 매주 일정하게 무게를 올리는 선형 진행(Linear Progression) 방식입니다.\n【진행법】 Day A(스쿼트/벤치/로우)와 Day B(스쿼트/OHP/데드)를 번갈아 수행합니다.\n모든 종목 5×5 (데드리프트만 1×5). 주 3일 격일 훈련.\n【증량】 매주 모든 종목에 +2.5kg. 실패 시 10% 디로드 후 재시작.\n【대상】 운동 경력 0~6개월 초보자. 근력 기초를 다지는 데 최적.',
+  description: '매주 5kg씩 증량. 초보자에게 가장 효과적인 프로그램',
+  guide: '【원리】 매주 일정하게 무게를 올리는 선형 진행(Linear Progression) 방식입니다.\n【진행법】 Day A(스쿼트/벤치/로우)와 Day B(스쿼트/OHP/데드)를 번갈아 수행합니다.\n모든 종목 5×5 (데드리프트만 1×5). 주 3일 격일 훈련.\n【증량】 매주 모든 종목에 +5kg. 실패 시 10% 디로드 후 재시작.\n【대상】 운동 경력 0~6개월 초보자. 근력 기초를 다지는 데 최적.',
   type: 'strength',
   daysPerWeek: 3,
   durationWeeks: 12,
@@ -88,7 +88,7 @@ const linearProgression: ProgramTemplate = {
         exercises: [exercises[0], exercises[1], exercises[4]].map((exName) => {
           const orm = oneRepMaxes[exName] || 0;
           const baseWeight = orm > 0 ? roundToPlate(orm * 0.7) : 0;
-          const weekWeight = baseWeight > 0 ? Math.min(roundToPlate(baseWeight + (week - 1) * 2.5), roundToPlate(orm * 0.95)) : 0;
+          const weekWeight = baseWeight > 0 ? Math.min(roundToPlate(baseWeight + (week - 1) * 5), roundToPlate(orm * 0.95)) : 0;
           return {
             exerciseName: exName,
             sets: Array.from({ length: 5 }, () => ({
@@ -104,7 +104,7 @@ const linearProgression: ProgramTemplate = {
         exercises: [exercises[0], exercises[3], exercises[2]].map((exName) => {
           const orm = oneRepMaxes[exName] || 0;
           const baseWeight = orm > 0 ? roundToPlate(orm * 0.7) : 0;
-          const weekWeight = baseWeight > 0 ? Math.min(roundToPlate(baseWeight + (week - 1) * 2.5), roundToPlate(orm * 0.95)) : 0;
+          const weekWeight = baseWeight > 0 ? Math.min(roundToPlate(baseWeight + (week - 1) * 5), roundToPlate(orm * 0.95)) : 0;
           return {
             exerciseName: exName,
             sets: Array.from({ length: exName === exercises[2] ? 1 : 5 }, () => ({
@@ -179,8 +179,8 @@ const pplHypertrophy: ProgramTemplate = {
 const strongLifts5x5: ProgramTemplate = {
   id: 'sl5x5',
   name: 'StrongLifts 5×5',
-  description: '주 3일 A/B 교대. 매 운동마다 +2.5kg 증량. 초보자 스트렝스의 정석',
-  guide: '【원리】 Mehdi의 미니멀 프로그램. A/B 두 루틴을 격일 교대로 수행합니다.\n【진행법】 A: 스쿼트/벤치/로우 5×5 | B: 스쿼트/OHP/데드 5×5(데드 1×5)\n스쿼트는 매 세션 실시. 매 세션 성공 시 +2.5kg.\n【핵심】 5회 5세트를 전부 성공해야 다음에 증량. 실패 시 같은 무게 재시도.\n3회 연속 실패 시 10% 디로드.\n【대상】 완전 초보자. 3~6개월 간 빠른 근력 성장 가능.',
+  description: '주 3일 A/B 교대. 매 운동마다 +5kg 증량. 초보자 스트렝스의 정석',
+  guide: '【원리】 Mehdi의 미니멀 프로그램. A/B 두 루틴을 격일 교대로 수행합니다.\n【진행법】 A: 스쿼트/벤치/로우 5×5 | B: 스쿼트/OHP/데드 5×5(데드 1×5)\n스쿼트는 매 세션 실시. 매 세션 성공 시 +5kg.\n【핵심】 5회 5세트를 전부 성공해야 다음에 증량. 실패 시 같은 무게 재시도.\n3회 연속 실패 시 10% 디로드.\n【대상】 완전 초보자. 3~6개월 간 빠른 근력 성장 가능.',
   type: 'strength',
   daysPerWeek: 3,
   durationWeeks: 12,
@@ -190,7 +190,7 @@ const strongLifts5x5: ProgramTemplate = {
     function calc(exName: string, session: number) {
       const orm = oneRepMaxes[exName] || 0;
       const base = orm > 0 ? roundToPlate(orm * 0.5) : 0;
-      const w = base > 0 ? Math.min(roundToPlate(base + session * 2.5), roundToPlate(orm * 0.95)) : 0;
+      const w = base > 0 ? Math.min(roundToPlate(base + session * 5), roundToPlate(orm * 0.95)) : 0;
       return { exerciseName: exName, sets: Array.from({ length: exName === ex[4] ? 1 : 5 }, () => ({
         percentage: orm > 0 ? Math.round((w / orm) * 100) : 0, reps: 5, weight: w || undefined,
       }))};
@@ -210,7 +210,7 @@ const phul: ProgramTemplate = {
   id: 'phul',
   name: 'PHUL (Power Hypertrophy)',
   description: '주 4일. 파워 2일 + 근비대 2일. 근력과 근비대를 동시에 추구하는 중급자 프로그램',
-  guide: '【원리】 Power(고중량 저반복)와 Hypertrophy(중중량 고반복)를 한 주에 모두 수행합니다.\n【진행법】 월: 상체 파워(5회) | 화: 하체 파워(5회) | 목: 상체 근비대(10~12회) | 금: 하체 근비대(10~12회)\n【증량】 파워 Day에서 목표 반복 달성 시 +2.5kg. 근비대 Day는 주차별 자동 강도 증가.\n【대상】 근력+근비대 둘 다 원하는 중급자. 최소 6개월 이상 경력 권장.',
+  guide: '【원리】 Power(고중량 저반복)와 Hypertrophy(중중량 고반복)를 한 주에 모두 수행합니다.\n【진행법】 월: 상체 파워(5회) | 화: 하체 파워(5회) | 목: 상체 근비대(10~12회) | 금: 하체 근비대(10~12회)\n【증량】 파워 Day에서 목표 반복 달성 시 +5kg. 근비대 Day는 주차별 자동 강도 증가.\n【대상】 근력+근비대 둘 다 원하는 중급자. 최소 6개월 이상 경력 권장.',
   type: 'hypertrophy',
   daysPerWeek: 4,
   durationWeeks: 8,
@@ -285,7 +285,7 @@ const nsuns: ProgramTemplate = {
   id: 'nsuns',
   name: 'nSuns 5/3/1 LP',
   description: '주 4일. 웬들러 5/3/1 변형. 매주 증량하는 공격적인 중급자 스트렝스 프로그램',
-  guide: '【원리】 5/3/1을 기반으로 T1(메인 9세트)과 T2(보조 8세트)로 높은 볼륨을 소화합니다.\n【진행법】 월: 벤치+OHP보조 | 화: 스쿼트+데드보조 | 목: OHP+벤치보조 | 금: 데드+스쿼트보조\nT1은 75→95%까지 올렸다가 내려오는 역피라미드. T2는 50~65%로 볼륨 채우기.\n【증량】 매주 TM +2.5kg (매우 공격적). 실패 시 TM 5% 하향.\n【대상】 5/3/1이 너무 느린 중급자. 빠른 근력 향상을 원하는 사람.',
+  guide: '【원리】 5/3/1을 기반으로 T1(메인 9세트)과 T2(보조 8세트)로 높은 볼륨을 소화합니다.\n【진행법】 월: 벤치+OHP보조 | 화: 스쿼트+데드보조 | 목: OHP+벤치보조 | 금: 데드+스쿼트보조\nT1은 75→95%까지 올렸다가 내려오는 역피라미드. T2는 50~65%로 볼륨 채우기.\n【증량】 매주 TM +5kg (매우 공격적). 실패 시 TM 5% 하향.\n【대상】 5/3/1이 너무 느린 중급자. 빠른 근력 향상을 원하는 사람.',
   type: 'strength',
   daysPerWeek: 4,
   durationWeeks: 6,
@@ -295,7 +295,7 @@ const nsuns: ProgramTemplate = {
     // nSuns T1: 메인 리프트 8~9세트, 주차별 TM 증가
     function t1Sets(exName: string, weekNum: number) {
       const orm = oneRepMaxes[exName] || 0;
-      const tm = orm > 0 ? roundToPlate(orm * 0.9 + (weekNum - 1) * 2.5) : 0;
+      const tm = orm > 0 ? roundToPlate(orm * 0.9 + (weekNum - 1) * 5) : 0;
       const scheme = [
         { pct: 0.75, reps: 5 }, { pct: 0.85, reps: 3 }, { pct: 0.95, reps: 1 },
         { pct: 0.90, reps: 3 }, { pct: 0.85, reps: 3 }, { pct: 0.80, reps: 3 },
@@ -310,7 +310,7 @@ const nsuns: ProgramTemplate = {
     // T2: 보조 리프트 8세트
     function t2Sets(exName: string, weekNum: number) {
       const orm = oneRepMaxes[exName] || 0;
-      const tm = orm > 0 ? roundToPlate(orm * 0.9 + (weekNum - 1) * 2.5) : 0;
+      const tm = orm > 0 ? roundToPlate(orm * 0.9 + (weekNum - 1) * 5) : 0;
       return { exerciseName: `${exName} (보조)`, sets: Array.from({ length: 8 }, (_, i) => {
         const pct = 0.50 + i * 0.025;
         return {
@@ -327,7 +327,7 @@ const nsuns: ProgramTemplate = {
       { label: 'OHP + 보조 벤치 (목)', exercises: [t1Sets(ex[1], week), t2Sets(ex[0], week)] },
       { label: '데드 + 보조 스쿼트 (금)', exercises: [t1Sets(ex[3], week), t2Sets(ex[2], week)] },
     ];
-    return { label: `Week ${week} (TM +${(week-1)*2.5}kg)`, days };
+    return { label: `Week ${week} (TM +${(week-1)*5}kg)`, days };
   },
 };
 
@@ -336,25 +336,25 @@ const gzclp: ProgramTemplate = {
   id: 'gzclp',
   name: 'GZCLP',
   description: '주 3~4일. 3단계 피라미드(T1/T2/T3). 체계적인 초중급 스트렝스 프로그램',
-  guide: '【원리】 Cody Lefever의 3단계 시스템. T1(고중량 3회), T2(중중량 10회), T3(저중량 고반복 보조).\n【진행법】 Day1: 스쿼트T1+벤치T2 | Day2: OHPT1+데드T2 | Day3: 벤치T1+스쿼트T2\nT1은 5×3(마지막 AMRAP), T2는 3×10. 매주 +2.5kg.\n【실패 시】 T1 실패: 6×2로 전환 → 10×1로 전환 → 리셋. T2도 유사.\n【대상】 StrongLifts/SS 이후 초중급자. 명확한 진행 규칙이 장점.',
+  guide: '【원리】 Cody Lefever의 3단계 시스템. T1(고중량 3회), T2(중중량 10회), T3(저중량 고반복 보조).\n【진행법】 Day1: 스쿼트T1+벤치T2 | Day2: OHPT1+데드T2 | Day3: 벤치T1+스쿼트T2\nT1은 5×3(마지막 AMRAP), T2는 3×10. 매주 +5kg.\n【실패 시】 T1 실패: 6×2로 전환 → 10×1로 전환 → 리셋. T2도 유사.\n【대상】 StrongLifts/SS 이후 초중급자. 명확한 진행 규칙이 장점.',
   type: 'strength',
   daysPerWeek: 3,
   durationWeeks: 8,
   exercises: ['스쿼트', '벤치프레스', '데드리프트', '오버헤드 프레스'],
   getWeekPlan(week: number, oneRepMaxes: Record<string, number>): WeekPlan {
     const ex = this.exercises;
-    // T1: 5x3+ (고중량, 저반복) → 매주 +2.5kg
+    // T1: 5x3+ (고중량, 저반복) → 매주 +5kg
     function t1(exName: string) {
       const orm = oneRepMaxes[exName] || 0;
-      const w = orm > 0 ? roundToPlate(orm * 0.85 + (week - 1) * 2.5) : 0;
+      const w = orm > 0 ? roundToPlate(orm * 0.85 + (week - 1) * 5) : 0;
       return { exerciseName: `${exName} (T1)`, sets: Array.from({ length: 5 }, () => ({
         percentage: orm > 0 ? Math.round((w / orm) * 100) : 0, reps: 3, weight: w || undefined,
       }))};
     }
-    // T2: 3x10 (중중량, 중반복) → 매주 +2.5kg
+    // T2: 3x10 (중중량, 중반복) → 매주 +5kg
     function t2(exName: string) {
       const orm = oneRepMaxes[exName] || 0;
-      const w = orm > 0 ? roundToPlate(orm * 0.65 + (week - 1) * 2.5) : 0;
+      const w = orm > 0 ? roundToPlate(orm * 0.65 + (week - 1) * 5) : 0;
       return { exerciseName: `${exName} (T2)`, sets: Array.from({ length: 3 }, () => ({
         percentage: orm > 0 ? Math.round((w / orm) * 100) : 0, reps: 10, weight: w || undefined,
       }))};
@@ -463,8 +463,8 @@ const phat: ProgramTemplate = {
 const startingStrength: ProgramTemplate = {
   id: 'ss',
   name: 'Starting Strength',
-  description: '주 3일 A/B 교대. Mark Rippetoe의 초보자 스트렝스 프로그램. 매 세션 +2.5kg',
-  guide: '【원리】 Mark Rippetoe의 바이블. 스쿼트/벤치/데드/OHP/로우 5가지 복합운동에만 집중합니다.\n【진행법】 A: 스쿼트3×5/벤치3×5/데드1×5 | B: 스쿼트3×5/OHP3×5/로우3×5\nA-B-A / B-A-B 교대. 스쿼트는 매 세션 실시.\n【증량】 매 세션 성공 시 +2.5kg. 데드리프트는 +5kg 가능.\n【핵심】 보조 운동 없이 복합 운동만. "강해지려면 무거운 걸 들어라"가 철학.\n【대상】 완전 초보자. 빈 바부터 시작해도 3개월 후 눈에 띄는 변화.',
+  description: '주 3일 A/B 교대. Mark Rippetoe의 초보자 스트렝스 프로그램. 매 세션 +5kg',
+  guide: '【원리】 Mark Rippetoe의 바이블. 스쿼트/벤치/데드/OHP/로우 5가지 복합운동에만 집중합니다.\n【진행법】 A: 스쿼트3×5/벤치3×5/데드1×5 | B: 스쿼트3×5/OHP3×5/로우3×5\nA-B-A / B-A-B 교대. 스쿼트는 매 세션 실시.\n【증량】 매 세션 성공 시 +5kg. 데드리프트는 +5kg 가능.\n【핵심】 보조 운동 없이 복합 운동만. "강해지려면 무거운 걸 들어라"가 철학.\n【대상】 완전 초보자. 빈 바부터 시작해도 3개월 후 눈에 띄는 변화.',
   type: 'strength',
   daysPerWeek: 3,
   durationWeeks: 12,
@@ -474,7 +474,7 @@ const startingStrength: ProgramTemplate = {
     function calc(exName: string, session: number, sets: number, reps: number) {
       const orm = oneRepMaxes[exName] || 0;
       const base = orm > 0 ? roundToPlate(orm * 0.55) : 0;
-      const w = base > 0 ? Math.min(roundToPlate(base + session * 2.5), roundToPlate(orm * 0.95)) : 0;
+      const w = base > 0 ? Math.min(roundToPlate(base + session * 5), roundToPlate(orm * 0.95)) : 0;
       return { exerciseName: exName, sets: Array.from({ length: sets }, () => ({
         percentage: orm > 0 ? Math.round((w / orm) * 100) : 0, reps, weight: w || undefined,
       }))};
@@ -504,7 +504,7 @@ const greyskulllp: ProgramTemplate = {
   id: 'gslp',
   name: 'Greyskull LP',
   description: '주 3일. Starting Strength 개선판. 마지막 세트 AMRAP으로 자연적 과부하. 초보자 추천',
-  guide: '【원리】 SS를 개선한 프로그램. 핵심 차이점: 마지막 세트를 AMRAP(최대 반복)으로 실시합니다.\n【진행법】 A: 벤치2×5+1×5+(AMRAP)/스쿼트2×5+1×5+ | B: OHP2×5+1×5+/데드1×5+\nA-B-A / B-A-B 교대.\n【증량】 벤치/OHP: +2.5kg/세션. 스쿼트/데드: +2.5kg/세션.\nAMRAP에서 10회 이상 달성 시 2배 증량 가능!\n【장점】 SS보다 유연하고, AMRAP이 자연스러운 오토레귤레이션 역할.\n【대상】 초보자. SS보다 약간 더 재미있고 유연한 프로그램을 원할 때.',
+  guide: '【원리】 SS를 개선한 프로그램. 핵심 차이점: 마지막 세트를 AMRAP(최대 반복)으로 실시합니다.\n【진행법】 A: 벤치2×5+1×5+(AMRAP)/스쿼트2×5+1×5+ | B: OHP2×5+1×5+/데드1×5+\nA-B-A / B-A-B 교대.\n【증량】 벤치/OHP: +5kg/세션. 스쿼트/데드: +5kg/세션.\nAMRAP에서 10회 이상 달성 시 2배 증량 가능!\n【장점】 SS보다 유연하고, AMRAP이 자연스러운 오토레귤레이션 역할.\n【대상】 초보자. SS보다 약간 더 재미있고 유연한 프로그램을 원할 때.',
   type: 'strength',
   daysPerWeek: 3,
   durationWeeks: 12,
@@ -514,7 +514,7 @@ const greyskulllp: ProgramTemplate = {
     function calc(exName: string, session: number, sets: number, reps: number, amrap: boolean = false) {
       const orm = oneRepMaxes[exName] || 0;
       const base = orm > 0 ? roundToPlate(orm * 0.6) : 0;
-      const w = base > 0 ? Math.min(roundToPlate(base + session * 2.5), roundToPlate(orm * 0.95)) : 0;
+      const w = base > 0 ? Math.min(roundToPlate(base + session * 5), roundToPlate(orm * 0.95)) : 0;
       return { exerciseName: exName + (amrap ? ' (AMRAP)' : ''), sets: Array.from({ length: sets }, (_, i) => ({
         percentage: orm > 0 ? Math.round((w / orm) * 100) : 0,
         reps: (amrap && i === sets - 1) ? reps : reps, // 마지막 세트 AMRAP 표시
@@ -555,7 +555,7 @@ const texasMethod: ProgramTemplate = {
     const ex = this.exercises;
     const isOdd = week % 2 === 1;
     const pressEx = isOdd ? ex[1] : ex[2];
-    const baseIncrease = (week - 1) * 2.5;
+    const baseIncrease = (week - 1) * 5;
 
     function make(exName: string, pct: number, sets: number, reps: number) {
       const orm = oneRepMaxes[exName] || 0;

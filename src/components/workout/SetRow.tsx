@@ -38,8 +38,8 @@ export default function SetRow({
   const hasSuggestion = suggestion && suggestion.weight > 0;
   const previousSet = previousSessionSets?.[setIndex];
 
-  // 장비별 무게 증감 단위
-  const weightStep = equipmentType === '머신' ? 5 : equipmentType === '덤벨' ? 2 : equipmentType === '맨몸' ? 1 : 2.5;
+  // 장비별 무게 증감 단위 (바벨은 양쪽 플레이트이므로 최소 5kg)
+  const weightStep = equipmentType === '바벨' ? 5 : equipmentType === '머신' ? 5 : equipmentType === '케이블' ? 5 : equipmentType === '덤벨' ? 2 : 1;
 
   return (
     <div className="mb-1.5">
