@@ -26,7 +26,18 @@ export interface ExercisePlan {
 }
 
 function roundToPlate(weight: number): number {
-  return Math.round(weight / 5) * 5; // 바벨 최소 증량 5kg (5kg 원판 × 양쪽)
+  return Math.round(weight / 5) * 5;
+}
+
+// 보조 운동 헬퍼 (% 기반 아닌 적절한 무게)
+function acc(name: string, sets: number, reps: number): ExercisePlan {
+  return { exerciseName: name, sets: Array.from({ length: sets }, () => ({ percentage: 0, reps, weight: undefined })) };
+}
+
+// BBB 보조 (1RM의 50% 기반)
+function bbb(name: string, orm: number): ExercisePlan {
+  const w = orm > 0 ? roundToPlate(orm * 0.5) : undefined;
+  return { exerciseName: name, sets: Array.from({ length: 5 }, () => ({ percentage: 50, reps: 10, weight: w })) };
 }
 
 // 5/3/1 (웬들러)
@@ -50,19 +61,28 @@ const wendler531: ProgramTemplate = {
 
     const scheme = weekSchemes[(week - 1) % 4];
 
+    // BBB 보조: 메인의 반대 종목 5×10 + 당기기/복근
+    const bbbPairs: Record<string, { bbbEx: string; acc1: string; acc1r: number }> = {
+      '오버헤드 프레스': { bbbEx: '벤치프레스', acc1: '랫풀다운', acc1r: 10 },
+      '데드리프트': { bbbEx: '스쿼트', acc1: '행잉 레그레이즈', acc1r: 12 },
+      '벤치프레스': { bbbEx: '오버헤드 프레스', acc1: '덤벨 로우', acc1r: 10 },
+      '스쿼트': { bbbEx: '데드리프트', acc1: '크런치', acc1r: 15 },
+    };
+
     const days: DayPlan[] = exercises.map((exName) => {
       const orm = oneRepMaxes[exName] || 0;
-      const tm = orm * 0.9; // Training Max
+      const tm = orm * 0.9;
+      const pair = bbbPairs[exName];
+      const bbbOrm = pair ? (oneRepMaxes[pair.bbbEx] || 0) : 0;
       return {
         label: exName,
-        exercises: [{
-          exerciseName: exName,
-          sets: scheme.sets.map((s) => ({
-            percentage: Math.round(s.pct * 100),
-            reps: s.reps,
+        exercises: [
+          { exerciseName: exName, sets: scheme.sets.map((s) => ({
+            percentage: Math.round(s.pct * 100), reps: s.reps,
             weight: orm > 0 ? roundToPlate(tm * s.pct) : undefined,
-          })),
-        }],
+          }))},
+          ...(pair ? [bbb(pair.bbbEx, bbbOrm), acc(pair.acc1, 5, pair.acc1r)] : []),
+        ],
       };
     });
 
@@ -151,22 +171,31 @@ const pplHypertrophy: ProgramTemplate = {
       {
         label: 'Push (가슴·어깨·삼두)',
         exercises: [
-          makeSets('벤치프레스', 4, 10),
+          makeSets('벤치프레스', 3, 8),
           makeSets('오버헤드 프레스', 3, 10),
+          acc('인클라인 덤벨 프레스', 3, 12),
+          acc('사이드 레터럴 레이즈', 3, 15),
+          acc('트라이셉 푸시다운', 3, 15),
         ],
       },
       {
         label: 'Pull (등·이두)',
         exercises: [
-          makeSets('바벨 로우', 4, 10),
-          makeSets('풀업', 3, 8),
+          makeSets('바벨 로우', 3, 8),
+          acc('랫풀다운', 3, 12),
+          acc('시티드 로우', 3, 12),
+          acc('바벨 컬', 3, 12),
+          acc('페이스 풀', 3, 15),
         ],
       },
       {
         label: 'Legs (하체)',
         exercises: [
-          makeSets('스쿼트', 4, 10),
+          makeSets('스쿼트', 3, 8),
           makeSets('루마니안 데드리프트', 3, 10),
+          acc('레그 익스텐션', 3, 15),
+          acc('레그 컬', 3, 15),
+          acc('행잉 레그레이즈', 3, 15),
         ],
       },
     ];
@@ -231,18 +260,32 @@ const phul: ProgramTemplate = {
       { label: '상체 파워 (월)', exercises: [
         make('벤치프레스', powerInt, 4, 5),
         make('바벨 로우', powerInt, 4, 5),
+        acc('인클라인 덤벨 프레스', 3, 8),
+        acc('랫풀다운', 3, 8),
+        acc('바벨 컬', 3, 10),
+        acc('스컬크러셔', 3, 10),
       ]},
       { label: '하체 파워 (화)', exercises: [
         make('스쿼트', powerInt, 4, 5),
         make('데드리프트', powerInt, 3, 5),
+        acc('레그프레스', 3, 10),
+        acc('레그 컬', 3, 12),
       ]},
       { label: '상체 근비대 (목)', exercises: [
         make('덤벨 벤치프레스', hyperInt, 4, 10),
-        make('랫풀다운', hyperInt, 4, 10),
+        acc('덤벨 로우', 4, 10),
+        acc('덤벨 플라이', 3, 12),
+        acc('시티드 로우', 3, 12),
+        acc('사이드 레터럴 레이즈', 3, 15),
+        acc('인클라인 덤벨 컬', 3, 12),
+        acc('트라이셉 푸시다운', 3, 12),
       ]},
       { label: '하체 근비대 (금)', exercises: [
-        make('레그프레스', hyperInt, 4, 12),
+        acc('프론트 스쿼트', 4, 10),
         make('루마니안 데드리프트', hyperInt, 3, 10),
+        acc('덤벨 런지', 3, 12),
+        acc('레그 익스텐션', 3, 15),
+        acc('레그 컬', 3, 12),
       ]},
     ];
     return { label: `Week ${week} (파워 ${Math.round(powerInt*100)}% / 근비대 ${Math.round(hyperInt*100)}%)`, days };
@@ -271,10 +314,10 @@ const upperLower: ProgramTemplate = {
     }
 
     const days: DayPlan[] = [
-      { label: '상체 A (월)', exercises: [make('벤치프레스', 4, 8), make('바벨 로우', 4, 8)] },
-      { label: '하체 A (화)', exercises: [make('스쿼트', 4, 8), make('루마니안 데드리프트', 3, 10)] },
-      { label: '상체 B (목)', exercises: [make('오버헤드 프레스', 4, 10), make('랫풀다운', 4, 10)] },
-      { label: '하체 B (금)', exercises: [make('레그프레스', 4, 12), make('레그 컬', 3, 12)] },
+      { label: '상체 A (월)', exercises: [make('벤치프레스', 3, 8), make('바벨 로우', 3, 8), acc('덤벨 숄더 프레스', 3, 10), acc('랫풀다운', 3, 10), acc('덤벨 컬', 2, 15), acc('오버헤드 익스텐션', 2, 15), acc('페이스 풀', 2, 20)] },
+      { label: '하체 A (화)', exercises: [make('스쿼트', 3, 8), acc('레그 컬', 3, 12), acc('덤벨 런지', 3, 12)] },
+      { label: '상체 B (목)', exercises: [acc('풀업', 3, 8), make('오버헤드 프레스', 3, 10), acc('인클라인 덤벨 프레스', 3, 10), acc('바벨 컬', 3, 12), acc('트라이셉 푸시다운', 3, 12)] },
+      { label: '하체 B (금)', exercises: [make('레그프레스', 3, 10), make('루마니안 데드리프트', 3, 10), acc('레그 익스텐션', 3, 15), acc('케이블 크런치', 3, 15)] },
     ];
     return { label: `Week ${week} (${Math.round(int * 100)}%)`, days };
   },
@@ -322,10 +365,10 @@ const nsuns: ProgramTemplate = {
     }
 
     const days: DayPlan[] = [
-      { label: '벤치 + 보조 OHP (월)', exercises: [t1Sets(ex[0], week), t2Sets(ex[1], week)] },
-      { label: '스쿼트 + 보조 데드 (화)', exercises: [t1Sets(ex[2], week), t2Sets(ex[3], week)] },
-      { label: 'OHP + 보조 벤치 (목)', exercises: [t1Sets(ex[1], week), t2Sets(ex[0], week)] },
-      { label: '데드 + 보조 스쿼트 (금)', exercises: [t1Sets(ex[3], week), t2Sets(ex[2], week)] },
+      { label: '벤치 + 보조 OHP (월)', exercises: [t1Sets(ex[0], week), t2Sets(ex[1], week), acc('랫풀다운', 3, 10), acc('페이스 풀', 3, 15), acc('트라이셉 푸시다운', 3, 12)] },
+      { label: '스쿼트 + 보조 데드 (화)', exercises: [t1Sets(ex[2], week), t2Sets(ex[3], week), acc('레그프레스', 3, 12), acc('레그 컬', 3, 12), acc('행잉 레그레이즈', 3, 12)] },
+      { label: 'OHP + 보조 벤치 (목)', exercises: [t1Sets(ex[1], week), t2Sets(ex[0], week), acc('시티드 로우', 3, 10), acc('사이드 레터럴 레이즈', 3, 15), acc('바벨 컬', 3, 12)] },
+      { label: '데드 + 보조 스쿼트 (금)', exercises: [t1Sets(ex[3], week), t2Sets(ex[2], week), acc('덤벨 로우', 3, 10), acc('레그 익스텐션', 3, 12), acc('크런치', 3, 15)] },
     ];
     return { label: `Week ${week} (TM +${(week-1)*5}kg)`, days };
   },
@@ -361,9 +404,9 @@ const gzclp: ProgramTemplate = {
     }
 
     const days: DayPlan[] = [
-      { label: 'Day 1 (월)', exercises: [t1(ex[0]), t2(ex[1])] },
-      { label: 'Day 2 (수)', exercises: [t1(ex[3]), t2(ex[2])] },
-      { label: 'Day 3 (금)', exercises: [t1(ex[1]), t2(ex[0])] },
+      { label: 'Day 1 (월)', exercises: [t1(ex[0]), t2(ex[1]), acc('랫풀다운', 3, 15), acc('페이스 풀', 3, 15)] },
+      { label: 'Day 2 (수)', exercises: [t1(ex[3]), t2(ex[2]), acc('덤벨 로우', 3, 15), acc('바벨 컬', 3, 15)] },
+      { label: 'Day 3 (금)', exercises: [t1(ex[1]), t2(ex[0]), acc('랫풀다운', 3, 15), acc('사이드 레터럴 레이즈', 3, 15)] },
     ];
     return { label: `Week ${week}`, days };
   },
@@ -390,9 +433,9 @@ const fullBody3Day: ProgramTemplate = {
     }
     const ex = this.exercises;
     const days: DayPlan[] = [
-      { label: 'Day A (월)', exercises: [make(ex[0], 3, 10), make(ex[1], 3, 10), make(ex[5], 3, 10)] },
-      { label: 'Day B (수)', exercises: [make(ex[4], 3, 10), make(ex[3], 3, 10), make(ex[2], 3, 10)] },
-      { label: 'Day C (금)', exercises: [make(ex[0], 3, 10), make(ex[1], 3, 10), make(ex[2], 3, 10)] },
+      { label: 'Day A (월)', exercises: [make(ex[0], 3, 8), make(ex[1], 3, 8), make(ex[5], 3, 10), acc('덤벨 숄더 프레스', 3, 10), acc('레그 컬', 3, 10), acc('바벨 컬', 3, 12), acc('페이스 풀', 3, 15)] },
+      { label: 'Day B (수)', exercises: [make(ex[4], 3, 8), make(ex[3], 3, 10), make(ex[2], 3, 8), acc('레그프레스', 3, 12), acc('사이드 레터럴 레이즈', 3, 15), acc('트라이셉 푸시다운', 3, 15)] },
+      { label: 'Day C (금)', exercises: [make(ex[0], 3, 8), make(ex[1], 3, 8), make(ex[2], 3, 8), acc('인클라인 덤벨 프레스', 3, 10), acc('덤벨 로우', 3, 10), acc('페이스 풀', 3, 15)] },
     ];
     return { label: `Week ${week} (${Math.round(int * 100)}%)`, days };
   },
@@ -420,9 +463,9 @@ const calisthenics: ProgramTemplate = {
     }
     const ex = this.exercises;
     const days: DayPlan[] = [
-      { label: 'Push Day (월)', exercises: [make(ex[0]), make(ex[2]), make(ex[4], 30 + week * 5)] },
-      { label: 'Pull Day (수)', exercises: [make(ex[1]), make(ex[5]), make(ex[4], 30 + week * 5)] },
-      { label: 'Legs+Core (금)', exercises: [make(ex[3], baseReps + 5), make(ex[5]), make(ex[0])] },
+      { label: 'Push Day (월)', exercises: [make(ex[0]), make(ex[2]), acc('파이크 푸시업', sets, baseReps), acc('다이아몬드 푸시업', sets, baseReps), make(ex[4], 30 + week * 5)] },
+      { label: 'Pull Day (수)', exercises: [make(ex[1]), acc('친업', sets, Math.max(baseReps - 2, 5)), acc('인버티드 로우', sets, baseReps), make(ex[5]), make(ex[4], 30 + week * 5)] },
+      { label: 'Legs+Core (금)', exercises: [make(ex[3], baseReps + 5), acc('맨몸 런지', sets, baseReps), acc('글루트 브릿지', sets, baseReps + 5), make(ex[5]), acc('러시안 트위스트', 3, 20)] },
     ];
     return { label: `Week ${week} (${sets}세트 × ${baseReps}회)`, days };
   },
@@ -449,11 +492,11 @@ const phat: ProgramTemplate = {
       }))};
     }
     const days: DayPlan[] = [
-      { label: '상체 파워 (월)', exercises: [make('벤치프레스', powerInt, 4, 5), make('바벨 로우', powerInt, 4, 5)] },
-      { label: '하체 파워 (화)', exercises: [make('스쿼트', powerInt, 4, 5), make('데드리프트', powerInt, 3, 5)] },
-      { label: '등+어깨 근비대 (목)', exercises: [make('랫풀다운', hyperInt, 4, 12), make('오버헤드 프레스', hyperInt, 3, 12)] },
-      { label: '하체 근비대 (금)', exercises: [make('레그프레스', hyperInt, 4, 15), make('스쿼트', hyperInt, 3, 12)] },
-      { label: '가슴+팔 근비대 (토)', exercises: [make('덤벨 벤치프레스', hyperInt, 4, 12), make('벤치프레스', hyperInt, 3, 12)] },
+      { label: '상체 파워 (월)', exercises: [make('바벨 로우', powerInt, 3, 5), make('벤치프레스', powerInt, 3, 5), acc('덤벨 숄더 프레스', 3, 8), acc('풀업', 2, 8), acc('EZ바 컬', 3, 8), acc('스컬크러셔', 3, 8)] },
+      { label: '하체 파워 (화)', exercises: [make('스쿼트', powerInt, 3, 5), acc('해크 스쿼트 머신', 2, 8), acc('레그 익스텐션', 2, 8), make('데드리프트', powerInt, 3, 5), acc('레그 컬', 2, 8)] },
+      { label: '등+어깨 근비대 (목)', exercises: [make('바벨 로우', hyperInt, 4, 10), acc('시티드 로우', 3, 12), acc('덤벨 로우', 2, 15), make('랫풀다운', hyperInt, 2, 15), acc('덤벨 숄더 프레스', 3, 10), acc('사이드 레터럴 레이즈', 3, 15)] },
+      { label: '하체 근비대 (금)', exercises: [make('스쿼트', hyperInt, 4, 10), acc('해크 스쿼트 머신', 3, 12), acc('레그프레스', 2, 15), acc('레그 익스텐션', 3, 15), acc('루마니안 데드리프트', 3, 10), acc('레그 컬', 3, 15)] },
+      { label: '가슴+팔 근비대 (토)', exercises: [make('덤벨 벤치프레스', hyperInt, 4, 10), acc('인클라인 덤벨 프레스', 3, 12), acc('덤벨 플라이', 2, 15), acc('프리처 컬', 3, 10), acc('컨센트레이션 컬', 2, 15), acc('오버헤드 익스텐션', 3, 10), acc('트라이셉 푸시다운', 2, 15)] },
     ];
     return { label: `Week ${week} (P:${Math.round(powerInt*100)}% H:${Math.round(hyperInt*100)}%)`, days };
   },
@@ -525,16 +568,16 @@ const greyskulllp: ProgramTemplate = {
     const isOdd = week % 2 === 1;
     const days: DayPlan[] = [
       { label: isOdd ? 'Day A (월)' : 'Day B (월)', exercises: isOdd
-        ? [calc(ex[0], s, 3, 5, true), calc(ex[2], s, 3, 5, true)]
-        : [calc(ex[1], s, 3, 5, true), calc(ex[2], s, 3, 5, true)]
+        ? [calc(ex[0], s, 3, 5, true), calc(ex[2], s, 3, 5, true), acc('바벨 컬', 2, 10), acc('덤벨 로우', 2, 10)]
+        : [calc(ex[1], s, 3, 5, true), calc(ex[2], s, 3, 5, true), acc('친업', 2, 8), acc('페이스 풀', 2, 15)]
       },
       { label: isOdd ? 'Day B (수)' : 'Day A (수)', exercises: isOdd
-        ? [calc(ex[1], s+1, 3, 5, true), calc(ex[3], s+1, 1, 5, true)]
-        : [calc(ex[0], s+1, 3, 5, true), calc(ex[3], s+1, 1, 5, true)]
+        ? [calc(ex[1], s+1, 3, 5, true), calc(ex[3], s+1, 1, 5, true), acc('친업', 2, 8), acc('페이스 풀', 2, 15), acc('행잉 레그레이즈', 2, 12)]
+        : [calc(ex[0], s+1, 3, 5, true), calc(ex[3], s+1, 1, 5, true), acc('바벨 컬', 2, 10), acc('덤벨 로우', 2, 10)]
       },
       { label: isOdd ? 'Day A (금)' : 'Day B (금)', exercises: isOdd
-        ? [calc(ex[0], s+2, 3, 5, true), calc(ex[2], s+2, 3, 5, true)]
-        : [calc(ex[1], s+2, 3, 5, true), calc(ex[2], s+2, 3, 5, true)]
+        ? [calc(ex[0], s+2, 3, 5, true), calc(ex[2], s+2, 3, 5, true), acc('바벨 컬', 2, 10), acc('덤벨 로우', 2, 10)]
+        : [calc(ex[1], s+2, 3, 5, true), calc(ex[2], s+2, 3, 5, true), acc('친업', 2, 8), acc('페이스 풀', 2, 15)]
       },
     ];
     return { label: `Week ${week} (마지막 세트 AMRAP)`, days };
@@ -569,10 +612,13 @@ const texasMethod: ProgramTemplate = {
       { label: '볼륨 Day (월)', exercises: [
         make(ex[0], 0.77, 5, 5),
         make(pressEx, 0.77, 5, 5),
+        make(ex[3], 0.77, 1, 5),
       ]},
       { label: '회복 Day (수)', exercises: [
         make(ex[0], 0.62, 2, 5),
         make(isOdd ? ex[2] : ex[1], 0.70, 3, 5),
+        acc('친업', 3, 8),
+        acc('크런치', 5, 12),
       ]},
       { label: '강도 Day (금)', exercises: [
         make(ex[0], 0.85, 1, 5),
@@ -622,9 +668,15 @@ const juggernaut: ProgramTemplate = {
       }))};
     }
 
+    const accMap: Record<string, ExercisePlan[]> = {
+      '스쿼트': [acc('레그프레스', 3, 10), acc('레그 컬', 3, 12), acc('행잉 레그레이즈', 3, 12)],
+      '벤치프레스': [acc('인클라인 덤벨 프레스', 3, 10), acc('덤벨 로우', 3, 10), acc('페이스 풀', 3, 15)],
+      '오버헤드 프레스': [acc('사이드 레터럴 레이즈', 3, 12), acc('친업', 3, 8), acc('트라이셉 푸시다운', 3, 12)],
+      '데드리프트': [acc('바벨 로우', 3, 10), acc('행잉 레그레이즈', 3, 12), acc('덤벨 컬', 3, 12)],
+    };
     const days: DayPlan[] = ex.map((exName) => ({
       label: exName,
-      exercises: [make(exName)],
+      exercises: [make(exName), ...(isDeload ? [] : (accMap[exName] || []))],
     }));
 
     return { label: `${wave.label} - Week ${weekInWave}${isDeload ? ' (디로드)' : ''}`, days };
@@ -662,11 +714,12 @@ const candito6week: ProgramTemplate = {
       }))};
     }
 
+    const isPeaking = week >= 5;
     const days: DayPlan[] = [
-      { label: '상체 (월)', exercises: [make(ex[1])] },
-      { label: '하체 (화)', exercises: [make(ex[0]), make(ex[2])] },
-      { label: '상체 (목)', exercises: [make(ex[1])] },
-      { label: '하체 (금)', exercises: [make(ex[0])] },
+      { label: '상체 (월)', exercises: [make(ex[1]), ...(isPeaking ? [] : [acc('랫풀다운', 3, 10), acc('덤벨 숄더 프레스', 3, 10), acc('바벨 컬', 3, 12)])] },
+      { label: '하체 (화)', exercises: [make(ex[0]), make(ex[2]), ...(isPeaking ? [] : [acc('힙 쓰러스트', 3, 10)])] },
+      { label: '상체 (목)', exercises: [make(ex[1]), ...(isPeaking ? [] : [acc('덤벨 로우', 3, 10), acc('해머 컬', 3, 12)])] },
+      { label: '하체 (금)', exercises: [make(ex[0]), ...(isPeaking ? [] : [acc('레그 컬', 3, 12)])] },
     ];
     return { label: phase.label, days };
   },
@@ -695,12 +748,12 @@ const arnoldSplit: ProgramTemplate = {
 
     const ex = this.exercises;
     const days: DayPlan[] = [
-      { label: '가슴+등 (월)', exercises: [make(ex[0], 4, 10), make(ex[1], 4, 10), make(ex[2], 3, 10), make(ex[3], 3, 8)] },
-      { label: '어깨+팔 (화)', exercises: [make(ex[4], 4, 10), make(ex[5], 3, 12), make(ex[6], 3, 10), make(ex[7], 3, 10)] },
-      { label: '하체 (수)', exercises: [make(ex[8], 4, 10), make(ex[9], 3, 12), make(ex[10], 3, 12), make(ex[11], 4, 15)] },
-      { label: '가슴+등 (목)', exercises: [make(ex[0], 4, 10), make(ex[1], 4, 10), make(ex[2], 3, 10), make(ex[3], 3, 8)] },
-      { label: '어깨+팔 (금)', exercises: [make(ex[4], 4, 10), make(ex[5], 3, 12), make(ex[6], 3, 10), make(ex[7], 3, 10)] },
-      { label: '하체 (토)', exercises: [make(ex[8], 4, 10), make(ex[9], 3, 12), make(ex[10], 3, 12), make(ex[11], 4, 15)] },
+      { label: '가슴+등 (월)', exercises: [make(ex[0], 4, 10), acc('인클라인 벤치프레스', 3, 10), acc('덤벨 플라이', 3, 12), make(ex[2], 3, 10), acc('풀업', 3, 8), make(ex[1], 4, 10), acc('랫풀다운', 3, 10), acc('크런치', 3, 15)] },
+      { label: '어깨+팔 (화)', exercises: [make(ex[4], 4, 10), acc('덤벨 숄더 프레스', 3, 10), make(ex[5], 3, 15), make(ex[6], 3, 10), acc('인클라인 덤벨 컬', 3, 12), make(ex[3], 3, 8), make(ex[7], 3, 10)] },
+      { label: '하체 (수)', exercises: [make(ex[8], 4, 10), acc('데드리프트', 3, 10), make(ex[9], 3, 12), make(ex[10], 3, 12), acc('레그 익스텐션', 3, 12), make(ex[11], 4, 15), acc('행잉 레그레이즈', 3, 15)] },
+      { label: '가슴+등 (목)', exercises: [make(ex[0], 4, 10), acc('인클라인 벤치프레스', 3, 10), acc('덤벨 플라이', 3, 12), make(ex[2], 3, 10), acc('풀업', 3, 8), make(ex[1], 4, 10), acc('랫풀다운', 3, 10), acc('크런치', 3, 15)] },
+      { label: '어깨+팔 (금)', exercises: [make(ex[4], 4, 10), acc('덤벨 숄더 프레스', 3, 10), make(ex[5], 3, 15), make(ex[6], 3, 10), acc('인클라인 덤벨 컬', 3, 12), make(ex[3], 3, 8), make(ex[7], 3, 10)] },
+      { label: '하체 (토)', exercises: [make(ex[8], 4, 10), acc('데드리프트', 3, 10), make(ex[9], 3, 12), make(ex[10], 3, 12), acc('레그 익스텐션', 3, 12), make(ex[11], 4, 15), acc('행잉 레그레이즈', 3, 15)] },
     ];
     return { label: `Week ${week} (${Math.round(int * 100)}%)`, days };
   },

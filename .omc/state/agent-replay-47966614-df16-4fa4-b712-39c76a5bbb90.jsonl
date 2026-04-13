@@ -20,3 +20,5 @@
 {"t":0,"agent":"ad51073","agent_type":"architect","event":"agent_stop","success":true,"duration_ms":321760}
 {"t":0,"agent":"adcceea","agent_type":"architect","event":"agent_start","parent_mode":"none"}
 {"t":0,"agent":"adcceea","agent_type":"architect","event":"agent_stop","success":true,"duration_ms":159104}
+{"t":0,"agent":"a4a107b","agent_type":"document-specialist","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"a4a107b","agent_type":"document-specialist","event":"agent_stop","success":true,"duration_ms":730294}

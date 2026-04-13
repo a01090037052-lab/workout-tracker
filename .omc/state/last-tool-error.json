@@ -1,7 +1,7 @@
 {
-  "tool_name": "Read",
-  "tool_input_preview": "{\"file_path\":\"/Users/woohyuk/Documents/Claude/01_study/운동 기록/app/src/data/exercises.ts\",\"limit\":100}",
-  "error": "File content (19558 tokens) exceeds maximum allowed tokens (10000). Use offset and limit parameters to read specific portions of the file, or search for specific content instead of reading the whole file.",
-  "timestamp": "2026-04-13T01:28:51.027Z",
-  "retry_count": 3
+  "tool_name": "WebFetch",
+  "tool_input_preview": "{\"url\":\"https://www.setforset.com/blogs/news/the-texas-method-strength-program\",\"prompt\":\"Extract the Texas Method complete program: Volume Day, Light Day, Intensity Day with all exercises, sets, reps...",
+  "error": "Request failed with status code 503",
+  "timestamp": "2026-04-13T06:04:58.982Z",
+  "retry_count": 2
 }
