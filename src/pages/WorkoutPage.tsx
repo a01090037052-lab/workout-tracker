@@ -25,6 +25,7 @@ interface WorkoutSummary {
   exerciseCount: number;
   totalSets: number;
   totalVolume: number;
+  prevVolume?: number;
   exercises: { name: string; sets: { weight: number; reps: number }[] }[];
 }
 
@@ -36,6 +37,7 @@ export default function WorkoutPage() {
   const [showFinishConfirm, setShowFinishConfirm] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showRestTimer, setShowRestTimer] = useState(false);
+  const [timerKey, setTimerKey] = useState(0);
   const [showPlateCalc, setShowPlateCalc] = useState(false);
   const [showInjuryLog, setShowInjuryLog] = useState(false);
   const [toast, setToast] = useState('');
@@ -79,6 +81,17 @@ export default function WorkoutPage() {
           <div className="text-5xl mb-4">🎉</div>
           <h1 className="text-2xl font-bold mb-2">운동 완료!</h1>
           <p className="text-text-secondary">수고했어요</p>
+          {summary.prevVolume !== undefined && summary.prevVolume > 0 && (
+            <p className={`text-sm font-semibold mt-2 ${
+              summary.totalVolume > summary.prevVolume ? 'text-success' : summary.totalVolume < summary.prevVolume ? 'text-warning' : 'text-text-secondary'
+            }`}>
+              {summary.totalVolume > summary.prevVolume
+                ? `지난 운동 대비 볼륨 +${(summary.totalVolume - summary.prevVolume).toLocaleString()}kg ▲`
+                : summary.totalVolume < summary.prevVolume
+                  ? `지난 운동 대비 볼륨 ${(summary.totalVolume - summary.prevVolume).toLocaleString()}kg ▼`
+                  : '지난 운동과 동일한 볼륨'}
+            </p>
+          )}
         </div>
 
         <div className="bg-surface rounded-2xl p-6 mb-4">
@@ -238,7 +251,7 @@ export default function WorkoutPage() {
           onCompleteSet={(i, isBw) => workout.completeSet(ex.exerciseId, i, isBw)}
           onRemoveExercise={() => workout.removeExercise(ex.exerciseId)}
           onMoveExercise={(dir) => workout.moveExercise(index, dir)}
-          onSetCompleted={() => setShowRestTimer(true)}
+          onSetCompleted={() => { setTimerKey((k) => k + 1); setShowRestTimer(true); }}
           onAddWarmupSets={(sets) => workout.addWarmupSets(ex.exerciseId, sets)}
         />
       ))}
@@ -265,6 +278,7 @@ export default function WorkoutPage() {
       {/* 휴식 타이머 */}
       {showRestTimer && (
         <RestTimer
+          key={timerKey}
           defaultTime={getRecommendedRestTime(workout.trainingGoal)}
           onClose={() => setShowRestTimer(false)}
         />
@@ -305,15 +319,21 @@ export default function WorkoutPage() {
                   setShowFinishConfirm(false);
                   if (result) {
                     const { session, validExercises } = result;
-                    // 종목 이름 조회
+                    // 종목 이름 조회 + 이전 볼륨
                     const exNames = await db.exercises.toArray();
                     const nameMap = new Map(exNames.map((e) => [e.id!, e.name]));
+                    const prevSessions = await db.sessions.orderBy('date').reverse().limit(2).toArray();
+                    const prevSession = prevSessions.find((s) => s.id !== result.id);
+                    const prevVolume = prevSession
+                      ? prevSession.exercises.reduce((a, e) => a + e.sets.filter((s) => s.isCompleted && s.setType !== 'warmup').reduce((sum, s) => sum + s.weight * s.reps, 0), 0)
+                      : undefined;
                     setSummary({
                       duration: session.duration,
                       exerciseCount: validExercises.length,
                       totalSets: validExercises.reduce((a, e) => a + e.sets.length, 0),
                       totalVolume: validExercises.reduce((a, e) =>
                         a + e.sets.reduce((s, set) => s + set.weight * set.reps, 0), 0),
+                      prevVolume,
                       exercises: validExercises.map((e) => ({
                         name: nameMap.get(e.exerciseId) || '알 수 없음',
                         sets: e.sets.map((s) => ({ weight: s.weight, reps: s.reps })),

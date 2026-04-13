@@ -25,6 +25,16 @@ export default function SettingsPage() {
       injuryLogs: await db.injuryLogs.toArray(),
       bodyWeightLogs: await db.bodyWeightLogs.toArray(),
       settings: { weightSuggestion: localStorage.getItem('weightSuggestion') || 'on' },
+      programProgress: (() => {
+        const progs: Record<string, string> = {};
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.startsWith('prog_') || key === 'activeProgramId')) {
+            progs[key] = localStorage.getItem(key) || '';
+          }
+        }
+        return progs;
+      })(),
       exportDate: new Date().toISOString(),
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -82,6 +92,12 @@ export default function SettingsPage() {
           // settings 복원
           if (data.settings?.weightSuggestion) {
             localStorage.setItem('weightSuggestion', data.settings.weightSuggestion);
+          }
+          // 프로그램 진행 상태 복원
+          if (data.programProgress) {
+            for (const [key, value] of Object.entries(data.programProgress)) {
+              localStorage.setItem(key, value as string);
+            }
           }
 
           showToast(`복원 완료! (세션 ${data.sessions?.length || 0}개, 루틴 ${data.routines?.length || 0}개)`);
@@ -191,6 +207,9 @@ export default function SettingsPage() {
         </div>
         <p className="text-sm text-text-secondary">기본 {exerciseCount ?? 0}개 종목이 등록되어 있습니다</p>
       </section>
+
+      {/* 부상 이력 관리 */}
+      <InjuryHistory />
 
       {/* 데이터 관리 */}
       <section className="bg-surface rounded-xl p-4 mb-4">
@@ -353,5 +372,68 @@ function AddExerciseModal({ onClose, onSaved }: { onClose: () => void; onSaved: 
         </button>
       </div>
     </div>
+  );
+}
+
+// 부상 이력 관리
+function InjuryHistory() {
+  const injuries = useLiveQuery(() => db.injuryLogs.orderBy('date').reverse().toArray());
+  if (!injuries || injuries.length === 0) return null;
+
+  const toggleResolved = async (id: number, current: boolean) => {
+    await db.injuryLogs.update(id, { isResolved: !current });
+  };
+
+  const deleteInjury = async (id: number) => {
+    await db.injuryLogs.delete(id);
+  };
+
+  const active = injuries.filter((i) => !i.isResolved);
+  const resolved = injuries.filter((i) => i.isResolved);
+
+  return (
+    <section className="bg-surface rounded-xl p-4 mb-4">
+      <h2 className="font-semibold mb-3">부상/통증 이력 ({active.length}건 진행 중)</h2>
+
+      {active.length > 0 && (
+        <div className="mb-3">
+          {active.map((inj) => (
+            <div key={inj.id} className="flex items-center justify-between py-2 border-b border-border last:border-b-0">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${
+                    inj.severity === 'severe' ? 'bg-danger' : inj.severity === 'moderate' ? 'bg-warning' : 'bg-yellow-400'
+                  }`} />
+                  <span className="text-sm font-medium">{inj.bodyPart} ({inj.side === 'left' ? '왼쪽' : inj.side === 'right' ? '오른쪽' : inj.side === 'both' ? '양쪽' : '중앙'})</span>
+                </div>
+                <div className="text-xs text-text-secondary ml-4">{inj.date} {inj.note && `· ${inj.note}`}</div>
+              </div>
+              <div className="flex gap-1">
+                <button onClick={() => toggleResolved(inj.id!, inj.isResolved)}
+                  className="text-[10px] px-2 py-1 bg-success/20 text-success rounded">해결</button>
+                <button onClick={() => deleteInjury(inj.id!)}
+                  className="text-[10px] px-2 py-1 bg-danger/10 text-danger rounded">삭제</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {resolved.length > 0 && (
+        <details className="text-sm">
+          <summary className="text-xs text-text-secondary cursor-pointer mb-2">해결된 이력 ({resolved.length}건)</summary>
+          {resolved.map((inj) => (
+            <div key={inj.id} className="flex items-center justify-between py-1.5 opacity-50">
+              <div className="text-xs">
+                <span className="line-through">{inj.bodyPart}</span>
+                <span className="text-text-secondary ml-2">{inj.date}</span>
+              </div>
+              <button onClick={() => toggleResolved(inj.id!, inj.isResolved)}
+                className="text-[10px] px-2 py-1 bg-surface-light rounded">재발</button>
+            </div>
+          ))}
+        </details>
+      )}
+    </section>
   );
 }
