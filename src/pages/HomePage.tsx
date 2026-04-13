@@ -128,14 +128,13 @@ export default function HomePage() {
 
   const weekCount = weekDays.filter((d) => workoutDatesSet.has(d)).length;
 
-  const todaySession = todaySessions?.[0];
-  const todayVolume = todaySession
-    ? todaySession.exercises.reduce(
-        (acc, ex) => acc + ex.sets.filter((s) => s.isCompleted).reduce((sum, s) => sum + s.weight * s.reps, 0), 0)
-    : 0;
-  const todaySets = todaySession
-    ? todaySession.exercises.reduce((acc, ex) => acc + ex.sets.filter((s) => s.isCompleted).length, 0)
-    : 0;
+  const hasTodaySessions = todaySessions && todaySessions.length > 0;
+  const todayExerciseCount = todaySessions?.reduce((acc, s) => acc + s.exercises.length, 0) || 0;
+  const todayVolume = todaySessions?.reduce((acc, s) =>
+    acc + s.exercises.reduce((a, ex) => a + ex.sets.filter((set) => set.isCompleted).reduce((sum, set) => sum + set.weight * set.reps, 0), 0), 0) || 0;
+  const todaySets = todaySessions?.reduce((acc, s) =>
+    acc + s.exercises.reduce((a, ex) => a + ex.sets.filter((set) => set.isCompleted).length, 0), 0) || 0;
+  const todayDuration = todaySessions?.reduce((acc, s) => acc + s.duration, 0) || 0;
 
   const exerciseNames = useLiveQuery(async () => {
     if (!recentSessions) return new Map();
@@ -240,7 +239,7 @@ export default function HomePage() {
       )}
 
       {/* 오늘 운동 추천 */}
-      {!workoutActive && !todaySession && allSessions && allSessions.length > 0 && (
+      {!workoutActive && !hasTodaySessions && allSessions && allSessions.length > 0 && (
         <section className="mb-4">
           <div className="bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-4">
             <div className="text-xs text-primary-light font-semibold mb-2">💡 오늘의 추천</div>
@@ -269,11 +268,14 @@ export default function HomePage() {
       {/* 오늘의 운동 */}
       <section className="mb-6">
         <h2 className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-3">오늘의 운동</h2>
-        {todaySession ? (
+        {hasTodaySessions ? (
           <div className="bg-gradient-to-br from-surface to-surface-light rounded-xl p-4 border border-border">
+            {todaySessions!.length > 1 && (
+              <div className="text-xs text-primary-light mb-2 text-center">{todaySessions!.length}회 운동</div>
+            )}
             <div className="grid grid-cols-3 gap-3 text-center">
               <div>
-                <div className="text-xl font-bold font-mono">{todaySession.exercises.length}</div>
+                <div className="text-xl font-bold font-mono">{todayExerciseCount}</div>
                 <div className="text-[10px] text-text-secondary mt-0.5">종목</div>
               </div>
               <div>
@@ -286,7 +288,7 @@ export default function HomePage() {
               </div>
             </div>
             <div className="mt-3 pt-3 border-t border-border text-xs text-text-secondary text-center">
-              {Math.floor(todaySession.duration / 60)}분 운동 완료
+              {Math.floor(todayDuration / 60)}분 운동 완료
             </div>
           </div>
         ) : (
