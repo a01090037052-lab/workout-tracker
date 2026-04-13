@@ -48,24 +48,18 @@ export default function SetRow({
           ? 'bg-gradient-to-r from-primary/15 to-primary/5 border border-primary/20'
           : 'hover:bg-surface-light/50'
       }`}>
-        {/* 세트 번호 + 타입 (탭: 타입 전환, 길게 누르기: 삭제) */}
+        {/* 세트 번호 + 타입 (탭: 타입 전환) */}
         <button
           onClick={() => {
             const types: ('normal' | 'warmup' | 'dropset')[] = ['normal', 'warmup', 'dropset'];
             const idx = types.indexOf(set.setType || 'normal');
             onUpdate({ setType: types[(idx + 1) % types.length] });
           }}
-          onContextMenu={(e) => { e.preventDefault(); setShowDeleteConfirm(true); }}
-          onTouchStart={() => {
-            const t = setTimeout(() => setShowDeleteConfirm(true), 600);
-            (window as any).__longPressTimer = t;
-          }}
-          onTouchEnd={() => clearTimeout((window as any).__longPressTimer)}
-          className={`text-[10px] w-8 text-center font-mono font-bold rounded ${
+          className={`text-[10px] w-8 text-center font-mono font-bold rounded py-1 ${
             set.setType === 'warmup' ? 'bg-yellow-500/20 text-yellow-400'
             : set.setType === 'dropset' ? 'bg-purple-500/20 text-purple-400'
             : set.isCompleted ? 'text-primary-light' : 'text-text-secondary'
-          } ${showDeleteConfirm ? 'text-danger' : ''}`}
+          }`}
         >
           {set.setType === 'warmup' ? 'W' : set.setType === 'dropset' ? 'D' : set.setNumber}
         </button>
@@ -155,6 +149,14 @@ export default function SetRow({
           }`}
         >
           ✓
+        </button>
+
+        {/* 삭제 버튼 */}
+        <button
+          onClick={() => setShowDeleteConfirm(true)}
+          className="w-6 h-11 flex items-center justify-center text-text-secondary/30 hover:text-danger text-xs"
+        >
+          ✕
         </button>
       </div>
 
