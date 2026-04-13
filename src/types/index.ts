@@ -40,6 +40,9 @@ export interface WorkoutSession {
   condition: Condition;
   trainingGoal: TrainingGoal;
   routineId?: number;
+  programId?: string;
+  programWeek?: number;
+  programDay?: number;
   exercises: WorkoutExercise[];
 }
 

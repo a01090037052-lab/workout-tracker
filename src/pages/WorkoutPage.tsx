@@ -46,9 +46,16 @@ export default function WorkoutPage() {
     const state = location.state as {
       exercises?: { exerciseId: number; sets: number; order: number; setsDetail?: { weight: number; reps: number }[] }[];
       fromProgram?: boolean;
+      routineId?: number;
+      programId?: string;
+      programWeek?: number;
+      programDay?: number;
     } | null;
     if (state?.exercises && !workout.isActive) {
       workout.startWorkout();
+      // 루틴/프로그램 정보 저장
+      if (state.routineId) workout.setRoutineId(state.routineId);
+      if (state.programId) workout.setProgramInfo({ programId: state.programId, week: state.programWeek || 1, day: state.programDay || 0 });
       requestAnimationFrame(async () => {
         try {
           const sorted = [...state.exercises!].sort((a, b) => a.order - b.order);

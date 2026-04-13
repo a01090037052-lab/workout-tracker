@@ -261,8 +261,12 @@ export default function ProgramPage() {
       .filter((e): e is NonNullable<typeof e> => e !== null);
 
     if (exercises.length > 0) {
+      // 완료 처리는 운동 종료(finishWorkout) 시 세션에 기록됨
       markDayComplete(dayIndex);
-      navigate('/workout', { state: { exercises, fromProgram: true } });
+      navigate('/workout', { state: {
+        exercises, fromProgram: true,
+        programId: selectedProgram.id, programWeek: progress.currentWeek, programDay: dayIndex,
+      }});
     }
   };
 

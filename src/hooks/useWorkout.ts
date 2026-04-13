@@ -19,6 +19,10 @@ interface SavedWorkout {
   startTime: number;
   condition: Condition;
   trainingGoal: TrainingGoal;
+  routineId?: number;
+  programId?: string;
+  programWeek?: number;
+  programDay?: number;
 }
 
 function saveToStorage(data: SavedWorkout) {
@@ -47,6 +51,10 @@ export function useWorkout() {
   const [condition, setCondition] = useState<Condition>(initialState?.condition || 'normal');
   const [trainingGoal, setTrainingGoal] = useState<TrainingGoal>(initialState?.trainingGoal || 'hypertrophy');
   const [prAlert, setPRAlert] = useState<PRAlert | null>(null);
+  const [routineId, setRoutineId] = useState<number | undefined>(initialState?.routineId);
+  const [programInfo, setProgramInfo] = useState<{ programId: string; week: number; day: number } | undefined>(
+    initialState?.programId ? { programId: initialState.programId, week: initialState.programWeek || 1, day: initialState.programDay || 0 } : undefined
+  );
   const startTimeRef = useRef<number>(initialState?.startTime || 0);
   const timerRef = useRef<number | null>(null);
 
@@ -66,9 +74,12 @@ export function useWorkout() {
   // 자동 저장
   useEffect(() => {
     if (isActive) {
-      saveToStorage({ isActive, exercises, startTime: startTimeRef.current, condition, trainingGoal });
+      saveToStorage({
+        isActive, exercises, startTime: startTimeRef.current, condition, trainingGoal,
+        routineId, programId: programInfo?.programId, programWeek: programInfo?.week, programDay: programInfo?.day,
+      });
     }
-  }, [isActive, exercises, condition, trainingGoal]);
+  }, [isActive, exercises, condition, trainingGoal, routineId, programInfo]);
 
   // 페이지 이탈 경고
   useEffect(() => {
@@ -82,6 +93,8 @@ export function useWorkout() {
     setIsActive(true);
     setExercises([]);
     setDuration(0);
+    setRoutineId(undefined);
+    setProgramInfo(undefined);
     startTimeRef.current = Date.now();
     timerRef.current = window.setInterval(() => {
       setDuration(Math.floor((Date.now() - startTimeRef.current) / 1000));
@@ -248,6 +261,10 @@ export function useWorkout() {
       duration,
       condition,
       trainingGoal,
+      routineId,
+      programId: programInfo?.programId,
+      programWeek: programInfo?.week,
+      programDay: programInfo?.day,
       exercises: validExercises,
     };
 
@@ -289,11 +306,13 @@ export function useWorkout() {
     setIsActive(false);
     setExercises([]);
     setDuration(0);
+    setRoutineId(undefined);
+    setProgramInfo(undefined);
   }, []);
 
   return {
     isActive, exercises, duration, condition, trainingGoal, prAlert, setPRAlert,
-    setCondition, setTrainingGoal,
+    setCondition, setTrainingGoal, routineId, setRoutineId, programInfo, setProgramInfo,
     startWorkout, addExercise, removeExercise, moveExercise,
     addWarmupSets, addSet, removeSet, updateSet, completeSet,
     finishWorkout, cancelWorkout,
