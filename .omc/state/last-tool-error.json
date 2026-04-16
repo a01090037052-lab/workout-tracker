@@ -1,7 +1,7 @@
 {
-  "tool_name": "WebFetch",
-  "tool_input_preview": "{\"url\":\"https://www.setforset.com/blogs/news/the-texas-method-strength-program\",\"prompt\":\"Extract the Texas Method complete program: Volume Day, Light Day, Intensity Day with all exercises, sets, reps...",
-  "error": "Request failed with status code 503",
-  "timestamp": "2026-04-13T06:04:58.982Z",
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"cd \\\"/Users/woohyuk/Documents/Claude/01_study/운동 기록/app\\\" && npm run build 2>&1\",\"timeout\":30000,\"description\":\"Build project\"}",
+  "error": "Exit code 2\n\n> app@0.0.0 build\n> tsc -b && vite build\n\nsrc/pages/HistoryPage.tsx(172,15): error TS1005: ')' expected.\nsrc/pages/HistoryPage.tsx(172,26): error TS1005: ',' expected.\nsrc/pages/HistoryPage.tsx(175,16): error TS1005: ',' expected.\nsrc/pages/HistoryPage.tsx(177,13): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?\nsrc/pages/HistoryPage.tsx(205,5): error TS1005: ')' expected.\nsrc/pages/HistoryPage.tsx(206,3): error TS1109: Expression expected.",
+  "timestamp": "2026-04-16T02:23:10.783Z",
   "retry_count": 2
 }

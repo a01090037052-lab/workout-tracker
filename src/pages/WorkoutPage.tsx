@@ -125,7 +125,7 @@ export default function WorkoutPage() {
                 <div className="flex flex-wrap gap-1.5">
                   {ex.sets.map((s, j) => (
                     <span key={j} className="text-xs font-mono bg-surface-light px-2 py-1 rounded-lg">
-                      {s.weight}kg×{s.reps}
+                      {s.weight > 0 ? `${s.weight}kg×${s.reps}` : `${s.reps}회`}
                     </span>
                   ))}
                 </div>

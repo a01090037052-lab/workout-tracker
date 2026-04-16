@@ -12,6 +12,49 @@ function formatDuration(seconds: number) {
   return `${m}분`;
 }
 
+function SessionSets({ ex, isEditing, exIdx, updateSetField, removeSet }: {
+  ex: any; isEditing: boolean; exIdx: number;
+  updateSetField: (ei: number, si: number, f: 'weight' | 'reps', v: number) => void;
+  removeSet: (ei: number, si: number) => void;
+}) {
+  const isBw = ex.info?.equipmentType === '맨몸';
+  return (
+    <div className="bg-surface-light rounded-lg overflow-hidden">
+      <div className="flex px-3 py-1.5 text-xs text-text-secondary border-b border-border">
+        <span className="w-10 text-center">세트</span>
+        {!isBw && <span className="flex-1 text-center">무게</span>}
+        <span className="flex-1 text-center">횟수</span>
+        {!isEditing && !isBw && <span className="flex-1 text-center">볼륨</span>}
+        {isEditing && <span className="w-10"></span>}
+      </div>
+      {(isEditing ? ex.sets : ex.sets.filter((s: any) => s.isCompleted)).map((set: any, setIdx: number) => (
+        <div key={setIdx} className="flex px-3 py-2 text-sm border-b border-border last:border-b-0 items-center">
+          <span className="w-10 text-center text-text-secondary font-mono">{set.setNumber}</span>
+          {isEditing ? (
+            <>
+              {!isBw && <input type="number" inputMode="decimal"
+                value={set.weight || ''} onChange={(e: any) => updateSetField(exIdx, setIdx, 'weight', Number(e.target.value))}
+                className="flex-1 bg-surface rounded px-2 py-1 text-center font-mono outline-none focus:ring-1 focus:ring-primary mx-1" />}
+              <input type="number" inputMode="numeric"
+                value={set.reps || ''} onChange={(e: any) => updateSetField(exIdx, setIdx, 'reps', Number(e.target.value))}
+                className="flex-1 bg-surface rounded px-2 py-1 text-center font-mono outline-none focus:ring-1 focus:ring-primary mx-1" />
+              <button onClick={() => removeSet(exIdx, setIdx)} className="w-10 text-center text-danger/50 text-xs">✕</button>
+            </>
+          ) : isBw ? (
+            <span className="flex-1 text-center font-semibold">{set.reps}회{set.weight > 0 ? ` (+${set.weight}kg)` : ''}</span>
+          ) : (
+            <>
+              <span className="flex-1 text-center">{set.weight}kg</span>
+              <span className="flex-1 text-center">{set.reps}회</span>
+              <span className="flex-1 text-center text-text-secondary">{set.weight * set.reps}kg</span>
+            </>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function SessionDetail({ session: initialSession, onClose }: { session: WorkoutSession; onClose: () => void }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editExercises, setEditExercises] = useState<WorkoutExercise[]>(initialSession.exercises);
@@ -123,37 +166,8 @@ function SessionDetail({ session: initialSession, onClose }: { session: WorkoutS
                   <button onClick={() => removeExercise(exIdx)} className="text-xs text-danger">종목 삭제</button>
                 )}
               </div>
-              <div className="bg-surface-light rounded-lg overflow-hidden">
-                <div className="flex px-3 py-1.5 text-xs text-text-secondary border-b border-border">
-                  <span className="w-10 text-center">세트</span>
-                  <span className="flex-1 text-center">무게</span>
-                  <span className="flex-1 text-center">횟수</span>
-                  {!isEditing && <span className="flex-1 text-center">볼륨</span>}
-                  {isEditing && <span className="w-10"></span>}
-                </div>
-                {(isEditing ? ex.sets : ex.sets.filter((s) => s.isCompleted)).map((set, setIdx) => (
-                  <div key={setIdx} className="flex px-3 py-2 text-sm border-b border-border last:border-b-0 items-center">
-                    <span className="w-10 text-center text-text-secondary font-mono">{set.setNumber}</span>
-                    {isEditing ? (
-                      <>
-                        <input type="number" inputMode="decimal"
-                          value={set.weight || ''} onChange={(e) => updateSetField(exIdx, setIdx, 'weight', Number(e.target.value))}
-                          className="flex-1 bg-surface rounded px-2 py-1 text-center font-mono outline-none focus:ring-1 focus:ring-primary mx-1" />
-                        <input type="number" inputMode="numeric"
-                          value={set.reps || ''} onChange={(e) => updateSetField(exIdx, setIdx, 'reps', Number(e.target.value))}
-                          className="flex-1 bg-surface rounded px-2 py-1 text-center font-mono outline-none focus:ring-1 focus:ring-primary mx-1" />
-                        <button onClick={() => removeSet(exIdx, setIdx)} className="w-10 text-center text-danger/50 text-xs">✕</button>
-                      </>
-                    ) : (
-                      <>
-                        <span className="flex-1 text-center">{set.weight}kg</span>
-                        <span className="flex-1 text-center">{set.reps}회</span>
-                        <span className="flex-1 text-center text-text-secondary">{set.weight * set.reps}kg</span>
-                      </>
-                    )}
-                  </div>
-                ))}
-              </div>
+              <SessionSets ex={ex} isEditing={isEditing} exIdx={exIdx}
+                updateSetField={updateSetField} removeSet={removeSet} />
               {isEditing && (
                 <button onClick={() => addSet(exIdx)}
                   className="w-full mt-1 py-2 text-xs text-primary-light hover:bg-primary/10 rounded-lg">+ 세트 추가</button>
