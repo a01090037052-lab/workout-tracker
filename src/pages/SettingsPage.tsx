@@ -56,8 +56,22 @@ export default function SettingsPage() {
         const text = await file.text();
         const data = JSON.parse(text);
 
-        if (!data.sessions || !data.exercises) {
-          showToast('유효하지 않은 백업 파일입니다');
+        // Schema validate — 손상된 백업으로 사용자 데이터 깨지는 것 방지
+        const checks: { ok: boolean; reason: string }[] = [
+          { ok: !!data && typeof data === 'object', reason: '최상위 객체 누락' },
+          { ok: Array.isArray(data?.sessions), reason: 'sessions 배열 누락' },
+          { ok: Array.isArray(data?.exercises), reason: 'exercises 배열 누락' },
+          { ok: !data?.sessions || data.sessions.every((s: { date?: unknown; exercises?: unknown }) =>
+              typeof s.date === 'string' && Array.isArray(s.exercises)), reason: 'session 필드 형식 오류' },
+          { ok: !data?.exercises || data.exercises.every((e: { name?: unknown }) =>
+              typeof e.name === 'string'), reason: 'exercise 필드 형식 오류' },
+          { ok: !data?.dailyMacroLogs || (Array.isArray(data.dailyMacroLogs) && data.dailyMacroLogs.every((l: { date?: unknown; entries?: unknown }) =>
+              typeof l.date === 'string' && Array.isArray(l.entries))), reason: 'dailyMacroLogs 형식 오류' },
+          { ok: !data?.foods || Array.isArray(data.foods), reason: 'foods 배열 형식 오류' },
+        ];
+        const failed = checks.find((c) => !c.ok);
+        if (failed) {
+          showToast(`유효하지 않은 백업: ${failed.reason}`);
           return;
         }
 

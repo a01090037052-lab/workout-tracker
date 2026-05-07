@@ -57,11 +57,20 @@ export default function NutritionPage() {
 // ============================================================
 function TodayView({ onNeedProfile }: { onNeedProfile: () => void }) {
   const today = getLocalDate();
+  const [yesterday] = useState(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().split('T')[0];
+  });
   const [profile] = useState(() => storage.nutritionProfile.get());
   const [showAddModal, setShowAddModal] = useState(false);
 
   const log = useLiveQuery(() => db.dailyMacroLogs.where('date').equals(today).first(), [today]);
+  const yesterdayLog = useLiveQuery(() => db.dailyMacroLogs.where('date').equals(yesterday).first(), [yesterday]);
   const entries = log?.entries || [];
+  const waterMl = log?.waterMl || 0;
+  const WATER_TARGET = 2000;
 
   const totals = entries.reduce(
     (acc, e) => ({
@@ -90,6 +99,25 @@ function TodayView({ onNeedProfile }: { onNeedProfile: () => void }) {
     await db.dailyMacroLogs.update(log.id, { entries: next });
   };
 
+  const copyYesterday = async () => {
+    if (!yesterdayLog?.entries.length) return;
+    const cloned = yesterdayLog.entries.map((e) => ({ ...e }));
+    if (log?.id) {
+      await db.dailyMacroLogs.update(log.id, { entries: cloned });
+    } else {
+      await db.dailyMacroLogs.add({ date: today, entries: cloned, waterMl: 0 });
+    }
+  };
+
+  const updateWater = async (delta: number) => {
+    const next = Math.max(0, waterMl + delta);
+    if (log?.id) {
+      await db.dailyMacroLogs.update(log.id, { waterMl: next });
+    } else {
+      await db.dailyMacroLogs.add({ date: today, entries: [], waterMl: next });
+    }
+  };
+
   if (!profile) {
     return (
       <div className="bg-surface rounded-xl p-6 text-center">
@@ -109,6 +137,19 @@ function TodayView({ onNeedProfile }: { onNeedProfile: () => void }) {
     <div className="space-y-4">
       {/* 매크로 합계 카드 */}
       <MacroSummaryCard totals={totals} target={target!} goal={profile.goal} />
+
+      {/* 물 섭취 카드 */}
+      <WaterCard waterMl={waterMl} target={WATER_TARGET} onAdd={updateWater} />
+
+      {/* 어제 식단 복사 (오늘 비어있고 어제 기록 있을 때만) */}
+      {entries.length === 0 && (yesterdayLog?.entries.length ?? 0) > 0 && (
+        <button
+          onClick={copyYesterday}
+          className="w-full py-3 bg-primary/10 border border-primary/30 rounded-xl text-sm text-primary-light font-medium active:bg-primary/20 transition-colors"
+        >
+          📋 어제 식단 그대로 복사 ({yesterdayLog?.entries.length}개 항목)
+        </button>
+      )}
 
       {/* 식사 추가 */}
       <button
@@ -447,14 +488,26 @@ function AddMealModal({ onAdd, onClose }: { onAdd: (entry: MacroEntry) => void; 
                 placeholder="100"
                 className="w-full bg-surface-light rounded-lg px-4 py-2.5 font-mono text-center outline-none focus:ring-2 focus:ring-primary"
               />
-              {selectedFood.servingLabel && (
-                <button
-                  onClick={() => setPortionG(String(selectedFood.defaultServing || 100))}
-                  className="text-[10px] text-primary-light underline mt-1"
-                >
-                  {selectedFood.servingLabel}로 채우기
-                </button>
-              )}
+
+              {/* 배수 빠른 입력 칩 */}
+              <div className="flex gap-1.5 mt-2">
+                {[0.5, 1, 1.5, 2].map((mult) => {
+                  const baseG = selectedFood.defaultServing || 100;
+                  const grams = Math.round(baseG * mult);
+                  const baseLabel = selectedFood.servingLabel?.split(' (')[0] || `${baseG}g`;
+                  const label = mult === 1 ? baseLabel : `×${mult}`;
+                  return (
+                    <button
+                      key={mult}
+                      onClick={() => setPortionG(String(grams))}
+                      className="flex-1 py-1.5 bg-surface-light hover:bg-border rounded-lg text-[11px] text-text-secondary transition-colors"
+                    >
+                      <div className="font-medium">{label}</div>
+                      <div className="text-[9px] opacity-70">{grams}g</div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {/* 매크로 미리보기 */}
@@ -750,6 +803,29 @@ function CalculatorView({ onSaved }: { onSaved: () => void }) {
   );
 }
 
+function WaterCard({ waterMl, target, onAdd }: { waterMl: number; target: number; onAdd: (delta: number) => void }) {
+  const pct = Math.min(100, (waterMl / target) * 100);
+  const liters = (waterMl / 1000).toFixed(waterMl >= 1000 ? 1 : 2);
+  return (
+    <div className="bg-surface rounded-xl p-4">
+      <div className="flex justify-between items-baseline mb-2">
+        <span className="text-sm font-semibold">💧 물 섭취</span>
+        <span className="text-sm font-mono">
+          {liters}<span className="text-xs text-text-secondary"> / {(target / 1000).toFixed(1)} L ({Math.round(pct)}%)</span>
+        </span>
+      </div>
+      <div className="h-2 bg-surface-light rounded-full overflow-hidden mb-3">
+        <div className="h-full bg-cyan-400 rounded-full transition-all" style={{ width: `${pct}%` }} />
+      </div>
+      <div className="flex gap-2">
+        <button onClick={() => onAdd(-250)} className="flex-1 py-2 bg-surface-light rounded-lg text-xs text-text-secondary">−250</button>
+        <button onClick={() => onAdd(250)} className="flex-1 py-2 bg-cyan-500/15 text-cyan-400 rounded-lg text-xs font-medium">+250ml</button>
+        <button onClick={() => onAdd(500)} className="flex-1 py-2 bg-cyan-500/15 text-cyan-400 rounded-lg text-xs font-medium">+500ml</button>
+      </div>
+    </div>
+  );
+}
+
 function NumberField({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
   return (
     <div>
@@ -866,6 +942,73 @@ function TrendView({ onNeedProfile }: { onNeedProfile: () => void }) {
           >최근 {d}일</button>
         ))}
       </div>
+
+      {/* 자연어 인사이트 */}
+      {(() => {
+        const insights: { icon: string; text: string; tone: 'success' | 'warning' | 'neutral' }[] = [];
+
+        if (target && avgProtein > 0) {
+          const ratio = avgProtein / target.protein;
+          if (ratio >= 0.95 && ratio <= 1.15) {
+            insights.push({ icon: '✅', text: `단백질 평균 ${Math.round(ratio * 100)}% 달성 — 잘 챙기고 있어요`, tone: 'success' });
+          } else if (ratio < 0.8) {
+            insights.push({ icon: '⚠', text: `단백질 ${Math.round(ratio * 100)}%로 목표보다 ${Math.round(target.protein - avgProtein)}g 부족`, tone: 'warning' });
+          } else if (ratio > 1.2) {
+            insights.push({ icon: '↑', text: `단백질 ${Math.round(ratio * 100)}% — 충분 (과다는 큰 문제 아님)`, tone: 'neutral' });
+          }
+        }
+
+        if (target && avgKcal > 0) {
+          const pct = Math.round(((avgKcal - target.kcal) / target.kcal) * 100);
+          if (Math.abs(pct) <= 5) {
+            insights.push({ icon: '🎯', text: `칼로리 평균 ${avgKcal} — 목표(${target.kcal}) 정확히 맞춤`, tone: 'success' });
+          } else if (Math.abs(pct) > 15) {
+            insights.push({ icon: '⚠', text: `칼로리 변동 큼 (목표 대비 ${pct > 0 ? '+' : ''}${pct}%)`, tone: 'warning' });
+          }
+        }
+
+        if (hasWeightData) {
+          const weeksSpan = Math.max(1, days / 7);
+          const weeklyDiff = +(weightDiff / weeksSpan).toFixed(2);
+          const goal = profile.goal;
+          if (goal === 'cut' || goal === 'cut_aggressive') {
+            if (weeklyDiff <= -0.3 && weeklyDiff >= -0.7) {
+              insights.push({ icon: '📉', text: `주당 ${Math.abs(weeklyDiff)}kg 감량 — 다이어트 적정 속도`, tone: 'success' });
+            } else if (weeklyDiff < -0.7) {
+              insights.push({ icon: '⚠', text: `주당 ${Math.abs(weeklyDiff)}kg — 너무 빠른 감량 (근손실 위험, 칼로리 ↑ 검토)`, tone: 'warning' });
+            } else if (weeklyDiff >= 0) {
+              insights.push({ icon: '⏸', text: `체중 정체 — 칼로리 정직하게 기록했는지 확인`, tone: 'warning' });
+            }
+          } else if (goal === 'lean_bulk' || goal === 'bulk') {
+            if (weeklyDiff >= 0.2 && weeklyDiff <= 0.5) {
+              insights.push({ icon: '📈', text: `주당 +${weeklyDiff}kg — 클린 벌크 적정 속도`, tone: 'success' });
+            } else if (weeklyDiff > 0.7) {
+              insights.push({ icon: '⚠', text: `주당 +${weeklyDiff}kg — 너무 빠른 벌크 (지방 증가 ↑, 탄수 −25g 검토)`, tone: 'warning' });
+            } else if (weeklyDiff < 0.1) {
+              insights.push({ icon: '↑', text: `벌크 진전 부족 — 탄수 +25g 추가 권장`, tone: 'neutral' });
+            }
+          }
+        }
+
+        if (insights.length === 0) return null;
+        return (
+          <div className="bg-surface rounded-xl p-4">
+            <h3 className="font-semibold text-sm mb-2">📊 이번 기간 인사이트</h3>
+            <div className="space-y-2">
+              {insights.map((ins, i) => (
+                <div key={i} className={`text-xs p-2.5 rounded-lg flex items-start gap-1.5 ${
+                  ins.tone === 'success' ? 'bg-success/10 text-success' :
+                  ins.tone === 'warning' ? 'bg-warning/10 text-warning' :
+                  'bg-surface-light text-text-secondary'
+                }`}>
+                  <span>{ins.icon}</span>
+                  <span className="flex-1">{ins.text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* 요약 카드 */}
       <div className="grid grid-cols-3 gap-2">

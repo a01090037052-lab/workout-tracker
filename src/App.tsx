@@ -1,16 +1,18 @@
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { seedExercises, seedFoods } from './db/seed';
 import { WorkoutProvider } from './hooks/WorkoutContext';
 import BottomNav from './components/common/BottomNav';
 import HomePage from './pages/HomePage';
 import WorkoutPage from './pages/WorkoutPage';
-import HistoryPage from './pages/HistoryPage';
-import StatsPage from './pages/StatsPage';
-import SettingsPage from './pages/SettingsPage';
-import RoutinePage from './pages/RoutinePage';
-import ProgramPage from './pages/ProgramPage';
-import NutritionPage from './pages/NutritionPage';
+
+// 자주 안 쓰는 페이지는 lazy load (첫 진입 번들 크기 ↓)
+const HistoryPage = lazy(() => import('./pages/HistoryPage'));
+const StatsPage = lazy(() => import('./pages/StatsPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const RoutinePage = lazy(() => import('./pages/RoutinePage'));
+const ProgramPage = lazy(() => import('./pages/ProgramPage'));
+const NutritionPage = lazy(() => import('./pages/NutritionPage'));
 
 function App() {
   useEffect(() => {
@@ -23,17 +25,19 @@ function App() {
       <WorkoutProvider>
         <div className="flex flex-col min-h-[100dvh]">
           <main className="flex-1 pb-16 overflow-y-auto">
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/workout" element={<WorkoutPage />} />
-              <Route path="/routines" element={<RoutinePage />} />
-              <Route path="/programs" element={<ProgramPage />} />
-              <Route path="/history" element={<HistoryPage />} />
-              <Route path="/stats" element={<StatsPage />} />
-              <Route path="/nutrition" element={<NutritionPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
+            <Suspense fallback={<div className="p-8 text-center text-text-secondary text-sm">로딩 중…</div>}>
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/workout" element={<WorkoutPage />} />
+                <Route path="/routines" element={<RoutinePage />} />
+                <Route path="/programs" element={<ProgramPage />} />
+                <Route path="/history" element={<HistoryPage />} />
+                <Route path="/stats" element={<StatsPage />} />
+                <Route path="/nutrition" element={<NutritionPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
           </main>
           <BottomNav />
         </div>

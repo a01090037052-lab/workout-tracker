@@ -10,6 +10,7 @@ import GoalSelector from '../components/workout/GoalSelector';
 import ConditionSelector from '../components/workout/ConditionSelector';
 import PlateCalculator from '../components/workout/PlateCalculator';
 import InjuryLogger from '../components/workout/InjuryLogger';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { getRecommendedRestTime } from '../hooks/useTrainingGuide';
 import { useWakeLock } from '../hooks/useWakeLock';
 import { useWorkoutDuration } from '../hooks/useWorkoutDuration';
@@ -50,6 +51,12 @@ export default function WorkoutPage() {
 
   // 시간 표시는 별도 훅 — 매초 리렌더가 이 컴포넌트에만 영향
   const duration = useWorkoutDuration();
+
+  // 활성 부상 (해결 안 된 것)
+  const activeInjuries = useLiveQuery(async () => {
+    const all = await db.injuryLogs.toArray();
+    return all.filter((i) => !i.isResolved);
+  }, []);
 
   // 루틴/프로그램으로 운동 시작
   useEffect(() => {
@@ -219,6 +226,28 @@ export default function WorkoutPage() {
           </button>
         </div>
       </div>
+
+      {/* 활성 부상 경고 배너 */}
+      {activeInjuries && activeInjuries.length > 0 && (
+        <div className="bg-warning/15 border border-warning/40 rounded-xl p-3 mb-3">
+          <div className="text-warning text-xs font-semibold mb-1.5">⚠ 활성 부상 {activeInjuries.length}건 — 해당 부위 주의</div>
+          <div className="space-y-0.5">
+            {activeInjuries.slice(0, 5).map((inj) => (
+              <div key={inj.id} className="text-[11px] text-text-secondary">
+                • <span className="font-medium text-text">{inj.bodyPart}</span>
+                {inj.side !== 'center' && ` (${inj.side === 'left' ? '왼쪽' : inj.side === 'right' ? '오른쪽' : '양쪽'})`}
+                <span className={`ml-1 text-[10px] ${inj.severity === 'severe' ? 'text-danger' : inj.severity === 'moderate' ? 'text-warning' : 'text-text-secondary'}`}>
+                  {inj.severity === 'severe' ? '심함' : inj.severity === 'moderate' ? '보통' : '가벼움'}
+                </span>
+                {inj.note && <span className="text-text-secondary/70"> · {inj.note}</span>}
+              </div>
+            ))}
+            {activeInjuries.length > 5 && (
+              <div className="text-[10px] text-text-secondary">…외 {activeInjuries.length - 5}건</div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* 컨디션 & 운동 목적 */}
       <ConditionSelector selected={workout.condition} onChange={workout.setCondition} />

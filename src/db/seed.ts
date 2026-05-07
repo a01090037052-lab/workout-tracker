@@ -3,7 +3,7 @@ import { defaultExercises } from '../data/exercises';
 import { defaultFoods } from '../data/foods';
 
 const SEED_VERSION = 5; // 운동 목록 버전. 추가 시 올리면 기존 사용자도 업데이트
-const FOOD_SEED_VERSION = 2; // 음식 데이터 버전. 추가/수정 시 올리면 기존 사용자도 갱신
+const FOOD_SEED_VERSION = 3; // 음식 데이터 버전. 추가/수정 시 올리면 기존 사용자도 갱신
 
 export async function seedExercises() {
   const versionKey = await db.settings.get('seedVersion');

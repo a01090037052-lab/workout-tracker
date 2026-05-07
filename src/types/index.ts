@@ -115,9 +115,10 @@ export interface DailyMacroLog {
   id?: number;
   date: string;          // YYYY-MM-DD
   entries: MacroEntry[];
+  waterMl?: number;      // 누적 물 섭취 (ml)
 }
 
-export type FoodCategory = 'grain' | 'protein' | 'vegetable' | 'fruit' | 'dairy' | 'snack' | 'beverage' | 'sauce' | 'processed' | 'delivery';
+export type FoodCategory = 'grain' | 'protein' | 'vegetable' | 'fruit' | 'dairy' | 'snack' | 'beverage' | 'sauce' | 'processed' | 'delivery' | 'supplement';
 
 export interface Food {
   id?: number;

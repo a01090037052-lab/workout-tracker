@@ -168,6 +168,77 @@ export const defaultFoods: Omit<Food, 'id'>[] = [
   { name: '카라멜 마키아토', category: 'delivery', kcalPer100g: 57, proteinPer100g: 2, carbsPer100g: 8.5, fatPer100g: 1.7, defaultServing: 350, servingLabel: '1잔 (350ml)', isCustom: false },
   { name: '케이크 한 조각', category: 'delivery', kcalPer100g: 350, proteinPer100g: 5, carbsPer100g: 50, fatPer100g: 14, defaultServing: 100, servingLabel: '1조각 (100g)', isCustom: false },
   { name: '도넛', category: 'delivery', kcalPer100g: 380, proteinPer100g: 5, carbsPer100g: 50, fatPer100g: 18, defaultServing: 60, servingLabel: '1개 (60g)', isCustom: false },
+
+  // ===== 운동 보충제 =====
+  { name: 'WPC 단백질 쉐이크', category: 'supplement', kcalPer100g: 410, proteinPer100g: 75, carbsPer100g: 6, fatPer100g: 6, defaultServing: 30, servingLabel: '1스쿱 (30g)', isCustom: false },
+  { name: 'WPI 단백질 쉐이크', category: 'supplement', kcalPer100g: 380, proteinPer100g: 88, carbsPer100g: 4, fatPer100g: 1, defaultServing: 30, servingLabel: '1스쿱 (30g)', isCustom: false },
+  { name: '게이너 (mass gainer)', category: 'supplement', kcalPer100g: 380, proteinPer100g: 30, carbsPer100g: 50, fatPer100g: 4, defaultServing: 60, servingLabel: '1스쿱 (60g)', isCustom: false },
+  { name: '크레아틴 (모노)', category: 'supplement', kcalPer100g: 0, proteinPer100g: 0, carbsPer100g: 0, fatPer100g: 0, defaultServing: 5, servingLabel: '1티스푼 (5g)', isCustom: false },
+  { name: 'BCAA', category: 'supplement', kcalPer100g: 320, proteinPer100g: 80, carbsPer100g: 0, fatPer100g: 0, defaultServing: 10, servingLabel: '1스쿱 (10g)', isCustom: false },
+
+  // ===== 편의점 =====
+  { name: '삼각김밥 (참치)', category: 'processed', kcalPer100g: 175, proteinPer100g: 5, carbsPer100g: 30, fatPer100g: 4, defaultServing: 100, servingLabel: '1개 (100g)', isCustom: false },
+  { name: '삼각김밥 (소고기)', category: 'processed', kcalPer100g: 180, proteinPer100g: 6, carbsPer100g: 28, fatPer100g: 5, defaultServing: 100, servingLabel: '1개 (100g)', isCustom: false },
+  { name: '컵라면', category: 'processed', kcalPer100g: 510, proteinPer100g: 11, carbsPer100g: 75, fatPer100g: 19, defaultServing: 65, servingLabel: '1컵 (65g)', isCustom: false },
+  { name: '편의점 도시락', category: 'processed', kcalPer100g: 150, proteinPer100g: 5, carbsPer100g: 20, fatPer100g: 5, defaultServing: 500, servingLabel: '1팩 (500g)', isCustom: false },
+  { name: '햇반 (즉석밥)', category: 'processed', kcalPer100g: 130, proteinPer100g: 2.5, carbsPer100g: 28, fatPer100g: 0.3, defaultServing: 210, servingLabel: '1팩 (210g)', isCustom: false },
+  { name: '핫바', category: 'processed', kcalPer100g: 230, proteinPer100g: 12, carbsPer100g: 16, fatPer100g: 14, defaultServing: 50, servingLabel: '1개 (50g)', isCustom: false },
+  { name: '닭가슴살 (스팀, 가공)', category: 'protein', kcalPer100g: 110, proteinPer100g: 24, carbsPer100g: 1, fatPer100g: 1, defaultServing: 100, servingLabel: '1팩 (100g)', isCustom: false },
+  { name: '단백질바', category: 'snack', kcalPer100g: 380, proteinPer100g: 30, carbsPer100g: 30, fatPer100g: 10, defaultServing: 50, servingLabel: '1개 (50g)', isCustom: false },
+  { name: '컵스프', category: 'processed', kcalPer100g: 32, proteinPer100g: 1, carbsPer100g: 5, fatPer100g: 1, defaultServing: 250, servingLabel: '1컵 (250g)', isCustom: false },
+  { name: '소세지빵', category: 'processed', kcalPer100g: 280, proteinPer100g: 8, carbsPer100g: 30, fatPer100g: 14, defaultServing: 80, servingLabel: '1개 (80g)', isCustom: false },
+
+  // ===== 국·찌개 =====
+  { name: '미역국', category: 'processed', kcalPer100g: 35, proteinPer100g: 3, carbsPer100g: 3, fatPer100g: 1.5, defaultServing: 400, servingLabel: '1인분 (400g)', isCustom: false },
+  { name: '콩나물국', category: 'processed', kcalPer100g: 25, proteinPer100g: 1.5, carbsPer100g: 3, fatPer100g: 1, defaultServing: 400, servingLabel: '1인분 (400g)', isCustom: false },
+  { name: '사골국', category: 'processed', kcalPer100g: 60, proteinPer100g: 5, carbsPer100g: 2, fatPer100g: 4, defaultServing: 500, servingLabel: '1인분 (500g)', isCustom: false },
+  { name: '감자탕', category: 'processed', kcalPer100g: 90, proteinPer100g: 7, carbsPer100g: 8, fatPer100g: 4, defaultServing: 600, servingLabel: '1인분 (600g)', isCustom: false },
+  { name: '닭곰탕', category: 'processed', kcalPer100g: 70, proteinPer100g: 8, carbsPer100g: 4, fatPer100g: 3, defaultServing: 600, servingLabel: '1인분 (600g)', isCustom: false },
+
+  // ===== 반찬 =====
+  { name: '멸치볶음', category: 'processed', kcalPer100g: 200, proteinPer100g: 16, carbsPer100g: 12, fatPer100g: 10, defaultServing: 30, servingLabel: '1접시 (30g)', isCustom: false },
+  { name: '메추리알 장조림', category: 'processed', kcalPer100g: 145, proteinPer100g: 12, carbsPer100g: 5, fatPer100g: 9, defaultServing: 50, isCustom: false },
+  { name: '시금치나물', category: 'processed', kcalPer100g: 35, proteinPer100g: 3, carbsPer100g: 4, fatPer100g: 1.5, defaultServing: 50, isCustom: false },
+  { name: '콩나물무침', category: 'processed', kcalPer100g: 38, proteinPer100g: 4, carbsPer100g: 4, fatPer100g: 1.5, defaultServing: 50, isCustom: false },
+  { name: '어묵볶음', category: 'processed', kcalPer100g: 130, proteinPer100g: 9, carbsPer100g: 12, fatPer100g: 5, defaultServing: 50, isCustom: false },
+  { name: '계란말이', category: 'processed', kcalPer100g: 165, proteinPer100g: 12, carbsPer100g: 2, fatPer100g: 12, defaultServing: 100, servingLabel: '1접시 (100g)', isCustom: false },
+  { name: '김자반', category: 'processed', kcalPer100g: 280, proteinPer100g: 12, carbsPer100g: 28, fatPer100g: 12, defaultServing: 10, servingLabel: '1숟갈 (10g)', isCustom: false },
+  { name: '깻잎 장아찌', category: 'processed', kcalPer100g: 28, proteinPer100g: 1.5, carbsPer100g: 3, fatPer100g: 1, defaultServing: 10, isCustom: false },
+
+  // ===== 과일 추가 =====
+  { name: '망고', category: 'fruit', kcalPer100g: 60, proteinPer100g: 0.8, carbsPer100g: 15, fatPer100g: 0.4, defaultServing: 200, servingLabel: '반 개 (200g)', isCustom: false },
+  { name: '파인애플', category: 'fruit', kcalPer100g: 50, proteinPer100g: 0.5, carbsPer100g: 13, fatPer100g: 0.1, defaultServing: 100, isCustom: false },
+  { name: '자몽', category: 'fruit', kcalPer100g: 42, proteinPer100g: 0.8, carbsPer100g: 11, fatPer100g: 0.1, defaultServing: 150, servingLabel: '반 개 (150g)', isCustom: false },
+  { name: '복숭아', category: 'fruit', kcalPer100g: 39, proteinPer100g: 0.9, carbsPer100g: 10, fatPer100g: 0.3, defaultServing: 150, servingLabel: '1개 (150g)', isCustom: false },
+  { name: '배', category: 'fruit', kcalPer100g: 57, proteinPer100g: 0.4, carbsPer100g: 15, fatPer100g: 0.1, defaultServing: 250, servingLabel: '1개 (250g)', isCustom: false },
+
+  // ===== 채소 추가 =====
+  { name: '가지', category: 'vegetable', kcalPer100g: 25, proteinPer100g: 1, carbsPer100g: 6, fatPer100g: 0.2, defaultServing: 100, isCustom: false },
+  { name: '애호박', category: 'vegetable', kcalPer100g: 17, proteinPer100g: 1.2, carbsPer100g: 3, fatPer100g: 0.3, defaultServing: 100, isCustom: false },
+  { name: '배추', category: 'vegetable', kcalPer100g: 13, proteinPer100g: 1.5, carbsPer100g: 2, fatPer100g: 0.2, defaultServing: 100, isCustom: false },
+  { name: '깻잎', category: 'vegetable', kcalPer100g: 50, proteinPer100g: 4, carbsPer100g: 7, fatPer100g: 1, defaultServing: 10, servingLabel: '5장 (10g)', isCustom: false },
+  { name: '상추', category: 'vegetable', kcalPer100g: 15, proteinPer100g: 1.4, carbsPer100g: 2.9, fatPer100g: 0.2, defaultServing: 50, isCustom: false },
+
+  // ===== 곡류 추가 =====
+  { name: '떡국떡', category: 'grain', kcalPer100g: 220, proteinPer100g: 5, carbsPer100g: 50, fatPer100g: 0.4, defaultServing: 100, isCustom: false },
+  { name: '우동면 (삶은)', category: 'grain', kcalPer100g: 100, proteinPer100g: 3, carbsPer100g: 21, fatPer100g: 0.5, defaultServing: 200, servingLabel: '1인분 (200g)', isCustom: false },
+  { name: '쌀국수 (삶은)', category: 'grain', kcalPer100g: 110, proteinPer100g: 2, carbsPer100g: 25, fatPer100g: 0.2, defaultServing: 200, isCustom: false },
+  { name: '호밀빵', category: 'grain', kcalPer100g: 260, proteinPer100g: 9, carbsPer100g: 48, fatPer100g: 3, defaultServing: 50, servingLabel: '1쪽 (50g)', isCustom: false },
+  { name: '무가당 그래놀라', category: 'grain', kcalPer100g: 450, proteinPer100g: 13, carbsPer100g: 60, fatPer100g: 17, defaultServing: 40, servingLabel: '1회 (40g)', isCustom: false },
+
+  // ===== 음료 추가 =====
+  { name: '이온음료 (게토레이)', category: 'beverage', kcalPer100g: 25, proteinPer100g: 0, carbsPer100g: 6, fatPer100g: 0, defaultServing: 500, servingLabel: '1병 (500ml)', isCustom: false },
+  { name: '저지방 우유', category: 'dairy', kcalPer100g: 42, proteinPer100g: 3.4, carbsPer100g: 5, fatPer100g: 1, defaultServing: 200, servingLabel: '1팩 (200ml)', isCustom: false },
+  { name: '오렌지주스', category: 'beverage', kcalPer100g: 45, proteinPer100g: 0.7, carbsPer100g: 10, fatPer100g: 0.2, defaultServing: 200, servingLabel: '1잔 (200ml)', isCustom: false },
+  { name: '와인 (레드)', category: 'beverage', kcalPer100g: 83, proteinPer100g: 0.1, carbsPer100g: 2.6, fatPer100g: 0, defaultServing: 150, servingLabel: '1잔 (150ml)', isCustom: false },
+  { name: '카페모카', category: 'beverage', kcalPer100g: 78, proteinPer100g: 3.5, carbsPer100g: 9, fatPer100g: 3.4, defaultServing: 350, servingLabel: '1잔 (350ml)', isCustom: false },
+
+  // ===== 카페·디저트 추가 =====
+  { name: '샌드위치 (햄·치즈)', category: 'delivery', kcalPer100g: 250, proteinPer100g: 12, carbsPer100g: 28, fatPer100g: 11, defaultServing: 200, servingLabel: '1개 (200g)', isCustom: false },
+  { name: '머핀', category: 'delivery', kcalPer100g: 380, proteinPer100g: 6, carbsPer100g: 50, fatPer100g: 17, defaultServing: 100, servingLabel: '1개 (100g)', isCustom: false },
+  { name: '크림빵', category: 'delivery', kcalPer100g: 320, proteinPer100g: 6, carbsPer100g: 50, fatPer100g: 12, defaultServing: 80, servingLabel: '1개 (80g)', isCustom: false },
+  { name: '샐러드볼 (드레싱 별도)', category: 'delivery', kcalPer100g: 80, proteinPer100g: 5, carbsPer100g: 8, fatPer100g: 3, defaultServing: 300, servingLabel: '1볼 (300g)', isCustom: false },
+  { name: '마카롱', category: 'delivery', kcalPer100g: 400, proteinPer100g: 6, carbsPer100g: 65, fatPer100g: 14, defaultServing: 25, servingLabel: '1개 (25g)', isCustom: false },
 ];
 
 export const FOOD_CATEGORY_LABELS: Record<Food['category'], string> = {
@@ -181,4 +252,5 @@ export const FOOD_CATEGORY_LABELS: Record<Food['category'], string> = {
   beverage: '음료',
   processed: '가공식품',
   delivery: '배달·외식',
+  supplement: '운동 보충제',
 };

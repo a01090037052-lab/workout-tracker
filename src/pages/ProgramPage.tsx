@@ -435,14 +435,38 @@ export default function ProgramPage() {
 
           {/* 다음 사이클 (TM 자동 증량) */}
           <button
-            onClick={() => {
+            onClick={async () => {
               const upperExercises = ['벤치프레스', '오버헤드 프레스', '덤벨 숄더 프레스', '덤벨 벤치프레스'];
+              const is531 = selectedProgram.id === '531' || selectedProgram.id === '531bbb';
+              const allExercises = await db.exercises.toArray();
+              const exMap = new Map(allExercises.map((e) => [e.id!, e.name]));
               const newMaxes: Record<string, number> = {};
+
               for (const exName of selectedProgram.exercises) {
                 const current = progress.oneRepMaxes[exName] || 0;
-                const increment = upperExercises.includes(exName) ? 5 : 10;
-                newMaxes[exName] = current > 0 ? current + increment : current;
+                if (current === 0) { newMaxes[exName] = 0; continue; }
+                const isUpper = upperExercises.includes(exName);
+
+                let increment: number;
+                if (is531) {
+                  // 5/3/1 정통: AMRAP 결과 기반 TM 증량 결정
+                  const recent = (programSessions || [])
+                    .filter((s) => s.exercises.some((e) => exMap.get(e.exerciseId) === exName))
+                    .sort((a, b) => b.date.localeCompare(a.date))[0];
+                  const ex = recent?.exercises.find((e) => exMap.get(e.exerciseId) === exName);
+                  const lastSet = ex?.sets[ex.sets.length - 1];
+                  const amrapReps = lastSet?.reps || 0;
+
+                  if (amrapReps >= 11) increment = isUpper ? 5 : 10;       // 탁월
+                  else if (amrapReps >= 4) increment = isUpper ? 2.5 : 5;  // 정상
+                  else if (amrapReps >= 1) increment = 0;                  // 유지 (다음 사이클 도전)
+                  else increment = isUpper ? -2.5 : -5;                    // 데이터 없음 → 약간 감량
+                } else {
+                  increment = isUpper ? 5 : 10;
+                }
+                newMaxes[exName] = Math.max(0, current + increment);
               }
+
               const newProgress: ProgramProgress = {
                 ...progress,
                 currentWeek: 1,
@@ -454,7 +478,14 @@ export default function ProgramPage() {
               saveProgress(newProgress);
             }}
             className="w-full px-4 py-3 bg-success text-white rounded-xl text-sm font-semibold mb-2"
-          >🔄 다음 사이클 시작 (상체 +5 / 하체 +10kg)</button>
+          >
+            🔄 다음 사이클 시작
+            <div className="text-[10px] font-normal mt-0.5 opacity-90">
+              {selectedProgram.id === '531' || selectedProgram.id === '531bbb'
+                ? 'AMRAP 결과 기반 자동 증량 (정통 5/3/1)'
+                : '상체 +5kg / 하체 +10kg'}
+            </div>
+          </button>
 
           <button
             onClick={() => { setActiveId(null); setSelectedProgram(null); }}
