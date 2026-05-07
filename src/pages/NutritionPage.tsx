@@ -6,6 +6,7 @@ import { storage } from '../lib/storage';
 import { calcBMR, calcTDEE, calcAllScenarios, calcMacros, GOAL_LABELS, GOAL_DESCRIPTIONS, ACTIVITY_LABELS } from '../lib/nutrition';
 import { getLocalDate } from '../hooks/useLocalDate';
 import { FOOD_CATEGORY_LABELS } from '../data/foods';
+import NutritionGuide from '../components/nutrition/NutritionGuide';
 import type { NutritionProfile, MealType, MacroEntry, ActivityLevel, DietGoal, Food, FoodCategory } from '../types';
 
 const MEAL_LABELS: Record<MealType, string> = {
@@ -591,6 +592,7 @@ function CalculatorView({ onSaved }: { onSaved: () => void }) {
       goal: 'maintain',
     }
   );
+  const [showGuide, setShowGuide] = useState(false);
 
   const handleSave = () => {
     storage.nutritionProfile.set(profile);
@@ -604,6 +606,22 @@ function CalculatorView({ onSaved }: { onSaved: () => void }) {
 
   return (
     <div className="space-y-4">
+      {/* 매크로 가이드 (펼침) */}
+      <div className="bg-surface rounded-xl overflow-hidden">
+        <button
+          onClick={() => setShowGuide(!showGuide)}
+          className="w-full flex justify-between items-center p-4 active:bg-surface-light transition-colors"
+        >
+          <span className="font-semibold text-sm">📚 매크로 가이드 — 단백질·탄수·지방이란?</span>
+          <span className="text-xs text-text-secondary">{showGuide ? '접기 ▴' : '펼치기 ▾'}</span>
+        </button>
+        {showGuide && (
+          <div className="px-4 pb-4 border-t border-border">
+            <NutritionGuide />
+          </div>
+        )}
+      </div>
+
       {/* 프로필 입력 */}
       <div className="bg-surface rounded-xl p-4 space-y-3">
         <h3 className="font-semibold">프로필</h3>
