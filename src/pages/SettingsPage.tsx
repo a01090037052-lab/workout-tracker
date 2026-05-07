@@ -25,8 +25,11 @@ export default function SettingsPage() {
       personalRecords: await db.personalRecords.toArray(),
       injuryLogs: await db.injuryLogs.toArray(),
       bodyWeightLogs: await db.bodyWeightLogs.toArray(),
+      dailyMacroLogs: await db.dailyMacroLogs.toArray(),
+      foods: await db.foods.toArray(),
       settings: { weightSuggestion: storage.weightSuggestion.raw() },
       programProgress: storage.programProgress.exportAll(),
+      nutritionProfile: storage.nutritionProfile.get(),
       exportDate: new Date().toISOString(),
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -66,6 +69,8 @@ export default function SettingsPage() {
           personalRecords: await db.personalRecords.toArray(),
           injuryLogs: await db.injuryLogs.toArray(),
           bodyWeightLogs: await db.bodyWeightLogs.toArray(),
+          dailyMacroLogs: await db.dailyMacroLogs.toArray(),
+          foods: await db.foods.toArray(),
         };
 
         try {
@@ -75,6 +80,8 @@ export default function SettingsPage() {
           await db.personalRecords.clear();
           await db.injuryLogs.clear();
           await db.exercises.clear();
+          await db.dailyMacroLogs.clear();
+          await db.foods.clear();
 
           if (data.exercises?.length) await db.exercises.bulkAdd(data.exercises);
           if (data.sessions?.length) await db.sessions.bulkAdd(data.sessions);
@@ -82,6 +89,8 @@ export default function SettingsPage() {
           if (data.personalRecords?.length) await db.personalRecords.bulkAdd(data.personalRecords);
           if (data.injuryLogs?.length) await db.injuryLogs.bulkAdd(data.injuryLogs);
           if (data.bodyWeightLogs?.length) await db.bodyWeightLogs.bulkAdd(data.bodyWeightLogs);
+          if (data.dailyMacroLogs?.length) await db.dailyMacroLogs.bulkAdd(data.dailyMacroLogs);
+          if (data.foods?.length) await db.foods.bulkAdd(data.foods);
 
           // settings 복원
           if (data.settings?.weightSuggestion) {
@@ -91,8 +100,12 @@ export default function SettingsPage() {
           if (data.programProgress) {
             storage.programProgress.importAll(data.programProgress as Record<string, string>);
           }
+          // 영양 프로필 복원
+          if (data.nutritionProfile) {
+            storage.nutritionProfile.set(data.nutritionProfile);
+          }
 
-          showToast(`복원 완료! (세션 ${data.sessions?.length || 0}개, 루틴 ${data.routines?.length || 0}개)`);
+          showToast(`복원 완료! (세션 ${data.sessions?.length || 0}개, 식단 ${data.dailyMacroLogs?.length || 0}일)`);
         } catch (restoreErr) {
           // 롤백
           await db.exercises.clear();
@@ -100,12 +113,17 @@ export default function SettingsPage() {
           await db.routines.clear();
           await db.personalRecords.clear();
           await db.injuryLogs.clear();
+          await db.bodyWeightLogs.clear();
+          await db.dailyMacroLogs.clear();
+          await db.foods.clear();
           if (backup.exercises.length) await db.exercises.bulkAdd(backup.exercises);
           if (backup.sessions.length) await db.sessions.bulkAdd(backup.sessions);
           if (backup.routines.length) await db.routines.bulkAdd(backup.routines);
           if (backup.personalRecords.length) await db.personalRecords.bulkAdd(backup.personalRecords);
           if (backup.injuryLogs.length) await db.injuryLogs.bulkAdd(backup.injuryLogs);
           if (backup.bodyWeightLogs.length) await db.bodyWeightLogs.bulkAdd(backup.bodyWeightLogs);
+          if (backup.dailyMacroLogs.length) await db.dailyMacroLogs.bulkAdd(backup.dailyMacroLogs);
+          if (backup.foods.length) await db.foods.bulkAdd(backup.foods);
           showToast('복원 실패. 기존 데이터를 유지합니다.');
         }
       } catch {

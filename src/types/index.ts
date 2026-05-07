@@ -116,3 +116,18 @@ export interface DailyMacroLog {
   date: string;          // YYYY-MM-DD
   entries: MacroEntry[];
 }
+
+export type FoodCategory = 'grain' | 'protein' | 'vegetable' | 'fruit' | 'dairy' | 'snack' | 'beverage' | 'sauce' | 'processed' | 'delivery';
+
+export interface Food {
+  id?: number;
+  name: string;
+  category: FoodCategory;
+  kcalPer100g: number;
+  proteinPer100g: number;
+  carbsPer100g: number;
+  fatPer100g: number;
+  defaultServing?: number;   // 기본 분량 (g) — 검색 시 자동 채움
+  servingLabel?: string;     // 표시용 (예: "1개(50g)", "1컵")
+  isCustom: boolean;
+}

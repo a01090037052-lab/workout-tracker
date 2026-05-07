@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { storage } from '../lib/storage';
 import { calcBMR, calcTDEE, calcAllScenarios, calcMacros, GOAL_LABELS, GOAL_DESCRIPTIONS, ACTIVITY_LABELS } from '../lib/nutrition';
 import { getLocalDate } from '../hooks/useLocalDate';
-import type { NutritionProfile, MealType, MacroEntry, ActivityLevel, DietGoal } from '../types';
+import { FOOD_CATEGORY_LABELS } from '../data/foods';
+import type { NutritionProfile, MealType, MacroEntry, ActivityLevel, DietGoal, Food, FoodCategory } from '../types';
 
 const MEAL_LABELS: Record<MealType, string> = {
   breakfast: '아침', lunch: '점심', dinner: '저녁', snack: '간식',
@@ -218,14 +219,72 @@ function MacroRow({ label, actual, target, pct, color }: { label: string; actual
 // 식사 추가 모달
 // ============================================================
 function AddMealModal({ onAdd, onClose }: { onAdd: (entry: MacroEntry) => void; onClose: () => void }) {
-  const [name, setName] = useState('');
+  const [mode, setMode] = useState<'search' | 'manual' | 'portion' | 'newFood'>('search');
+  const [query, setQuery] = useState('');
+  const [selectedFood, setSelectedFood] = useState<Food | null>(null);
+  const [portionG, setPortionG] = useState('');
   const [mealType, setMealType] = useState<MealType>('breakfast');
+  const [categoryFilter, setCategoryFilter] = useState<'all' | 'favorites' | FoodCategory>('all');
+  const [favTick, setFavTick] = useState(0); // 즐겨찾기 토글 → 리렌더
+
+  // 직접 입력 모드 상태
+  const [name, setName] = useState('');
   const [kcal, setKcal] = useState('');
   const [protein, setProtein] = useState('');
   const [carbs, setCarbs] = useState('');
   const [fat, setFat] = useState('');
 
-  const handleSave = () => {
+  const allFoods = useLiveQuery(() => db.foods.toArray(), []);
+  const favIds = useMemo(() => storage.favoriteFoods.get(), [favTick]);
+
+  const filteredFoods = useMemo(() => {
+    if (!allFoods) return [];
+    const q = query.trim().toLowerCase();
+    let list = allFoods;
+    // 카테고리 필터
+    if (categoryFilter === 'favorites') {
+      list = list.filter((f) => f.id !== undefined && favIds.includes(f.id));
+    } else if (categoryFilter !== 'all') {
+      list = list.filter((f) => f.category === categoryFilter);
+    }
+    // 검색어 필터
+    if (q) list = list.filter((f) => f.name.toLowerCase().includes(q));
+    // 즐겨찾기 우선 정렬
+    list = [...list].sort((a, b) => {
+      const af = a.id !== undefined && favIds.includes(a.id) ? 1 : 0;
+      const bf = b.id !== undefined && favIds.includes(b.id) ? 1 : 0;
+      return bf - af;
+    });
+    return q ? list : list.slice(0, 50);
+  }, [allFoods, query, categoryFilter, favIds]);
+
+  const toggleFavorite = (e: React.MouseEvent, id: number) => {
+    e.stopPropagation();
+    storage.favoriteFoods.toggle(id);
+    setFavTick((t) => t + 1);
+  };
+
+  const handleSelectFood = (food: Food) => {
+    setSelectedFood(food);
+    setPortionG(String(food.defaultServing || 100));
+    setMode('portion');
+  };
+
+  const handlePortionAdd = () => {
+    if (!selectedFood) return;
+    const g = Math.max(1, Number(portionG) || 0);
+    const ratio = g / 100;
+    onAdd({
+      name: `${selectedFood.name} ${g}g`,
+      mealType,
+      kcal: Math.round(selectedFood.kcalPer100g * ratio),
+      protein: Math.round(selectedFood.proteinPer100g * ratio * 10) / 10,
+      carbs: Math.round(selectedFood.carbsPer100g * ratio * 10) / 10,
+      fat: Math.round(selectedFood.fatPer100g * ratio * 10) / 10,
+    });
+  };
+
+  const handleManualAdd = () => {
     if (!name.trim()) return;
     onAdd({
       name: name.trim(),
@@ -237,7 +296,6 @@ function AddMealModal({ onAdd, onClose }: { onAdd: (entry: MacroEntry) => void; 
     });
   };
 
-  // 매크로로 칼로리 자동 계산 옵션 (헬퍼)
   const autoKcal = () => {
     const p = Number(protein) || 0;
     const c = Number(carbs) || 0;
@@ -246,88 +304,267 @@ function AddMealModal({ onAdd, onClose }: { onAdd: (entry: MacroEntry) => void; 
     if (calc > 0) setKcal(String(calc));
   };
 
+  const portionRatio = selectedFood ? Math.max(1, Number(portionG) || 0) / 100 : 0;
+  const preview = selectedFood ? {
+    kcal: Math.round(selectedFood.kcalPer100g * portionRatio),
+    p: Math.round(selectedFood.proteinPer100g * portionRatio * 10) / 10,
+    c: Math.round(selectedFood.carbsPer100g * portionRatio * 10) / 10,
+    f: Math.round(selectedFood.fatPer100g * portionRatio * 10) / 10,
+  } : null;
+
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center">
       <div className="bg-surface w-full max-w-[430px] rounded-t-2xl p-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex justify-between items-center mb-3">
           <h3 className="text-lg font-bold">식사 추가</h3>
           <button onClick={onClose} className="text-text-secondary text-2xl leading-none">&times;</button>
         </div>
 
-        <div className="space-y-3">
-          <div>
-            <label className="text-xs text-text-secondary mb-1 block">음식 이름</label>
-            <input
-              type="text" value={name} onChange={(e) => setName(e.target.value)}
-              placeholder="예: 닭가슴살 100g"
-              className="w-full bg-surface-light rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-primary"
-            />
+        {/* 모드 토글 (분량 입력 중엔 숨김) */}
+        {mode !== 'portion' && (
+          <div className="flex gap-2 mb-3 bg-surface-light/50 rounded-lg p-1">
+            <button
+              onClick={() => setMode('search')}
+              className={`flex-1 py-1.5 rounded text-xs font-medium ${mode === 'search' ? 'bg-primary text-white' : 'text-text-secondary'}`}
+            >🔍 음식 검색</button>
+            <button
+              onClick={() => setMode('manual')}
+              className={`flex-1 py-1.5 rounded text-xs font-medium ${mode === 'manual' ? 'bg-primary text-white' : 'text-text-secondary'}`}
+            >✏️ 직접 입력</button>
           </div>
+        )}
 
-          <div>
-            <label className="text-xs text-text-secondary mb-1 block">식사 분류</label>
-            <div className="flex gap-2">
-              {MEAL_ORDER.map((m) => (
+        {/* 검색 모드 */}
+        {mode === 'search' && (
+          <>
+            <input
+              type="text" value={query} onChange={(e) => setQuery(e.target.value)}
+              placeholder="음식 이름으로 검색 (예: 닭가슴살)"
+              autoFocus
+              className="w-full bg-surface-light rounded-lg px-4 py-2.5 mb-3 outline-none focus:ring-2 focus:ring-primary"
+            />
+
+            {/* 카테고리 필터 칩 */}
+            <div className="flex gap-1.5 mb-3 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+              {[{ key: 'all', label: '전체' }, { key: 'favorites', label: '⭐' },
+                ...(Object.keys(FOOD_CATEGORY_LABELS) as FoodCategory[]).map((c) => ({ key: c, label: FOOD_CATEGORY_LABELS[c] })),
+              ].map((c) => (
                 <button
-                  key={m}
-                  onClick={() => setMealType(m)}
-                  className={`flex-1 py-2 rounded-lg text-sm ${
-                    mealType === m ? 'bg-primary text-white' : 'bg-surface-light text-text-secondary'
+                  key={c.key}
+                  onClick={() => setCategoryFilter(c.key as 'all' | 'favorites' | FoodCategory)}
+                  className={`shrink-0 px-3 py-1 rounded-full text-[11px] font-medium transition-colors ${
+                    categoryFilter === c.key ? 'bg-primary text-white' : 'bg-surface-light text-text-secondary'
                   }`}
-                >
-                  {MEAL_LABELS[m]}
-                </button>
+                >{c.label}</button>
               ))}
             </div>
-          </div>
 
-          <div className="grid grid-cols-3 gap-2">
-            <div>
-              <label className="text-[10px] text-red-400 mb-1 block">단백질(g)</label>
+            <div className="space-y-1 max-h-[45vh] overflow-y-auto mb-2">
+              {filteredFoods.length === 0 && (
+                <div className="text-center py-8 text-text-secondary text-sm">
+                  {categoryFilter === 'favorites'
+                    ? '즐겨찾기가 없어요. ★를 눌러 추가하세요'
+                    : query ? '검색 결과가 없어요' : '식품 데이터 로딩 중...'}
+                </div>
+              )}
+              {filteredFoods.map((f) => {
+                const isFav = f.id !== undefined && favIds.includes(f.id);
+                return (
+                  <div key={f.id} className="flex items-stretch gap-0.5 bg-surface-light hover:bg-border rounded-lg transition-colors">
+                    <button
+                      onClick={(e) => toggleFavorite(e, f.id!)}
+                      className={`px-3 ${isFav ? 'text-yellow-400' : 'text-text-secondary/30 hover:text-text-secondary'}`}
+                      aria-label="즐겨찾기"
+                    >★</button>
+                    <button
+                      onClick={() => handleSelectFood(f)}
+                      className="flex-1 text-left py-3 pr-3"
+                    >
+                      <div className="flex justify-between items-baseline">
+                        <span className="text-sm font-medium">{f.name}</span>
+                        <span className="text-[10px] text-text-secondary">
+                          {FOOD_CATEGORY_LABELS[f.category]}
+                          {f.isCustom && <span className="text-primary-light ml-1">· 내가 추가</span>}
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-text-secondary font-mono mt-0.5">
+                        100g: {f.kcalPer100g}kcal · P{f.proteinPer100g} · C{f.carbsPer100g} · F{f.fatPer100g}
+                        {f.servingLabel && <span className="text-primary-light ml-2">· {f.servingLabel}</span>}
+                      </div>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={() => setMode('newFood')}
+              className="w-full py-2.5 border-2 border-dashed border-border rounded-lg text-text-secondary hover:border-primary hover:text-primary text-sm transition-colors"
+            >
+              + 새 음식 등록
+            </button>
+          </>
+        )}
+
+        {/* 새 음식 등록 모드 */}
+        {mode === 'newFood' && (
+          <NewFoodForm
+            onSaved={(food) => {
+              setSelectedFood(food);
+              setPortionG(String(food.defaultServing || 100));
+              setMode('portion');
+            }}
+            onCancel={() => setMode('search')}
+          />
+        )}
+
+        {/* 분량 입력 모드 (음식 선택 후) */}
+        {mode === 'portion' && selectedFood && preview && (
+          <>
+            <button
+              onClick={() => { setMode('search'); setSelectedFood(null); }}
+              className="text-xs text-primary-light mb-2"
+            >← 다른 음식 선택</button>
+            <div className="bg-surface-light rounded-lg p-3 mb-3">
+              <div className="font-semibold mb-1">{selectedFood.name}</div>
+              <div className="text-[10px] text-text-secondary font-mono">
+                100g 기준: {selectedFood.kcalPer100g}kcal · P{selectedFood.proteinPer100g} · C{selectedFood.carbsPer100g} · F{selectedFood.fatPer100g}
+              </div>
+            </div>
+
+            <div className="mb-3">
+              <label className="text-xs text-text-secondary mb-1 block">분량 (g)</label>
               <input
-                type="number" inputMode="decimal" value={protein} onChange={(e) => setProtein(e.target.value)}
-                placeholder="0"
-                className="w-full bg-surface-light rounded-lg px-3 py-2 text-sm font-mono text-center outline-none focus:ring-2 focus:ring-primary"
+                type="number" inputMode="decimal" value={portionG} onChange={(e) => setPortionG(e.target.value)}
+                placeholder="100"
+                className="w-full bg-surface-light rounded-lg px-4 py-2.5 font-mono text-center outline-none focus:ring-2 focus:ring-primary"
+              />
+              {selectedFood.servingLabel && (
+                <button
+                  onClick={() => setPortionG(String(selectedFood.defaultServing || 100))}
+                  className="text-[10px] text-primary-light underline mt-1"
+                >
+                  {selectedFood.servingLabel}로 채우기
+                </button>
+              )}
+            </div>
+
+            {/* 매크로 미리보기 */}
+            <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 mb-3">
+              <div className="text-[10px] text-text-secondary mb-1">매크로 미리보기</div>
+              <div className="flex justify-between items-baseline">
+                <span className="text-2xl font-mono font-bold">{preview.kcal}<span className="text-sm text-text-secondary"> kcal</span></span>
+              </div>
+              <div className="flex gap-3 text-xs font-mono mt-1">
+                <span className="text-red-400">P {preview.p}g</span>
+                <span className="text-yellow-400">C {preview.c}g</span>
+                <span className="text-blue-400">F {preview.f}g</span>
+              </div>
+            </div>
+
+            <div className="mb-3">
+              <label className="text-xs text-text-secondary mb-1 block">식사 분류</label>
+              <div className="flex gap-2">
+                {MEAL_ORDER.map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setMealType(m)}
+                    className={`flex-1 py-2 rounded-lg text-sm ${
+                      mealType === m ? 'bg-primary text-white' : 'bg-surface-light text-text-secondary'
+                    }`}
+                  >
+                    {MEAL_LABELS[m]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button
+              onClick={handlePortionAdd}
+              className="w-full py-3 bg-primary text-white rounded-xl font-semibold"
+            >
+              추가
+            </button>
+          </>
+        )}
+
+        {/* 직접 입력 모드 */}
+        {mode === 'manual' && (
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-text-secondary mb-1 block">음식 이름</label>
+              <input
+                type="text" value={name} onChange={(e) => setName(e.target.value)}
+                placeholder="예: 닭가슴살 샐러드"
+                className="w-full bg-surface-light rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
+
             <div>
-              <label className="text-[10px] text-yellow-400 mb-1 block">탄수(g)</label>
+              <label className="text-xs text-text-secondary mb-1 block">식사 분류</label>
+              <div className="flex gap-2">
+                {MEAL_ORDER.map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setMealType(m)}
+                    className={`flex-1 py-2 rounded-lg text-sm ${
+                      mealType === m ? 'bg-primary text-white' : 'bg-surface-light text-text-secondary'
+                    }`}
+                  >
+                    {MEAL_LABELS[m]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <label className="text-[10px] text-red-400 mb-1 block">단백질(g)</label>
+                <input
+                  type="number" inputMode="decimal" value={protein} onChange={(e) => setProtein(e.target.value)}
+                  placeholder="0"
+                  className="w-full bg-surface-light rounded-lg px-3 py-2 text-sm font-mono text-center outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-yellow-400 mb-1 block">탄수(g)</label>
+                <input
+                  type="number" inputMode="decimal" value={carbs} onChange={(e) => setCarbs(e.target.value)}
+                  placeholder="0"
+                  className="w-full bg-surface-light rounded-lg px-3 py-2 text-sm font-mono text-center outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-blue-400 mb-1 block">지방(g)</label>
+                <input
+                  type="number" inputMode="decimal" value={fat} onChange={(e) => setFat(e.target.value)}
+                  placeholder="0"
+                  className="w-full bg-surface-light rounded-lg px-3 py-2 text-sm font-mono text-center outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <label className="text-xs text-text-secondary">칼로리 (kcal)</label>
+                <button onClick={autoKcal} className="text-[10px] text-primary-light underline">매크로로 자동 계산</button>
+              </div>
               <input
-                type="number" inputMode="decimal" value={carbs} onChange={(e) => setCarbs(e.target.value)}
+                type="number" inputMode="decimal" value={kcal} onChange={(e) => setKcal(e.target.value)}
                 placeholder="0"
-                className="w-full bg-surface-light rounded-lg px-3 py-2 text-sm font-mono text-center outline-none focus:ring-2 focus:ring-primary"
+                className="w-full bg-surface-light rounded-lg px-4 py-2.5 font-mono text-center outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
-            <div>
-              <label className="text-[10px] text-blue-400 mb-1 block">지방(g)</label>
-              <input
-                type="number" inputMode="decimal" value={fat} onChange={(e) => setFat(e.target.value)}
-                placeholder="0"
-                className="w-full bg-surface-light rounded-lg px-3 py-2 text-sm font-mono text-center outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-          </div>
 
-          <div>
-            <div className="flex justify-between items-center mb-1">
-              <label className="text-xs text-text-secondary">칼로리 (kcal)</label>
-              <button onClick={autoKcal} className="text-[10px] text-primary-light underline">매크로로 자동 계산</button>
-            </div>
-            <input
-              type="number" inputMode="decimal" value={kcal} onChange={(e) => setKcal(e.target.value)}
-              placeholder="0"
-              className="w-full bg-surface-light rounded-lg px-4 py-2.5 font-mono text-center outline-none focus:ring-2 focus:ring-primary"
-            />
+            <button
+              onClick={handleManualAdd}
+              disabled={!name.trim()}
+              className="w-full mt-2 py-3 bg-primary disabled:opacity-40 text-white rounded-xl font-semibold"
+            >
+              추가
+            </button>
           </div>
-        </div>
-
-        <button
-          onClick={handleSave}
-          disabled={!name.trim()}
-          className="w-full mt-4 py-3 bg-primary disabled:opacity-40 text-white rounded-xl font-semibold"
-        >
-          추가
-        </button>
+        )}
       </div>
     </div>
   );
@@ -498,5 +735,145 @@ function NumberField({ label, value, onChange }: { label: string; value: number;
         className="w-full bg-surface-light rounded-lg px-3 py-2 text-sm font-mono text-center outline-none focus:ring-2 focus:ring-primary"
       />
     </div>
+  );
+}
+
+// ============================================================
+// 새 음식 등록 폼
+// ============================================================
+function NewFoodForm({ onSaved, onCancel }: { onSaved: (food: Food) => void; onCancel: () => void }) {
+  const [name, setName] = useState('');
+  const [category, setCategory] = useState<FoodCategory>('protein');
+  const [kcal, setKcal] = useState('');
+  const [protein, setProtein] = useState('');
+  const [carbs, setCarbs] = useState('');
+  const [fat, setFat] = useState('');
+  const [defaultServing, setDefaultServing] = useState('');
+  const [servingLabel, setServingLabel] = useState('');
+
+  const isValid = name.trim().length > 0 && Number(kcal) >= 0;
+
+  const handleSave = async () => {
+    if (!isValid) return;
+    const food: Omit<Food, 'id'> = {
+      name: name.trim(),
+      category,
+      kcalPer100g: Math.max(0, Number(kcal) || 0),
+      proteinPer100g: Math.max(0, Number(protein) || 0),
+      carbsPer100g: Math.max(0, Number(carbs) || 0),
+      fatPer100g: Math.max(0, Number(fat) || 0),
+      defaultServing: defaultServing ? Math.max(1, Number(defaultServing)) : undefined,
+      servingLabel: servingLabel.trim() || undefined,
+      isCustom: true,
+    };
+    const id = await db.foods.add(food as Food);
+    onSaved({ ...food, id: id as number });
+  };
+
+  // 매크로로 칼로리 자동 계산
+  const autoKcal = () => {
+    const p = Number(protein) || 0;
+    const c = Number(carbs) || 0;
+    const f = Number(fat) || 0;
+    const calc = Math.round(p * 4 + c * 4 + f * 9);
+    if (calc > 0) setKcal(String(calc));
+  };
+
+  return (
+    <>
+      <button onClick={onCancel} className="text-xs text-primary-light mb-3">← 검색으로 돌아가기</button>
+
+      <div className="space-y-3">
+        <div>
+          <label className="text-xs text-text-secondary mb-1 block">음식 이름</label>
+          <input
+            type="text" value={name} onChange={(e) => setName(e.target.value)}
+            placeholder="예: 단백질 쉐이크"
+            className="w-full bg-surface-light rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-primary"
+          />
+        </div>
+
+        <div>
+          <label className="text-xs text-text-secondary mb-1 block">카테고리</label>
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value as FoodCategory)}
+            className="w-full bg-surface-light rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary"
+          >
+            {(Object.keys(FOOD_CATEGORY_LABELS) as FoodCategory[]).map((c) => (
+              <option key={c} value={c}>{FOOD_CATEGORY_LABELS[c]}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="bg-surface-light/50 rounded-lg p-3">
+          <div className="text-[10px] text-text-secondary mb-2">100g 기준 매크로</div>
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <label className="text-[10px] text-red-400 mb-1 block">단백질(g)</label>
+              <input
+                type="number" inputMode="decimal" value={protein} onChange={(e) => setProtein(e.target.value)}
+                placeholder="0"
+                className="w-full bg-surface rounded-lg px-3 py-2 text-sm font-mono text-center outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] text-yellow-400 mb-1 block">탄수(g)</label>
+              <input
+                type="number" inputMode="decimal" value={carbs} onChange={(e) => setCarbs(e.target.value)}
+                placeholder="0"
+                className="w-full bg-surface rounded-lg px-3 py-2 text-sm font-mono text-center outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] text-blue-400 mb-1 block">지방(g)</label>
+              <input
+                type="number" inputMode="decimal" value={fat} onChange={(e) => setFat(e.target.value)}
+                placeholder="0"
+                className="w-full bg-surface rounded-lg px-3 py-2 text-sm font-mono text-center outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+          </div>
+          <div className="mt-2">
+            <div className="flex justify-between items-center mb-1">
+              <label className="text-[10px] text-text-secondary">칼로리 (kcal)</label>
+              <button onClick={autoKcal} className="text-[10px] text-primary-light underline">매크로로 자동 계산</button>
+            </div>
+            <input
+              type="number" inputMode="decimal" value={kcal} onChange={(e) => setKcal(e.target.value)}
+              placeholder="0"
+              className="w-full bg-surface rounded-lg px-4 py-2 font-mono text-center outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="text-[10px] text-text-secondary mb-1 block">기본 분량 (g, 선택)</label>
+            <input
+              type="number" inputMode="decimal" value={defaultServing} onChange={(e) => setDefaultServing(e.target.value)}
+              placeholder="100"
+              className="w-full bg-surface-light rounded-lg px-3 py-2 text-sm font-mono outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] text-text-secondary mb-1 block">단위 라벨 (선택)</label>
+            <input
+              type="text" value={servingLabel} onChange={(e) => setServingLabel(e.target.value)}
+              placeholder="예: 1스쿱"
+              className="w-full bg-surface-light rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+        </div>
+
+        <button
+          onClick={handleSave}
+          disabled={!isValid}
+          className="w-full mt-2 py-3 bg-primary disabled:opacity-40 text-white rounded-xl font-semibold"
+        >
+          등록하고 식사에 추가
+        </button>
+      </div>
+    </>
   );
 }

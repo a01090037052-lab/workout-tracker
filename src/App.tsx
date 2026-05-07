@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { seedExercises } from './db/seed';
+import { seedExercises, seedFoods } from './db/seed';
 import { WorkoutProvider } from './hooks/WorkoutContext';
 import BottomNav from './components/common/BottomNav';
 import HomePage from './pages/HomePage';
@@ -15,6 +15,7 @@ import NutritionPage from './pages/NutritionPage';
 function App() {
   useEffect(() => {
     seedExercises();
+    seedFoods();
   }, []);
 
   return (

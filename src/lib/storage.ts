@@ -135,4 +135,22 @@ export const storage = {
       localStorage.removeItem(KEYS.nutritionProfile);
     },
   },
+
+  favoriteFoods: {
+    get(): number[] {
+      return readJSON<number[]>('favoriteFoods') || [];
+    },
+    set(ids: number[]) {
+      writeJSON('favoriteFoods', ids);
+    },
+    has(id: number): boolean {
+      return this.get().includes(id);
+    },
+    toggle(id: number): boolean {
+      const cur = this.get();
+      const next = cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id];
+      this.set(next);
+      return next.includes(id);
+    },
+  },
 };
