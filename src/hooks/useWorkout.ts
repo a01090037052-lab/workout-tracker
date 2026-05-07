@@ -1,6 +1,7 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { db } from '../db';
 import { getLocalDate } from './useLocalDate';
+import { storage } from '../lib/storage';
 import type { WorkoutExercise, WorkoutSet, WorkoutSession, Condition, TrainingGoal } from '../types';
 
 export interface PRAlert {
@@ -11,43 +12,12 @@ export interface PRAlert {
   estimated1RM: number;
 }
 
-const STORAGE_KEY = 'activeWorkout';
-
-interface SavedWorkout {
-  isActive: boolean;
-  exercises: WorkoutExercise[];
-  startTime: number;
-  condition: Condition;
-  trainingGoal: TrainingGoal;
-  routineId?: number;
-  programId?: string;
-  programWeek?: number;
-  programDay?: number;
-}
-
-function saveToStorage(data: SavedWorkout) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
-}
-
-function loadFromStorage(): SavedWorkout | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw);
-  } catch { return null; }
-}
-
-function clearStorage() {
-  localStorage.removeItem(STORAGE_KEY);
-}
-
 export function useWorkout() {
-  // lazy initializer로 최초 1회만 파싱
-  const [initialState] = useState(() => loadFromStorage());
+  const [initialState] = useState(() => storage.activeWorkout.get());
 
   const [isActive, setIsActive] = useState(initialState?.isActive || false);
   const [exercises, setExercises] = useState<WorkoutExercise[]>(initialState?.exercises || []);
-  const [duration, setDuration] = useState(0);
+  const [startTimeMs, setStartTimeMs] = useState<number>(initialState?.startTime || 0);
   const [condition, setCondition] = useState<Condition>(initialState?.condition || 'normal');
   const [trainingGoal, setTrainingGoal] = useState<TrainingGoal>(initialState?.trainingGoal || 'hypertrophy');
   const [prAlert, setPRAlert] = useState<PRAlert | null>(null);
@@ -55,31 +25,16 @@ export function useWorkout() {
   const [programInfo, setProgramInfo] = useState<{ programId: string; week: number; day: number } | undefined>(
     initialState?.programId ? { programId: initialState.programId, week: initialState.programWeek || 1, day: initialState.programDay || 0 } : undefined
   );
-  const startTimeRef = useRef<number>(initialState?.startTime || 0);
-  const timerRef = useRef<number | null>(null);
-
-  // 타이머 복구 및 시작
-  useEffect(() => {
-    if (isActive && startTimeRef.current > 0 && !timerRef.current) {
-      timerRef.current = window.setInterval(() => {
-        setDuration(Math.floor((Date.now() - startTimeRef.current) / 1000));
-      }, 1000);
-    }
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-      timerRef.current = null;
-    };
-  }, [isActive]);
 
   // 자동 저장
   useEffect(() => {
     if (isActive) {
-      saveToStorage({
-        isActive, exercises, startTime: startTimeRef.current, condition, trainingGoal,
+      storage.activeWorkout.set({
+        isActive, exercises, startTime: startTimeMs, condition, trainingGoal,
         routineId, programId: programInfo?.programId, programWeek: programInfo?.week, programDay: programInfo?.day,
       });
     }
-  }, [isActive, exercises, condition, trainingGoal, routineId, programInfo]);
+  }, [isActive, exercises, startTimeMs, condition, trainingGoal, routineId, programInfo]);
 
   // 페이지 이탈 경고
   useEffect(() => {
@@ -92,22 +47,16 @@ export function useWorkout() {
   const startWorkout = useCallback(() => {
     setIsActive(true);
     setExercises([]);
-    setDuration(0);
+    setStartTimeMs(Date.now());
     setRoutineId(undefined);
     setProgramInfo(undefined);
-    startTimeRef.current = Date.now();
-    timerRef.current = window.setInterval(() => {
-      setDuration(Math.floor((Date.now() - startTimeRef.current) / 1000));
-    }, 1000);
   }, []);
 
-  // initialSets가 주어지면 이전 기록 무시하고 해당 값 사용
   const addExercise = useCallback(async (
     exerciseId: number,
     numSets: number = 1,
     initialSets?: { weight: number; reps: number }[],
   ) => {
-    // 이전 기록에서 무게/횟수 가져오기 (initialSets가 없을 때만)
     let prevSets: { weight: number; reps: number }[] = [];
     if (!initialSets) {
       try {
@@ -119,7 +68,7 @@ export function useWorkout() {
             break;
           }
         }
-      } catch {}
+      } catch { /* prev session lookup is best-effort */ }
     }
 
     const source = initialSets || prevSets;
@@ -219,7 +168,6 @@ export function useWorkout() {
       if (!set) return prev;
 
       const togglingToComplete = !set.isCompleted;
-      // 맨몸 운동은 횟수만 있으면 완료 가능, 일반 운동은 무게+횟수 필요
       if (togglingToComplete) {
         if (isBodyweight && set.reps <= 0) return prev;
         if (!isBodyweight && (set.weight <= 0 || set.reps <= 0)) return prev;
@@ -237,28 +185,26 @@ export function useWorkout() {
       });
     });
 
-    // setState 밖에서 사이드 이펙트 실행 (React StrictMode 안전)
     if (shouldCheckPR) {
       checkPR(exerciseId, prWeight, prReps);
     }
   }, [checkPR]);
 
   const finishWorkout = useCallback(async () => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = null;
-
-    // 맨몸 운동은 weight 0 허용, 모든 완료 세트 저장
     const validExercises = exercises
       .map((ex) => ({ ...ex, sets: ex.sets.filter((s) => s.isCompleted && s.reps > 0) }))
       .filter((ex) => ex.sets.length > 0);
 
     if (validExercises.length === 0) return null;
 
+    const endMs = Date.now();
+    const durationSec = startTimeMs > 0 ? Math.floor((endMs - startTimeMs) / 1000) : 0;
+
     const session: WorkoutSession = {
       date: getLocalDate(),
-      startTime: new Date(startTimeRef.current).toISOString(),
-      endTime: new Date().toISOString(),
-      duration,
+      startTime: new Date(startTimeMs).toISOString(),
+      endTime: new Date(endMs).toISOString(),
+      duration: durationSec,
       condition,
       trainingGoal,
       routineId,
@@ -271,7 +217,6 @@ export function useWorkout() {
     const id = await db.sessions.add(session);
 
     for (const ex of validExercises) {
-      // PR 계산: 워밍업 제외, weight > 0인 일반/드롭세트만
       let bestSet: { weight: number; reps: number; estimated1RM: number } | null = null;
       for (const set of ex.sets) {
         if (set.setType === 'warmup' || set.weight <= 0) continue;
@@ -292,26 +237,24 @@ export function useWorkout() {
       }
     }
 
-    clearStorage();
+    storage.activeWorkout.clear();
     setIsActive(false);
     setExercises([]);
-    setDuration(0);
+    setStartTimeMs(0);
     return { id, session, validExercises };
-  }, [exercises, duration, condition, trainingGoal]);
+  }, [exercises, startTimeMs, condition, trainingGoal, routineId, programInfo]);
 
   const cancelWorkout = useCallback(() => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = null;
-    clearStorage();
+    storage.activeWorkout.clear();
     setIsActive(false);
     setExercises([]);
-    setDuration(0);
+    setStartTimeMs(0);
     setRoutineId(undefined);
     setProgramInfo(undefined);
   }, []);
 
   return {
-    isActive, exercises, duration, condition, trainingGoal, prAlert, setPRAlert,
+    isActive, exercises, startTimeMs, condition, trainingGoal, prAlert, setPRAlert,
     setCondition, setTrainingGoal, routineId, setRoutineId, programInfo, setProgramInfo,
     startWorkout, addExercise, removeExercise, moveExercise,
     addWarmupSets, addSet, removeSet, updateSet, completeSet,

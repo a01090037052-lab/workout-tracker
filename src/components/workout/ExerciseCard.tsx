@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
 import { usePreviousRecord } from '../../hooks/usePreviousRecord';
-import { getProgressionMessage } from '../../hooks/useTrainingGuide';
+import { getProgressionMessage, classifyExercise } from '../../hooks/useTrainingGuide';
 import { useSmartInsight } from '../../hooks/useSmartInsight';
 import SetRow from './SetRow';
 import WarmupGuide from './WarmupGuide';
@@ -64,6 +64,7 @@ export default function ExerciseCard({
   const colorClass = muscleColors[exerciseInfo.muscleGroup] || 'from-surface to-surface-light border-border';
   const dotClass = muscleDots[exerciseInfo.muscleGroup] || 'bg-text-secondary';
   const isBodyweight = exerciseInfo.equipmentType === '맨몸';
+  const { isCompound } = classifyExercise(exerciseInfo.name, exerciseInfo.secondaryMuscle.length);
 
   const handleComplete = (setIndex: number) => {
     const set = exercise.sets[setIndex];
@@ -137,9 +138,8 @@ export default function ExerciseCard({
       )}
 
       {/* 헤더 라벨 */}
-      <div className="flex items-center gap-2 px-3 mb-1 text-[10px] text-text-secondary uppercase tracking-wider font-medium">
-        <span className="w-7 text-center">세트</span>
-        <span className="w-16 text-center">이전</span>
+      <div className="flex items-center gap-1.5 px-3 mb-1 text-[10px] text-text-secondary uppercase tracking-wider font-medium">
+        <span className="w-8 text-center">세트</span>
         {!isBodyweight ? (
           <span className="flex-1 min-w-[80px] text-center">무게</span>
         ) : (
@@ -162,6 +162,7 @@ export default function ExerciseCard({
           condition={condition}
           isBodyweight={isBodyweight}
           equipmentType={exerciseInfo.equipmentType}
+          isCompound={isCompound}
           onUpdate={(updates) => onUpdateSet(i, updates)}
           onComplete={() => handleComplete(i)}
           onRemove={() => onRemoveSet(i)}
@@ -170,7 +171,7 @@ export default function ExerciseCard({
 
       {/* 증량 메시지 */}
       {(() => {
-        const msg = getProgressionMessage(trainingGoal, exercise.sets);
+        const msg = getProgressionMessage(trainingGoal, exercise.sets, exerciseInfo.equipmentType, isCompound);
         if (!msg) return null;
         return (
           <div className="mx-3 mt-1 mb-2 px-3 py-2 bg-success/10 border border-success/20 rounded-lg text-xs text-success">

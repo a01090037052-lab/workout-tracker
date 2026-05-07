@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
+import { storage } from '../lib/storage';
 import type { MuscleGroup, EquipmentType } from '../types';
 
 const muscleGroups: MuscleGroup[] = ['가슴', '등', '어깨', '이두', '삼두', '하체', '코어'];
@@ -24,17 +25,8 @@ export default function SettingsPage() {
       personalRecords: await db.personalRecords.toArray(),
       injuryLogs: await db.injuryLogs.toArray(),
       bodyWeightLogs: await db.bodyWeightLogs.toArray(),
-      settings: { weightSuggestion: localStorage.getItem('weightSuggestion') || 'on' },
-      programProgress: (() => {
-        const progs: Record<string, string> = {};
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && (key.startsWith('prog_') || key === 'activeProgramId')) {
-            progs[key] = localStorage.getItem(key) || '';
-          }
-        }
-        return progs;
-      })(),
+      settings: { weightSuggestion: storage.weightSuggestion.raw() },
+      programProgress: storage.programProgress.exportAll(),
       exportDate: new Date().toISOString(),
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -44,6 +36,8 @@ export default function SettingsPage() {
     a.download = `workout-backup-${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
+    storage.lastBackupAt.setNow();
+    storage.backupSnoozedUntil.clear();
     showToast('백업 파일 다운로드 완료!');
   };
 
@@ -91,13 +85,11 @@ export default function SettingsPage() {
 
           // settings 복원
           if (data.settings?.weightSuggestion) {
-            localStorage.setItem('weightSuggestion', data.settings.weightSuggestion);
+            storage.weightSuggestion.setRaw(data.settings.weightSuggestion);
           }
           // 프로그램 진행 상태 복원
           if (data.programProgress) {
-            for (const [key, value] of Object.entries(data.programProgress)) {
-              localStorage.setItem(key, value as string);
-            }
+            storage.programProgress.importAll(data.programProgress as Record<string, string>);
           }
 
           showToast(`복원 완료! (세션 ${data.sessions?.length || 0}개, 루틴 ${data.routines?.length || 0}개)`);
@@ -135,13 +127,11 @@ export default function SettingsPage() {
   };
 
   // 무게 추천 설정
-  const [weightSuggestion, setWeightSuggestion] = useState(() =>
-    localStorage.getItem('weightSuggestion') !== 'off'
-  );
+  const [weightSuggestion, setWeightSuggestion] = useState(() => storage.weightSuggestion.get());
   const toggleWeightSuggestion = () => {
     const next = !weightSuggestion;
     setWeightSuggestion(next);
-    localStorage.setItem('weightSuggestion', next ? 'on' : 'off');
+    storage.weightSuggestion.set(next);
     showToast(next ? '무게 추천 켜짐' : '무게 추천 꺼짐');
   };
 

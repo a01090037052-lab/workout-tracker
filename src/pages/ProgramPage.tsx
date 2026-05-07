@@ -2,11 +2,9 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
+import { storage } from '../lib/storage';
 import { programTemplates } from '../data/programs';
 import type { ProgramTemplate, WeekPlan, DayPlan } from '../data/programs';
-
-const PROG_KEY_PREFIX = 'prog_';
-const ACTIVE_PROG_KEY = 'activeProgramId';
 
 interface ProgramProgress {
   programId: string;
@@ -17,20 +15,16 @@ interface ProgramProgress {
 }
 
 function saveProgress(prog: ProgramProgress) {
-  try { localStorage.setItem(PROG_KEY_PREFIX + prog.programId, JSON.stringify(prog)); } catch {}
+  storage.programProgress.set(prog.programId, prog);
 }
 function loadProgress(programId: string): ProgramProgress | null {
-  try {
-    const raw = localStorage.getItem(PROG_KEY_PREFIX + programId);
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
+  return storage.programProgress.get<ProgramProgress>(programId);
 }
 function getActiveId(): string | null {
-  return localStorage.getItem(ACTIVE_PROG_KEY);
+  return storage.activeProgramId.get();
 }
 function setActiveId(id: string | null) {
-  if (id) localStorage.setItem(ACTIVE_PROG_KEY, id);
-  else localStorage.removeItem(ACTIVE_PROG_KEY);
+  storage.activeProgramId.set(id);
 }
 
 export default function ProgramPage() {

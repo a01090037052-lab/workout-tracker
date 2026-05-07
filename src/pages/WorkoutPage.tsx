@@ -11,6 +11,8 @@ import ConditionSelector from '../components/workout/ConditionSelector';
 import PlateCalculator from '../components/workout/PlateCalculator';
 import InjuryLogger from '../components/workout/InjuryLogger';
 import { getRecommendedRestTime } from '../hooks/useTrainingGuide';
+import { useWakeLock } from '../hooks/useWakeLock';
+import { useWorkoutDuration } from '../hooks/useWorkoutDuration';
 
 function formatTime(seconds: number) {
   const h = Math.floor(seconds / 3600);
@@ -42,6 +44,12 @@ export default function WorkoutPage() {
   const [showInjuryLog, setShowInjuryLog] = useState(false);
   const [toast, setToast] = useState('');
   const [summary, setSummary] = useState<WorkoutSummary | null>(null);
+
+  // 운동 중 화면 꺼짐 방지
+  useWakeLock(workout.isActive);
+
+  // 시간 표시는 별도 훅 — 매초 리렌더가 이 컴포넌트에만 영향
+  const duration = useWorkoutDuration();
 
   // 루틴/프로그램으로 운동 시작
   useEffect(() => {
@@ -189,7 +197,7 @@ export default function WorkoutPage() {
       {/* 상단 운동 정보 (sticky) */}
       <div className="flex justify-between items-center mb-4 sticky top-0 z-10 bg-bg py-2 -mx-4 px-4">
         <div>
-          <div className="text-2xl font-bold font-mono">{formatTime(workout.duration)}</div>
+          <div className="text-2xl font-bold font-mono">{formatTime(duration)}</div>
           <div className="text-xs text-text-secondary mt-1">
             {totalSets}세트 · {totalVolume.toLocaleString()}kg
           </div>
@@ -304,7 +312,7 @@ export default function WorkoutPage() {
           <div className="bg-surface rounded-2xl p-6 w-full max-w-[350px]">
             <h3 className="text-lg font-bold mb-2">운동 완료</h3>
             <p className="text-text-secondary text-sm mb-4">
-              {formatTime(workout.duration)} 동안 {totalSets}세트를 완료했어요. 저장할까요?
+              {formatTime(duration)} 동안 {totalSets}세트를 완료했어요. 저장할까요?
             </p>
             <div className="flex gap-2">
               <button

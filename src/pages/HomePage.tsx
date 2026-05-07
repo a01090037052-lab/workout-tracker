@@ -4,6 +4,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { getLocalDate, formatDateKr } from '../hooks/useLocalDate';
 import { useWorkoutContext } from '../hooks/WorkoutContext';
+import { useWorkoutDuration } from '../hooks/useWorkoutDuration';
+import { storage } from '../lib/storage';
 
 function BodyWeightWidget() {
   const today = getLocalDate();
@@ -109,16 +111,34 @@ const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const { isActive: workoutActive, exercises: workoutExercises, duration: workoutDuration } = useWorkoutContext();
+  const { isActive: workoutActive, exercises: workoutExercises } = useWorkoutContext();
+  const workoutDuration = useWorkoutDuration();
   const today = getLocalDate();
 
   const todaySessions = useLiveQuery(
     () => db.sessions.where('date').equals(today).toArray()
   );
 
+  // 최근 60일치만 가져옴 — streak/이번주/최근5개/추천 모두 60일이면 충분, 장기 누적 시 첫 진입 비용 방지
   const allSessions = useLiveQuery(
-    () => db.sessions.orderBy('date').reverse().toArray()
+    () => db.sessions.orderBy('date').reverse().limit(60).toArray()
   );
+
+  // 백업 리마인더 스냅샷 (1회 평가)
+  const [bannerSnapshot] = useState(() => {
+    const lastBackupAt = storage.lastBackupAt.get();
+    const snoozedUntil = storage.backupSnoozedUntil.get();
+    const now = Date.now();
+    const isSnoozed = snoozedUntil > now;
+    const daysSinceBackup = lastBackupAt > 0 ? Math.floor((now - lastBackupAt) / 86400000) : null;
+    return { isSnoozed, daysSinceBackup };
+  });
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+
+  const snoozeBackupReminder = () => {
+    storage.backupSnoozedUntil.set(Date.now() + 30 * 86400000);
+    setBannerDismissed(true);
+  };
 
   const recentSessions = allSessions?.slice(0, 5);
   const allDates = allSessions?.map((s) => s.date) || [];
@@ -164,6 +184,42 @@ export default function HomePage() {
           </div>
         )}
       </div>
+
+      {/* 백업 리마인더 */}
+      {!bannerDismissed && !bannerSnapshot.isSnoozed && allSessions && allSessions.length > 0 &&
+        (bannerSnapshot.daysSinceBackup === null || bannerSnapshot.daysSinceBackup >= 14) && (
+          <section className="mb-4">
+            <div className="bg-primary/10 border border-primary/30 rounded-xl p-4">
+              <div className="flex items-start gap-2.5">
+                <span className="text-lg leading-none mt-0.5">💾</span>
+                <div className="flex-1">
+                  <div className="text-sm font-semibold mb-1">
+                    {bannerSnapshot.daysSinceBackup === null ? '백업이 한 번도 없어요' : '백업한 지 오래됐어요'}
+                  </div>
+                  <p className="text-xs text-text-secondary leading-relaxed">
+                    {bannerSnapshot.daysSinceBackup === null
+                      ? '브라우저 데이터가 삭제되면 운동 기록이 모두 사라져요. 한 번만 백업해두세요.'
+                      : `백업한 지 ${bannerSnapshot.daysSinceBackup}일 됐어요. 그동안의 기록을 잃지 않으려면 백업이 필요해요.`}
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2 mt-3">
+                <button
+                  onClick={() => navigate('/settings')}
+                  className="flex-1 py-2 bg-primary text-white rounded-lg text-sm font-medium"
+                >
+                  지금 백업
+                </button>
+                <button
+                  onClick={snoozeBackupReminder}
+                  className="px-3 py-2 text-text-secondary text-xs"
+                >
+                  30일 후
+                </button>
+              </div>
+            </div>
+          </section>
+        )}
 
       {/* 이번 주 진행률 */}
       <div className="bg-surface rounded-xl p-4 mb-4">
@@ -244,7 +300,7 @@ export default function HomePage() {
           <div className="bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-4">
             <div className="text-xs text-primary-light font-semibold mb-2">💡 오늘의 추천</div>
             {(() => {
-              const activeProgId = localStorage.getItem('activeProgramId');
+              const activeProgId = storage.activeProgramId.get();
               if (activeProgId) {
                 return <p className="text-sm text-text-secondary">진행 중인 프로그램이 있어요. 운동 탭 → 프로그램 보기에서 확인하세요!</p>;
               }
