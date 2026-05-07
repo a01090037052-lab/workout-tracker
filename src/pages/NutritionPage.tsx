@@ -273,6 +273,8 @@ function AddMealModal({ onAdd, onClose }: { onAdd: (entry: MacroEntry) => void; 
   const [mealType, setMealType] = useState<MealType>('breakfast');
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'favorites' | FoodCategory>('all');
   const [favTick, setFavTick] = useState(0); // 즐겨찾기 토글 → 리렌더
+  // 매크로 사용자 수정값 (분량 변경 시 reset)
+  const [overrides, setOverrides] = useState<{ kcal?: number; p?: number; c?: number; f?: number }>({});
 
   // 직접 입력 모드 상태
   const [name, setName] = useState('');
@@ -316,20 +318,25 @@ function AddMealModal({ onAdd, onClose }: { onAdd: (entry: MacroEntry) => void; 
   const handleSelectFood = (food: Food) => {
     setSelectedFood(food);
     setPortionG(String(food.defaultServing || 100));
+    setOverrides({}); // 새 음식 선택 → 수정값 초기화
     setMode('portion');
   };
 
+  const handlePortionG = (v: string) => {
+    setPortionG(v);
+    setOverrides({}); // 분량 변경 시 자동 계산값으로 다시 (사용자가 수정한 값 reset)
+  };
+
   const handlePortionAdd = () => {
-    if (!selectedFood) return;
+    if (!selectedFood || !preview) return;
     const g = Math.max(1, Number(portionG) || 0);
-    const ratio = g / 100;
     onAdd({
       name: `${selectedFood.name} ${g}g`,
       mealType,
-      kcal: Math.round(selectedFood.kcalPer100g * ratio),
-      protein: Math.round(selectedFood.proteinPer100g * ratio * 10) / 10,
-      carbs: Math.round(selectedFood.carbsPer100g * ratio * 10) / 10,
-      fat: Math.round(selectedFood.fatPer100g * ratio * 10) / 10,
+      kcal: preview.kcal,
+      protein: preview.p,
+      carbs: preview.c,
+      fat: preview.f,
     });
   };
 
@@ -354,12 +361,20 @@ function AddMealModal({ onAdd, onClose }: { onAdd: (entry: MacroEntry) => void; 
   };
 
   const portionRatio = selectedFood ? Math.max(1, Number(portionG) || 0) / 100 : 0;
-  const preview = selectedFood ? {
+  const autoMacros = selectedFood ? {
     kcal: Math.round(selectedFood.kcalPer100g * portionRatio),
     p: Math.round(selectedFood.proteinPer100g * portionRatio * 10) / 10,
     c: Math.round(selectedFood.carbsPer100g * portionRatio * 10) / 10,
     f: Math.round(selectedFood.fatPer100g * portionRatio * 10) / 10,
   } : null;
+  // 사용자 수정값이 있으면 override, 없으면 auto
+  const preview = autoMacros ? {
+    kcal: overrides.kcal ?? autoMacros.kcal,
+    p: overrides.p ?? autoMacros.p,
+    c: overrides.c ?? autoMacros.c,
+    f: overrides.f ?? autoMacros.f,
+  } : null;
+  const hasOverride = Object.keys(overrides).length > 0;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center">
@@ -484,7 +499,7 @@ function AddMealModal({ onAdd, onClose }: { onAdd: (entry: MacroEntry) => void; 
             <div className="mb-3">
               <label className="text-xs text-text-secondary mb-1 block">분량 (g)</label>
               <input
-                type="number" inputMode="decimal" value={portionG} onChange={(e) => setPortionG(e.target.value)}
+                type="number" inputMode="decimal" value={portionG} onChange={(e) => handlePortionG(e.target.value)}
                 placeholder="100"
                 className="w-full bg-surface-light rounded-lg px-4 py-2.5 font-mono text-center outline-none focus:ring-2 focus:ring-primary"
               />
@@ -499,7 +514,7 @@ function AddMealModal({ onAdd, onClose }: { onAdd: (entry: MacroEntry) => void; 
                   return (
                     <button
                       key={mult}
-                      onClick={() => setPortionG(String(grams))}
+                      onClick={() => handlePortionG(String(grams))}
                       className="flex-1 py-1.5 bg-surface-light hover:bg-border rounded-lg text-[11px] text-text-secondary transition-colors"
                     >
                       <div className="font-medium">{label}</div>
@@ -510,16 +525,28 @@ function AddMealModal({ onAdd, onClose }: { onAdd: (entry: MacroEntry) => void; 
               </div>
             </div>
 
-            {/* 매크로 미리보기 */}
+            {/* 매크로 — 자동 계산 + 사용자 수정 가능 */}
             <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 mb-3">
-              <div className="text-[10px] text-text-secondary mb-1">매크로 미리보기</div>
-              <div className="flex justify-between items-baseline">
-                <span className="text-2xl font-mono font-bold">{preview.kcal}<span className="text-sm text-text-secondary"> kcal</span></span>
+              <div className="flex justify-between items-baseline mb-2">
+                <span className="text-[10px] text-text-secondary">
+                  매크로 (분량 기준 자동, 직접 수정 가능)
+                </span>
+                {hasOverride && (
+                  <button
+                    onClick={() => setOverrides({})}
+                    className="text-[10px] text-primary-light underline"
+                  >자동 계산으로 초기화</button>
+                )}
               </div>
-              <div className="flex gap-3 text-xs font-mono mt-1">
-                <span className="text-red-400">P {preview.p}g</span>
-                <span className="text-yellow-400">C {preview.c}g</span>
-                <span className="text-blue-400">F {preview.f}g</span>
+              <div className="grid grid-cols-4 gap-1.5">
+                <MacroEditField label="kcal" value={preview.kcal} color="text-text"
+                  onChange={(v) => setOverrides({ ...overrides, kcal: v })} />
+                <MacroEditField label="P (g)" value={preview.p} color="text-red-400"
+                  onChange={(v) => setOverrides({ ...overrides, p: v })} />
+                <MacroEditField label="C (g)" value={preview.c} color="text-yellow-400"
+                  onChange={(v) => setOverrides({ ...overrides, c: v })} />
+                <MacroEditField label="F (g)" value={preview.f} color="text-blue-400"
+                  onChange={(v) => setOverrides({ ...overrides, f: v })} />
               </div>
             </div>
 
@@ -799,6 +826,20 @@ function CalculatorView({ onSaved }: { onSaved: () => void }) {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+function MacroEditField({ label, value, color, onChange }: { label: string; value: number; color: string; onChange: (v: number) => void }) {
+  return (
+    <div className="bg-surface rounded-lg p-2">
+      <div className={`text-[9px] ${color} text-center`}>{label}</div>
+      <input
+        type="number" inputMode="decimal"
+        value={value || ''}
+        onChange={(e) => onChange(Math.max(0, Number(e.target.value) || 0))}
+        className="w-full bg-transparent text-center text-base font-mono font-semibold outline-none focus:bg-surface-light/50 rounded mt-0.5"
+      />
     </div>
   );
 }
