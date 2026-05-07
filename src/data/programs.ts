@@ -22,7 +22,7 @@ export interface DayPlan {
 
 export interface ExercisePlan {
   exerciseName: string;
-  sets: { percentage: number; reps: number; weight?: number }[];
+  sets: { percentage: number; reps: number; weight?: number; isAMRAP?: boolean }[];
 }
 
 function roundToPlate(weight: number): number {
@@ -69,6 +69,7 @@ const wendler531: ProgramTemplate = {
       '스쿼트': { bbbEx: '데드리프트', acc1: '크런치', acc1r: 15 },
     };
 
+    const isDeload = week % 4 === 0;
     const days: DayPlan[] = exercises.map((exName) => {
       const orm = oneRepMaxes[exName] || 0;
       const tm = orm * 0.9;
@@ -77,9 +78,10 @@ const wendler531: ProgramTemplate = {
       return {
         label: exName,
         exercises: [
-          { exerciseName: exName, sets: scheme.sets.map((s) => ({
+          { exerciseName: exName, sets: scheme.sets.map((s, i, arr) => ({
             percentage: Math.round(s.pct * 100), reps: s.reps,
             weight: orm > 0 ? roundToPlate(tm * s.pct) : undefined,
+            isAMRAP: !isDeload && i === arr.length - 1, // 마지막 세트는 AMRAP (디로드 제외)
           }))},
           ...(pair ? [bbb(pair.bbbEx, bbbOrm), acc(pair.acc1, 5, pair.acc1r)] : []),
         ],
@@ -890,9 +892,10 @@ const wendler531BBB: ProgramTemplate = {
       return {
         label: exName,
         exercises: [
-          { exerciseName: exName, sets: scheme.sets.map((s) => ({
+          { exerciseName: exName, sets: scheme.sets.map((s, i, arr) => ({
             percentage: Math.round(s.pct * 100), reps: s.reps,
             weight: orm > 0 ? roundToPlate(tm * s.pct) : undefined,
+            isAMRAP: !isDeload && i === arr.length - 1, // 마지막 세트 AMRAP (디로드 제외)
           }))},
           ...(accMap[exName] || []),
         ],

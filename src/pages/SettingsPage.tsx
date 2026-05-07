@@ -106,7 +106,7 @@ export default function SettingsPage() {
           }
 
           showToast(`복원 완료! (세션 ${data.sessions?.length || 0}개, 식단 ${data.dailyMacroLogs?.length || 0}일)`);
-        } catch (restoreErr) {
+        } catch {
           // 롤백
           await db.exercises.clear();
           await db.sessions.clear();

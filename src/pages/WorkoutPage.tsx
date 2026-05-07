@@ -79,6 +79,8 @@ export default function WorkoutPage() {
       });
       navigate('/workout', { replace: true, state: null });
     }
+    // location.state 1회 처리. workout/navigate는 deps 제외 (재트리거 시 무한 루프 방지)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state]);
 
   // 운동 완료 요약 화면

@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Legend } from 'recharts';
 import { db } from '../db';
 import { storage } from '../lib/storage';
 import { calcBMR, calcTDEE, calcAllScenarios, calcMacros, GOAL_LABELS, GOAL_DESCRIPTIONS, ACTIVITY_LABELS } from '../lib/nutrition';
@@ -13,7 +14,7 @@ const MEAL_LABELS: Record<MealType, string> = {
 const MEAL_ORDER: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
 
 export default function NutritionPage() {
-  const [view, setView] = useState<'today' | 'calculator'>(() =>
+  const [view, setView] = useState<'today' | 'calculator' | 'trend'>(() =>
     storage.nutritionProfile.get() ? 'today' : 'calculator'
   );
 
@@ -22,26 +23,30 @@ export default function NutritionPage() {
       <h1 className="text-2xl font-bold mb-4">영양</h1>
 
       {/* 탭 토글 */}
-      <div className="flex gap-2 mb-4 bg-surface rounded-xl p-1">
+      <div className="flex gap-1 mb-4 bg-surface rounded-xl p-1">
         <button
           onClick={() => setView('today')}
-          className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+          className={`flex-1 py-2 rounded-lg text-xs font-medium transition-colors ${
             view === 'today' ? 'bg-primary text-white' : 'text-text-secondary'
           }`}
-        >
-          오늘 식단
-        </button>
+        >오늘 식단</button>
+        <button
+          onClick={() => setView('trend')}
+          className={`flex-1 py-2 rounded-lg text-xs font-medium transition-colors ${
+            view === 'trend' ? 'bg-primary text-white' : 'text-text-secondary'
+          }`}
+        >추이</button>
         <button
           onClick={() => setView('calculator')}
-          className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+          className={`flex-1 py-2 rounded-lg text-xs font-medium transition-colors ${
             view === 'calculator' ? 'bg-primary text-white' : 'text-text-secondary'
           }`}
-        >
-          계산기 / 프로필
-        </button>
+        >계산기</button>
       </div>
 
-      {view === 'today' ? <TodayView onNeedProfile={() => setView('calculator')} /> : <CalculatorView onSaved={() => setView('today')} />}
+      {view === 'today' && <TodayView onNeedProfile={() => setView('calculator')} />}
+      {view === 'trend' && <TrendView onNeedProfile={() => setView('calculator')} />}
+      {view === 'calculator' && <CalculatorView onSaved={() => setView('today')} />}
     </div>
   );
 }
@@ -235,6 +240,8 @@ function AddMealModal({ onAdd, onClose }: { onAdd: (entry: MacroEntry) => void; 
   const [fat, setFat] = useState('');
 
   const allFoods = useLiveQuery(() => db.foods.toArray(), []);
+  // favTick은 의도적 트리거 (storage 변경을 useMemo에 알림)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const favIds = useMemo(() => storage.favoriteFoods.get(), [favTick]);
 
   const filteredFoods = useMemo(() => {
@@ -734,6 +741,202 @@ function NumberField({ label, value, onChange }: { label: string; value: number;
         onChange={(e) => onChange(Math.max(0, Number(e.target.value) || 0))}
         className="w-full bg-surface-light rounded-lg px-3 py-2 text-sm font-mono text-center outline-none focus:ring-2 focus:ring-primary"
       />
+    </div>
+  );
+}
+
+// ============================================================
+// 추이 view (체중 / 칼로리 / 매크로)
+// ============================================================
+function TrendView({ onNeedProfile }: { onNeedProfile: () => void }) {
+  const [days, setDays] = useState<7 | 30 | 90>(30);
+  const [profile] = useState(() => storage.nutritionProfile.get());
+
+  // 기간 시작일 (포함)
+  const fromDate = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - (days - 1));
+    return d.toISOString().split('T')[0];
+  }, [days]);
+
+  const weightLogs = useLiveQuery(
+    () => db.bodyWeightLogs.where('date').aboveOrEqual(fromDate).toArray(),
+    [fromDate]
+  );
+  const macroLogs = useLiveQuery(
+    () => db.dailyMacroLogs.where('date').aboveOrEqual(fromDate).toArray(),
+    [fromDate]
+  );
+
+  const target = profile ? calcMacros(profile, profile.goal) : null;
+
+  const trendData = useMemo(() => {
+    if (!weightLogs || !macroLogs) return [];
+    const weightMap = new Map(weightLogs.map((w) => [w.date, w.weight]));
+    const macroMap = new Map(
+      macroLogs.map((l) => [
+        l.date,
+        l.entries.reduce(
+          (a, e) => ({ kcal: a.kcal + e.kcal, p: a.p + e.protein, c: a.c + e.carbs, f: a.f + e.fat }),
+          { kcal: 0, p: 0, c: 0, f: 0 }
+        ),
+      ])
+    );
+
+    const points: { date: string; label: string; weight?: number; kcal: number; protein: number; carbs: number; fat: number }[] = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      const m = macroMap.get(dateStr);
+      points.push({
+        date: dateStr,
+        label: `${d.getMonth() + 1}/${d.getDate()}`,
+        weight: weightMap.get(dateStr),
+        kcal: m?.kcal || 0,
+        protein: m?.p || 0,
+        carbs: m?.c || 0,
+        fat: m?.f || 0,
+      });
+    }
+    return points;
+  }, [weightLogs, macroLogs, days]);
+
+  const weightPoints = trendData.filter((p) => p.weight !== undefined);
+  const kcalPoints = trendData.filter((p) => p.kcal > 0);
+  const hasMacroData = kcalPoints.length > 0;
+  const hasWeightData = weightPoints.length >= 2;
+
+  // 평균 계산
+  const avgKcal = hasMacroData
+    ? Math.round(kcalPoints.reduce((a, p) => a + p.kcal, 0) / kcalPoints.length)
+    : 0;
+  const avgProtein = hasMacroData
+    ? Math.round(kcalPoints.reduce((a, p) => a + p.protein, 0) / kcalPoints.length)
+    : 0;
+  const weightDiff = hasWeightData
+    ? +(weightPoints[weightPoints.length - 1].weight! - weightPoints[0].weight!).toFixed(1)
+    : 0;
+
+  if (!profile) {
+    return (
+      <div className="bg-surface rounded-xl p-6 text-center">
+        <div className="text-3xl mb-3">📊</div>
+        <h3 className="font-bold mb-1">프로필이 필요해요</h3>
+        <p className="text-sm text-text-secondary mb-4">목표 칼로리·매크로를 표시하려면 프로필 설정이 필요해요</p>
+        <button onClick={onNeedProfile} className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium">
+          프로필 입력하기
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* 기간 선택 */}
+      <div className="flex gap-1 bg-surface rounded-xl p-1">
+        {[7, 30, 90].map((d) => (
+          <button
+            key={d}
+            onClick={() => setDays(d as 7 | 30 | 90)}
+            className={`flex-1 py-2 rounded-lg text-xs font-medium transition-colors ${
+              days === d ? 'bg-primary text-white' : 'text-text-secondary'
+            }`}
+          >최근 {d}일</button>
+        ))}
+      </div>
+
+      {/* 요약 카드 */}
+      <div className="grid grid-cols-3 gap-2">
+        <div className="bg-surface rounded-xl p-3 text-center">
+          <div className="text-[10px] text-text-secondary">평균 칼로리</div>
+          <div className="text-lg font-mono font-bold mt-0.5">{avgKcal}</div>
+          <div className="text-[10px] text-text-secondary">목표 {target?.kcal || 0}</div>
+        </div>
+        <div className="bg-surface rounded-xl p-3 text-center">
+          <div className="text-[10px] text-text-secondary">평균 단백질</div>
+          <div className="text-lg font-mono font-bold mt-0.5 text-red-400">{avgProtein}<span className="text-[10px] text-text-secondary">g</span></div>
+          <div className="text-[10px] text-text-secondary">목표 {target?.protein || 0}g</div>
+        </div>
+        <div className="bg-surface rounded-xl p-3 text-center">
+          <div className="text-[10px] text-text-secondary">체중 변화</div>
+          <div className={`text-lg font-mono font-bold mt-0.5 ${weightDiff > 0 ? 'text-warning' : weightDiff < 0 ? 'text-success' : ''}`}>
+            {hasWeightData ? `${weightDiff > 0 ? '+' : ''}${weightDiff}` : '-'}
+          </div>
+          <div className="text-[10px] text-text-secondary">kg</div>
+        </div>
+      </div>
+
+      {/* 체중 추이 */}
+      <div className="bg-surface rounded-xl p-4">
+        <h3 className="font-semibold text-sm mb-2">체중 추이</h3>
+        {hasWeightData ? (
+          <ResponsiveContainer width="100%" height={180}>
+            <LineChart data={trendData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+              <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#94A3B8' }} interval="preserveStartEnd" />
+              <YAxis tick={{ fontSize: 10, fill: '#94A3B8' }} domain={['dataMin - 1', 'dataMax + 1']} />
+              <Tooltip
+                contentStyle={{ background: '#1E293B', border: '1px solid #334155', borderRadius: 8, fontSize: 11 }}
+                labelFormatter={(l) => `날짜 ${l}`}
+                formatter={(v) => [`${v}kg`, '체중']}
+              />
+              <Line type="monotone" dataKey="weight" stroke="#6366F1" strokeWidth={2} dot={{ r: 3 }} connectNulls />
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="text-center py-6 text-text-secondary text-xs">
+            체중 기록이 2개 이상 필요해요. 홈에서 매일 기록해보세요.
+          </div>
+        )}
+      </div>
+
+      {/* 칼로리 추이 */}
+      <div className="bg-surface rounded-xl p-4">
+        <h3 className="font-semibold text-sm mb-2">칼로리 추이</h3>
+        {hasMacroData ? (
+          <ResponsiveContainer width="100%" height={180}>
+            <LineChart data={trendData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+              <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#94A3B8' }} interval="preserveStartEnd" />
+              <YAxis tick={{ fontSize: 10, fill: '#94A3B8' }} />
+              <Tooltip
+                contentStyle={{ background: '#1E293B', border: '1px solid #334155', borderRadius: 8, fontSize: 11 }}
+                formatter={(v) => [`${v} kcal`, '칼로리']}
+              />
+              {target && <ReferenceLine y={target.kcal} stroke="#22C55E" strokeDasharray="3 3" label={{ value: '목표', fill: '#22C55E', fontSize: 9, position: 'right' }} />}
+              <Line type="monotone" dataKey="kcal" stroke="#F59E0B" strokeWidth={2} dot={{ r: 3 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="text-center py-6 text-text-secondary text-xs">
+            식단 기록이 없어요. 오늘 식단에서 추가해보세요.
+          </div>
+        )}
+      </div>
+
+      {/* 매크로 추이 */}
+      <div className="bg-surface rounded-xl p-4">
+        <h3 className="font-semibold text-sm mb-2">매크로 추이 (g)</h3>
+        {hasMacroData ? (
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={trendData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+              <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#94A3B8' }} interval="preserveStartEnd" />
+              <YAxis tick={{ fontSize: 10, fill: '#94A3B8' }} />
+              <Tooltip
+                contentStyle={{ background: '#1E293B', border: '1px solid #334155', borderRadius: 8, fontSize: 11 }}
+              />
+              <Legend wrapperStyle={{ fontSize: 10 }} iconSize={8} />
+              <Line type="monotone" dataKey="protein" name="단백질" stroke="#F87171" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="carbs" name="탄수" stroke="#FBBF24" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="fat" name="지방" stroke="#60A5FA" strokeWidth={2} dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="text-center py-6 text-text-secondary text-xs">데이터 없음</div>
+        )}
+      </div>
     </div>
   );
 }

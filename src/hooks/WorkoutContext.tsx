@@ -14,6 +14,7 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useWorkoutContext(): WorkoutContextType {
   const ctx = useContext(WorkoutContext);
   if (!ctx) throw new Error('useWorkoutContext must be used within WorkoutProvider');

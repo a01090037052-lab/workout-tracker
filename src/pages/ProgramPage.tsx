@@ -41,6 +41,7 @@ export default function ProgramPage() {
   });
   const [setupMode, setSetupMode] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
+  const [autoPR, setAutoPR] = useState(() => storage.programAutoApplyPR.get());
 
   // PR에서 1RM 자동 로드
   const prs = useLiveQuery(async () => {
@@ -57,8 +58,20 @@ export default function ProgramPage() {
     return best;
   });
 
-  // PR 변경 감지 → 1RM 자동 반영
+  // day complete를 실제 운동 세션 기반으로 판정 (cancel/실패해도 정확)
+  const programSessions = useLiveQuery(
+    async () => {
+      if (!selectedProgram) return [];
+      const all = await db.sessions.toArray();
+      return all.filter((s) => s.programId === selectedProgram.id);
+    },
+    [selectedProgram?.id]
+  );
+
+  // PR 변경 감지 → 1RM 자동 반영 (옵션 ON일 때만; OFF면 사용자가 setupMode에서 수동 반영)
+  // progress/selectedProgram은 의도적으로 deps 제외 — setProgress 후 재트리거 시 updated=false라 안전한 종료, deps에 넣으면 사이클당 1번만 도는 흐름이 깨짐
   useEffect(() => {
+    if (!autoPR) return;
     if (!prs || !progress || !selectedProgram) return;
     let updated = false;
     const newMaxes = { ...progress.oneRepMaxes };
@@ -70,10 +83,12 @@ export default function ProgramPage() {
     }
     if (updated) {
       const newProgress = { ...progress, oneRepMaxes: newMaxes };
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setProgress(newProgress);
       saveProgress(newProgress);
     }
-  }, [prs]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prs, autoPR]);
 
   // 진행 상태 자동 저장
   useEffect(() => {
@@ -107,29 +122,22 @@ export default function ProgramPage() {
     setShowGuide(false);
   };
 
-  const markDayComplete = (dayIndex: number) => {
-    if (!progress) return;
-    const today = new Date();
-    const dateStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-    const alreadyDone = progress.completedDays.some(
-      (d) => d.week === progress.currentWeek && d.dayIndex === dayIndex
-    );
-    if (alreadyDone) return;
-    const newProgress = {
-      ...progress,
-      completedDays: [...progress.completedDays, { week: progress.currentWeek, dayIndex, date: dateStr }],
-    };
-    setProgress(newProgress);
-  };
-
+  // sessions 기반: 실제 완료된 운동만 인정 (cancel/저장 안 된 day는 미완료로 표시)
   const isDayCompleted = (dayIndex: number) => {
-    return progress?.completedDays.some(
-      (d) => d.week === (progress?.currentWeek || 0) && d.dayIndex === dayIndex
-    ) || false;
+    if (!progress || !programSessions) return false;
+    return programSessions.some(
+      (s) => s.programWeek === progress.currentWeek && s.programDay === dayIndex
+    );
   };
 
   const weekCompletedCount = () => {
-    return progress?.completedDays.filter((d) => d.week === progress.currentWeek).length || 0;
+    if (!progress || !programSessions) return 0;
+    const days = new Set(
+      programSessions
+        .filter((s) => s.programWeek === progress.currentWeek)
+        .map((s) => s.programDay)
+    );
+    return days.size;
   };
 
   // 프로그램 선택 화면
@@ -255,8 +263,7 @@ export default function ProgramPage() {
       .filter((e): e is NonNullable<typeof e> => e !== null);
 
     if (exercises.length > 0) {
-      // 완료 처리는 운동 종료(finishWorkout) 시 세션에 기록됨
-      markDayComplete(dayIndex);
+      // day complete는 finishWorkout 후 sessions에 programDay가 저장될 때 자동 인식 (cancel 시 미완료 유지)
       navigate('/workout', { state: {
         exercises, fromProgram: true,
         programId: selectedProgram.id, programWeek: progress.currentWeek, programDay: dayIndex,
@@ -275,11 +282,16 @@ export default function ProgramPage() {
 
       <div className="flex justify-between items-center mb-3">
         <h1 className="text-xl font-bold">{selectedProgram.name}</h1>
-        <div className="flex gap-2">
-          <button onClick={() => setShowGuide(!showGuide)} className="text-xs text-primary-light px-2 py-1 bg-primary/10 rounded-lg">
+        <div className="flex gap-1.5">
+          <button
+            onClick={() => { const next = !autoPR; storage.programAutoApplyPR.set(next); setAutoPR(next); }}
+            className={`text-[10px] px-2 py-1 rounded-lg ${autoPR ? 'bg-success/15 text-success' : 'bg-surface-light text-text-secondary'}`}
+            title={autoPR ? 'PR 갱신 시 1RM 자동 반영 (사이클 도중 무게 점프 가능)' : '1RM 수동 갱신 (사이클 시작 시 직접)'}
+          >PR자동 {autoPR ? 'ON' : 'OFF'}</button>
+          <button onClick={() => setShowGuide(!showGuide)} className="text-[10px] text-primary-light px-2 py-1 bg-primary/10 rounded-lg">
             {showGuide ? '접기' : '📖 가이드'}
           </button>
-          <button onClick={() => setSetupMode(true)} className="text-xs text-text-secondary px-2 py-1 bg-surface-light rounded-lg">
+          <button onClick={() => setSetupMode(true)} className="text-[10px] text-text-secondary px-2 py-1 bg-surface-light rounded-lg">
             1RM 수정
           </button>
         </div>
@@ -363,7 +375,9 @@ export default function ProgramPage() {
                         <span className="w-10 text-center text-text-secondary font-mono">{si + 1}</span>
                         <span className="flex-1 text-center font-mono font-semibold">{set.weight ? `${set.weight}kg` : '-'}</span>
                         <span className="flex-1 text-center text-text-secondary font-mono">{set.percentage > 0 ? `${set.percentage}%` : '-'}</span>
-                        <span className="w-12 text-center font-mono">{set.reps}회</span>
+                        <span className="w-12 text-center font-mono">
+                          {set.reps}{set.isAMRAP && <span className="text-orange-400 font-bold">+</span>}회
+                        </span>
                       </div>
                     ))}
                   </div>

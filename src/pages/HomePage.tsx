@@ -125,6 +125,9 @@ export default function HomePage() {
   );
 
   // 백업 리마인더 스냅샷 (1회 평가)
+  // 페이지 진입 시점을 1회 캡처 (Date.now()를 렌더 중 호출하지 않기 위함)
+  const [pageOpenedMs] = useState(() => Date.now());
+
   const [bannerSnapshot] = useState(() => {
     const lastBackupAt = storage.lastBackupAt.get();
     const snoozedUntil = storage.backupSnoozedUntil.get();
@@ -305,7 +308,7 @@ export default function HomePage() {
                 return <p className="text-sm text-text-secondary">진행 중인 프로그램이 있어요. 운동 탭 → 프로그램 보기에서 확인하세요!</p>;
               }
               const lastDate = allSessions[0]?.date || '';
-              const daysSince = lastDate ? Math.floor((Date.now() - new Date(lastDate + 'T12:00:00').getTime()) / 86400000) : 0;
+              const daysSince = lastDate ? Math.floor((pageOpenedMs - new Date(lastDate + 'T12:00:00').getTime()) / 86400000) : 0;
               if (daysSince >= 3) {
                 return <p className="text-sm text-text-secondary">마지막 운동이 {daysSince}일 전이에요. 오늘 다시 시작해보세요! 💪</p>;
               }
