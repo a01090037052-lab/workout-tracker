@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie';
-import type { Exercise, WorkoutSession, Routine, PersonalRecord, InjuryLog, BodyWeightLog, UserSettings } from '../types';
+import type { Exercise, WorkoutSession, Routine, PersonalRecord, InjuryLog, BodyWeightLog, DailyMacroLog, UserSettings } from '../types';
 
 class WorkoutDB extends Dexie {
   exercises!: Table<Exercise>;
@@ -8,6 +8,7 @@ class WorkoutDB extends Dexie {
   personalRecords!: Table<PersonalRecord>;
   injuryLogs!: Table<InjuryLog>;
   bodyWeightLogs!: Table<BodyWeightLog>;
+  dailyMacroLogs!: Table<DailyMacroLog>;
   settings!: Table<UserSettings>;
 
   constructor() {
@@ -27,6 +28,16 @@ class WorkoutDB extends Dexie {
       personalRecords: '++id, exerciseId, date, sessionId',
       injuryLogs: '++id, date, bodyPart, isResolved',
       bodyWeightLogs: '++id, date',
+      settings: 'key',
+    });
+    this.version(3).stores({
+      exercises: '++id, name, muscleGroup, equipmentType, isCustom',
+      sessions: '++id, date, trainingGoal',
+      routines: '++id, name',
+      personalRecords: '++id, exerciseId, date, sessionId',
+      injuryLogs: '++id, date, bodyPart, isResolved',
+      bodyWeightLogs: '++id, date',
+      dailyMacroLogs: '++id, date',
       settings: 'key',
     });
   }

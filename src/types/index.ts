@@ -85,3 +85,34 @@ export interface UserSettings {
   key: string;
   value: string | number | boolean | number[];
 }
+
+// === 영양 / 매크로 ===
+export type Gender = 'male' | 'female';
+export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
+export type DietGoal = 'cut_aggressive' | 'cut' | 'maintain' | 'lean_bulk' | 'bulk';
+export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+
+export interface NutritionProfile {
+  gender: Gender;
+  age: number;
+  height: number;        // cm
+  weight: number;        // kg
+  bodyFat?: number;      // % (선택, Katch-McArdle용)
+  activityLevel: ActivityLevel;
+  goal: DietGoal;
+}
+
+export interface MacroEntry {
+  name: string;
+  kcal: number;
+  protein: number;       // g
+  carbs: number;         // g
+  fat: number;           // g
+  mealType: MealType;
+}
+
+export interface DailyMacroLog {
+  id?: number;
+  date: string;          // YYYY-MM-DD
+  entries: MacroEntry[];
+}

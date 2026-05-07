@@ -5,6 +5,7 @@ const tabs = [
   { path: '/', label: '홈', icon: '🏠' },
   { path: '/workout', label: '운동', icon: '💪' },
   { path: '/history', label: '기록', icon: '📋' },
+  { path: '/nutrition', label: '영양', icon: '🥗' },
   { path: '/stats', label: '통계', icon: '📊' },
   { path: '/settings', label: '설정', icon: '⚙️' },
 ];

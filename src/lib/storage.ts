@@ -1,4 +1,4 @@
-import type { WorkoutExercise, Condition, TrainingGoal } from '../types';
+import type { WorkoutExercise, Condition, TrainingGoal, NutritionProfile } from '../types';
 
 // 모든 localStorage 키를 한 곳에 모아 오타 방지
 const KEYS = {
@@ -8,6 +8,7 @@ const KEYS = {
   backupSnoozedUntil: 'backupReminderSnoozedUntil',
   activeProgramId: 'activeProgramId',
   programProgressPrefix: 'prog_',
+  nutritionProfile: 'nutritionProfile',
 } as const;
 
 export interface SavedActiveWorkout {
@@ -120,6 +121,18 @@ export const storage = {
           localStorage.setItem(key, value);
         }
       }
+    },
+  },
+
+  nutritionProfile: {
+    get(): NutritionProfile | null {
+      return readJSON<NutritionProfile>(KEYS.nutritionProfile);
+    },
+    set(profile: NutritionProfile) {
+      writeJSON(KEYS.nutritionProfile, profile);
+    },
+    clear() {
+      localStorage.removeItem(KEYS.nutritionProfile);
     },
   },
 };
