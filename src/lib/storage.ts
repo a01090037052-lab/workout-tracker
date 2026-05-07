@@ -153,4 +153,14 @@ export const storage = {
       return next.includes(id);
     },
   },
+
+  programAutoApplyPR: {
+    // default true (기존 동작 유지). PR 갱신 시 진행 중 1RM 자동 반영.
+    get(): boolean {
+      return localStorage.getItem('programAutoApplyPR') !== 'off';
+    },
+    set(enabled: boolean) {
+      localStorage.setItem('programAutoApplyPR', enabled ? 'on' : 'off');
+    },
+  },
 };
