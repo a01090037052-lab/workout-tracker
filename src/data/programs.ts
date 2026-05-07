@@ -759,21 +759,555 @@ const arnoldSplit: ProgramTemplate = {
   },
 };
 
+// === Madcow 5×5 (중급, 주 3일, 12주) ===
+const madcow5x5: ProgramTemplate = {
+  id: 'madcow',
+  name: 'Madcow 5×5',
+  description: 'StrongLifts에서 정체된 중급자용. 주 3일 다른 강도로 점진적 과부하',
+  guide: '【원리】 월요일 무거운 5×5, 수요일 가벼운 5×5 (회복), 금요일 1×3 탑세트 + 백오프.\n【진행법】 모든 메인 세트는 ramp 방식 (50→62→75→87→100%). Week 1의 100%가 1RM의 87.5%.\n【증량】 매주 +2.5%씩 자동 증가. 12주 후 1RM 약 +5~10% 성장 기대.\n【대상】 SL 5×5에서 정체된 6개월~2년 경력자.',
+  type: 'strength',
+  daysPerWeek: 3,
+  durationWeeks: 12,
+  exercises: ['스쿼트', '벤치프레스', '바벨 로우', '오버헤드 프레스', '데드리프트'],
+  getWeekPlan(week: number, oneRepMaxes: Record<string, number>): WeekPlan {
+    const baseFactor = 0.875 + (week - 1) * 0.025; // Week 1: 87.5%, +2.5%/week
+    const tm = (n: string) => (oneRepMaxes[n] || 0) * baseFactor;
+
+    function ramp(top: number, reps: number = 5) {
+      const t = roundToPlate(top);
+      const w = (p: number) => t > 0 ? roundToPlate(t * p) : undefined;
+      return [
+        { percentage: 50, reps, weight: w(0.5) },
+        { percentage: 62, reps, weight: w(0.625) },
+        { percentage: 75, reps, weight: w(0.75) },
+        { percentage: 87, reps, weight: w(0.875) },
+        { percentage: 100, reps, weight: t > 0 ? t : undefined },
+      ];
+    }
+
+    const dayA: DayPlan = {
+      label: '월요일 (무거운 day)',
+      exercises: [
+        { exerciseName: '스쿼트', sets: ramp(tm('스쿼트')) },
+        { exerciseName: '벤치프레스', sets: ramp(tm('벤치프레스')) },
+        { exerciseName: '바벨 로우', sets: ramp(tm('바벨 로우')) },
+      ],
+    };
+
+    const dayB: DayPlan = {
+      label: '수요일 (가벼운 day)',
+      exercises: [
+        { exerciseName: '스쿼트', sets: Array.from({ length: 4 }, () => ({
+          percentage: 60, reps: 5,
+          weight: tm('스쿼트') > 0 ? roundToPlate(tm('스쿼트') * 0.6) : undefined,
+        })) },
+        { exerciseName: '오버헤드 프레스', sets: ramp(tm('오버헤드 프레스')) },
+        { exerciseName: '데드리프트', sets: ramp(tm('데드리프트')) },
+      ],
+    };
+
+    const dayC: DayPlan = {
+      label: '금요일 (PR day, 탑세트+백오프)',
+      exercises: [
+        { exerciseName: '스쿼트', sets: [
+          ...ramp(tm('스쿼트')).slice(0, 4),
+          { percentage: 102, reps: 3, weight: tm('스쿼트') > 0 ? roundToPlate(tm('스쿼트') * 1.025) : undefined },
+          { percentage: 90, reps: 8, weight: tm('스쿼트') > 0 ? roundToPlate(tm('스쿼트') * 0.9) : undefined },
+        ]},
+        { exerciseName: '벤치프레스', sets: [
+          ...ramp(tm('벤치프레스')).slice(0, 4),
+          { percentage: 102, reps: 3, weight: tm('벤치프레스') > 0 ? roundToPlate(tm('벤치프레스') * 1.025) : undefined },
+          { percentage: 90, reps: 8, weight: tm('벤치프레스') > 0 ? roundToPlate(tm('벤치프레스') * 0.9) : undefined },
+        ]},
+        { exerciseName: '바벨 로우', sets: [
+          ...ramp(tm('바벨 로우')).slice(0, 4),
+          { percentage: 102, reps: 3, weight: tm('바벨 로우') > 0 ? roundToPlate(tm('바벨 로우') * 1.025) : undefined },
+          { percentage: 90, reps: 8, weight: tm('바벨 로우') > 0 ? roundToPlate(tm('바벨 로우') * 0.9) : undefined },
+        ]},
+      ],
+    };
+
+    return { label: `Week ${week} (${Math.round(baseFactor * 100)}%)`, days: [dayA, dayB, dayC] };
+  },
+};
+
+// === 5/3/1 BBB (Boring But Big) (주 4일, 4주) ===
+const wendler531BBB: ProgramTemplate = {
+  id: '531bbb',
+  name: '5/3/1 BBB',
+  description: '5/3/1 메인 + 5×10 보조 (Boring But Big). 스트렝스 + 근비대 동시 추구',
+  guide: '【원리】 5/3/1 메인 운동 + 동일 종목 또는 보완 종목 5×10 보조 + 다양한 보조 운동.\n【진행법】 메인은 1RM의 90%(TM) 기준. BBB 보조는 TM의 50~60%로 5×10. 각 day 4~5개 보조 추가.\n【증량】 4주 사이클 후 상체 +5kg, 하체 +5kg. AMRAP 결과로 미세 조정 가능.\n【대상】 5/3/1 사용자 중 보디빌딩 효과(가슴 두께·등 너비)도 원하는 사람.',
+  type: 'strength',
+  daysPerWeek: 4,
+  durationWeeks: 4,
+  exercises: ['스쿼트', '벤치프레스', '데드리프트', '오버헤드 프레스'],
+  getWeekPlan(week: number, oneRepMaxes: Record<string, number>): WeekPlan {
+    const exercises = this.exercises;
+    const weekSchemes: { label: string; sets: { pct: number; reps: number }[] }[] = [
+      { label: 'Week 1 (5/5/5+)', sets: [{ pct: 0.65, reps: 5 }, { pct: 0.75, reps: 5 }, { pct: 0.85, reps: 5 }] },
+      { label: 'Week 2 (3/3/3+)', sets: [{ pct: 0.70, reps: 3 }, { pct: 0.80, reps: 3 }, { pct: 0.90, reps: 3 }] },
+      { label: 'Week 3 (5/3/1+)', sets: [{ pct: 0.75, reps: 5 }, { pct: 0.85, reps: 3 }, { pct: 0.95, reps: 1 }] },
+      { label: 'Week 4 (디로드)', sets: [{ pct: 0.40, reps: 5 }, { pct: 0.50, reps: 5 }, { pct: 0.60, reps: 5 }] },
+    ];
+    const scheme = weekSchemes[(week - 1) % 4];
+    const isDeload = week % 4 === 0;
+
+    const accMap: Record<string, ExercisePlan[]> = {
+      '오버헤드 프레스': [
+        ...(isDeload ? [] : [bbb('벤치프레스', oneRepMaxes['벤치프레스'] || 0)]),
+        acc('덤벨 숄더 프레스', 4, 10),
+        acc('사이드 레터럴 레이즈', 4, 12),
+        acc('페이스 풀', 4, 15),
+        acc('해머 컬', 3, 12),
+      ],
+      '데드리프트': [
+        ...(isDeload ? [] : [bbb('스쿼트', oneRepMaxes['스쿼트'] || 0)]),
+        acc('루마니안 데드리프트', 4, 8),
+        acc('레그 컬', 4, 12),
+        acc('카프 레이즈 머신', 4, 15),
+        acc('행잉 레그레이즈', 3, 15),
+      ],
+      '벤치프레스': [
+        ...(isDeload ? [] : [bbb('오버헤드 프레스', oneRepMaxes['오버헤드 프레스'] || 0)]),
+        acc('인클라인 덤벨 프레스', 4, 10),
+        acc('덤벨 플라이', 4, 12),
+        acc('트라이셉 푸시다운', 4, 12),
+        acc('케이블 크로스오버', 3, 15),
+      ],
+      '스쿼트': [
+        // Wendler BBB 정통: 스쿼트 day는 데드 5×10이 등 부담 너무 커서 권장 안 함. RDL 또는 프론트 스쿼트 사용
+        ...(isDeload ? [] : [bbb('루마니안 데드리프트', oneRepMaxes['데드리프트'] || 0)]),
+        acc('레그프레스', 4, 12),
+        acc('레그 익스텐션', 4, 15),
+        acc('레그 컬', 3, 12),
+        acc('크런치', 3, 20),
+      ],
+    };
+
+    const days: DayPlan[] = exercises.map((exName) => {
+      const orm = oneRepMaxes[exName] || 0;
+      const tm = orm * 0.9;
+      return {
+        label: exName,
+        exercises: [
+          { exerciseName: exName, sets: scheme.sets.map((s) => ({
+            percentage: Math.round(s.pct * 100), reps: s.reps,
+            weight: orm > 0 ? roundToPlate(tm * s.pct) : undefined,
+          }))},
+          ...(accMap[exName] || []),
+        ],
+      };
+    });
+
+    return { label: scheme.label, days };
+  },
+};
+
+// === PPL 3-day 압축형 (주 3일, 8주) ===
+const ppl3Day: ProgramTemplate = {
+  id: 'ppl3',
+  name: 'PPL 3-day',
+  description: '주 3일 Push/Pull/Legs 압축형. 시간 부족한 중급자용 근비대',
+  guide: '【원리】 6-day PPL을 3-day로 압축. 매주 Push/Pull/Legs 한 번씩 + 종목 다양화.\n【진행법】 월: Push (가슴·어깨·삼두), 수: Pull (등·이두·후면), 금: Legs (하체·코어). 메인 4×8 + 보조 3×10~15.\n【증량】 모든 세트 목표 횟수 달성 시 상체 +2.5kg, 하체 +5kg.\n【대상】 시간이 부족한 중급자, 근비대 목표.',
+  type: 'hypertrophy',
+  daysPerWeek: 3,
+  durationWeeks: 8,
+  exercises: ['벤치프레스', '오버헤드 프레스', '바벨 로우', '풀업', '스쿼트', '루마니안 데드리프트'],
+  getWeekPlan(week: number, oneRepMaxes: Record<string, number>): WeekPlan {
+    function main(exName: string, sets: number, reps: number, intensity: number): ExercisePlan {
+      const orm = oneRepMaxes[exName] || 0;
+      const w = orm > 0 ? roundToPlate(orm * intensity) : undefined;
+      return {
+        exerciseName: exName,
+        sets: Array.from({ length: sets }, () => ({
+          percentage: Math.round(intensity * 100), reps, weight: w,
+        })),
+      };
+    }
+
+    const days: DayPlan[] = [
+      {
+        label: 'Push (가슴 / 어깨 / 삼두)',
+        exercises: [
+          main('벤치프레스', 4, 8, 0.75),
+          main('오버헤드 프레스', 3, 10, 0.7),
+          acc('인클라인 덤벨 프레스', 3, 10),
+          acc('사이드 레터럴 레이즈', 4, 12),
+          acc('덤벨 플라이', 3, 12),
+          acc('트라이셉 푸시다운', 3, 12),
+          acc('스컬크러셔', 3, 12),
+        ],
+      },
+      {
+        label: 'Pull (등 / 이두 / 후면)',
+        exercises: [
+          main('바벨 로우', 4, 8, 0.75),
+          main('풀업', 3, 8, 0.7),
+          acc('랫풀다운', 3, 12),
+          acc('시티드 로우 머신', 3, 10),
+          acc('페이스 풀', 4, 15),
+          acc('바벨 컬', 3, 10),
+          acc('해머 컬', 3, 12),
+        ],
+      },
+      {
+        label: 'Legs (하체 / 코어)',
+        exercises: [
+          main('스쿼트', 4, 8, 0.75),
+          main('루마니안 데드리프트', 3, 10, 0.7),
+          acc('레그프레스', 3, 12),
+          acc('레그 익스텐션', 3, 15),
+          acc('레그 컬', 3, 15),
+          acc('카프 레이즈 머신', 4, 15),
+          acc('행잉 레그레이즈', 3, 15),
+        ],
+      },
+    ];
+
+    return { label: `Week ${week}/8`, days };
+  },
+};
+
+// === Stronger By Science 28-Free (주 3, 12주, 균형형) ===
+const sbs28Free: ProgramTemplate = {
+  id: 'sbs28',
+  name: 'SBS 28-Free (Powerbuilding)',
+  description: 'Stronger By Science 무료 프로그램. 주 3일 hypertrophy + strength 균형형',
+  guide: '【원리】 Greg Nuckols(SBS) 무료 매뉴얼 기반. 부위 빈도 2회/주 + 강도/볼륨 파동.\n【진행법】 Day1: 스쿼트(무거움)+벤치(중간) | Day2: 벤치(무거움)+데드(중간) | Day3: 데드(무거움)+스쿼트(중간)+OHP. 메인 5×5(80%), 백오프 3×8(70%).\n【증량】 4주마다 1RM +5kg 또는 RPE 8 도달 시 +2.5kg.\n【대상】 1년 이상 경력 중급자. 스트렝스+근비대 동시 추구.',
+  type: 'strength',
+  daysPerWeek: 3,
+  durationWeeks: 12,
+  exercises: ['스쿼트', '벤치프레스', '데드리프트', '오버헤드 프레스'],
+  getWeekPlan(week: number, oneRepMaxes: Record<string, number>): WeekPlan {
+    // 4주 사이클 강도 파동 (week 1: 75%, week 2: 80%, week 3: 85%, week 4: 70% 디로드)
+    const cycleWeek = ((week - 1) % 4) + 1;
+    const heavyPct = cycleWeek === 4 ? 0.70 : 0.75 + (cycleWeek - 1) * 0.05;
+    const mediumPct = heavyPct - 0.10;
+
+    function main(exName: string, sets: number, reps: number, pct: number): ExercisePlan {
+      const orm = oneRepMaxes[exName] || 0;
+      const w = orm > 0 ? roundToPlate(orm * pct) : undefined;
+      return {
+        exerciseName: exName,
+        sets: Array.from({ length: sets }, () => ({ percentage: Math.round(pct * 100), reps, weight: w })),
+      };
+    }
+
+    const days: DayPlan[] = [
+      {
+        label: 'Day 1 (스쿼트 무거움 + 벤치 중간)',
+        exercises: [
+          main('스쿼트', 5, 5, heavyPct),
+          main('벤치프레스', 4, 8, mediumPct),
+          acc('루마니안 데드리프트', 3, 10),
+          acc('인클라인 덤벨 프레스', 3, 10),
+          acc('페이스 풀', 4, 15),
+        ],
+      },
+      {
+        label: 'Day 2 (벤치 무거움 + 데드 중간)',
+        exercises: [
+          main('벤치프레스', 5, 5, heavyPct),
+          main('데드리프트', 3, 5, mediumPct),
+          acc('덤벨 숄더 프레스', 4, 10),
+          acc('바벨 로우', 4, 8),
+          acc('트라이셉 푸시다운', 3, 12),
+        ],
+      },
+      {
+        label: 'Day 3 (데드 무거움 + 스쿼트 중간 + OHP)',
+        exercises: [
+          main('데드리프트', 4, 3, heavyPct),
+          main('스쿼트', 4, 8, mediumPct),
+          main('오버헤드 프레스', 4, 6, heavyPct),
+          acc('가중 풀업', 4, 8),
+          acc('바벨 컬', 3, 10),
+        ],
+      },
+    ];
+
+    return { label: `Week ${week} (${Math.round(heavyPct * 100)}%${cycleWeek === 4 ? ' 디로드' : ''})`, days };
+  },
+};
+
+// === Reverse Pyramid Training (RPT) (주 3, 8주, 시간 효율) ===
+const rpt: ProgramTemplate = {
+  id: 'rpt',
+  name: 'Reverse Pyramid Training (RPT)',
+  description: 'Martin Berkhan / Lean Gains. 주 3일 30~45분 완주 시간 효율 극강',
+  guide: '【원리】 가장 무거운 세트 먼저 → 무게 10%씩 줄여가며 추가. 종목 적게 + 강도 최대.\n【진행법】 각 운동 3세트: 1세트 6~8회(100%), 2세트 8~10회(90%), 3세트 10~12회(80%). 종목 4~5개로 30~45분 완료.\n【증량】 마지막 세트 목표 횟수 상한 달성 시 다음 운동에 +1.25kg(상체) / +2.5kg(하체).\n【대상】 시간 부족한 중급자. 운동 빈도보다 강도 추구.',
+  type: 'hypertrophy',
+  daysPerWeek: 3,
+  durationWeeks: 8,
+  exercises: ['벤치프레스', '데드리프트', '스쿼트', '오버헤드 프레스', '풀업'],
+  getWeekPlan(week: number, oneRepMaxes: Record<string, number>): WeekPlan {
+    function rpt(exName: string, baseReps: number = 6): ExercisePlan {
+      const orm = oneRepMaxes[exName] || 0;
+      const w100 = orm > 0 ? roundToPlate(orm * 0.825) : undefined; // top set ~82.5% (6~8회 가능 강도)
+      const w90 = orm > 0 ? roundToPlate(orm * 0.825 * 0.9) : undefined;
+      const w80 = orm > 0 ? roundToPlate(orm * 0.825 * 0.8) : undefined;
+      return {
+        exerciseName: exName,
+        sets: [
+          { percentage: 82, reps: baseReps, weight: w100 },
+          { percentage: 74, reps: baseReps + 2, weight: w90 },
+          { percentage: 66, reps: baseReps + 4, weight: w80 },
+        ],
+      };
+    }
+
+    const days: DayPlan[] = [
+      {
+        label: 'Day A (가슴/삼두/이두)',
+        exercises: [
+          rpt('벤치프레스', 6),
+          rpt('풀업', 6),
+          acc('인클라인 덤벨 프레스', 3, 8),
+          acc('바벨 컬', 2, 8),
+        ],
+      },
+      {
+        label: 'Day B (하체/햄)',
+        exercises: [
+          rpt('데드리프트', 6),
+          acc('루마니안 데드리프트', 2, 8),
+          acc('레그 컬', 3, 10),
+          acc('카프 레이즈 머신', 3, 12),
+        ],
+      },
+      {
+        label: 'Day C (어깨/등/하체)',
+        exercises: [
+          rpt('스쿼트', 6),
+          rpt('오버헤드 프레스', 6),
+          acc('바벨 로우', 3, 8),
+          acc('사이드 레터럴 레이즈', 3, 12),
+        ],
+      },
+    ];
+
+    return { label: `Week ${week}/8`, days };
+  },
+};
+
+// === Push/Pull 4-day (주 4, 8주, 근비대) ===
+const pushPull4Day: ProgramTemplate = {
+  id: 'pushpull4',
+  name: 'Push/Pull 4-day',
+  description: '주 4일 Push/Pull 분할. PPL과 다르게 다리도 푸시·풀에 분배. 부위 빈도 2회/주',
+  guide: '【원리】 미는 동작(가슴·어깨·삼두·쿼드)과 당기는 동작(등·이두·햄)으로 분할. 다리는 푸시 day(스쿼트)와 풀 day(데드/RDL)에 분배.\n【진행법】 Day1: Push(벤치+스쿼트), Day2: Pull(데드+풀업), Day3: Push(OHP+레그프레스), Day4: Pull(RDL+바벨로우).\n【증량】 모든 세트 목표 횟수 달성 시 상체 +2.5kg, 하체 +5kg.\n【대상】 PPL 6일이 부담스러운 중급자. 근비대 + 빈도 균형.',
+  type: 'hypertrophy',
+  daysPerWeek: 4,
+  durationWeeks: 8,
+  exercises: ['벤치프레스', '오버헤드 프레스', '스쿼트', '데드리프트', '바벨 로우', '루마니안 데드리프트'],
+  getWeekPlan(week: number, oneRepMaxes: Record<string, number>): WeekPlan {
+    function main(exName: string, sets: number, reps: number, pct: number): ExercisePlan {
+      const orm = oneRepMaxes[exName] || 0;
+      const w = orm > 0 ? roundToPlate(orm * pct) : undefined;
+      return {
+        exerciseName: exName,
+        sets: Array.from({ length: sets }, () => ({ percentage: Math.round(pct * 100), reps, weight: w })),
+      };
+    }
+
+    const days: DayPlan[] = [
+      {
+        label: 'Day 1 Push (가슴 메인 + 쿼드)',
+        exercises: [
+          main('벤치프레스', 4, 6, 0.78),
+          main('스쿼트', 4, 8, 0.70),
+          acc('인클라인 덤벨 프레스', 3, 10),
+          acc('레그 익스텐션', 3, 12),
+          acc('트라이셉 푸시다운', 3, 12),
+          acc('사이드 레터럴 레이즈', 3, 12),
+        ],
+      },
+      {
+        label: 'Day 2 Pull (등 메인 + 햄)',
+        exercises: [
+          main('데드리프트', 4, 5, 0.75),
+          main('가중 풀업', 4, 8, 0.70),
+          acc('시티드 로우 머신', 3, 10),
+          acc('레그 컬', 3, 12),
+          acc('바벨 컬', 3, 10),
+          acc('페이스 풀', 3, 15),
+        ],
+      },
+      {
+        label: 'Day 3 Push (어깨 메인 + 쿼드 보조)',
+        exercises: [
+          main('오버헤드 프레스', 4, 6, 0.78),
+          acc('레그프레스', 4, 12),
+          acc('덤벨 벤치프레스', 3, 10),
+          acc('덤벨 플라이', 3, 12),
+          acc('스컬크러셔', 3, 12),
+          acc('카프 레이즈 머신', 4, 15),
+        ],
+      },
+      {
+        label: 'Day 4 Pull (등 너비 + 햄 메인)',
+        exercises: [
+          main('루마니안 데드리프트', 4, 8, 0.70),
+          main('바벨 로우', 4, 6, 0.75),
+          acc('랫풀다운', 3, 12),
+          acc('덤벨 로우', 3, 10),
+          acc('해머 컬', 3, 12),
+          acc('행잉 레그레이즈', 3, 12),
+        ],
+      },
+    ];
+
+    return { label: `Week ${week}/8`, days };
+  },
+};
+
+// === German Volume Training (GVT) (주 3, 4주 단기, 고볼륨) ===
+const gvt: ProgramTemplate = {
+  id: 'gvt',
+  name: 'German Volume Training (GVT)',
+  description: 'Charles Poliquin. 메인 10×10 같은 무게 (60% 1RM). 4주 단기 고볼륨',
+  guide: '【원리】 메인 운동 10세트 10회 같은 무게(1RM의 60%). 90초 휴식. 극한 볼륨으로 근비대 자극.\n【진행법】 Day1: 가슴+등, Day2: 다리+코어, Day3: 어깨+팔. 메인 10×10 + 보조 3×10~12.\n【증량】 4주 사이클 동안 무게 고정. 매 세션 10×10 모두 달성 시 다음 사이클 +2.5kg(상체) / +5kg(하체).\n【주의】 4주 이상 지속 비추천. 회복 보장이 핵심 (수면·식사·휴식). 기존 프로그램 사이 정체 돌파용.',
+  type: 'hypertrophy',
+  daysPerWeek: 3,
+  durationWeeks: 4,
+  exercises: ['벤치프레스', '바벨 로우', '스쿼트', '오버헤드 프레스', '루마니안 데드리프트'],
+  getWeekPlan(week: number, oneRepMaxes: Record<string, number>): WeekPlan {
+    function gvtMain(exName: string): ExercisePlan {
+      const orm = oneRepMaxes[exName] || 0;
+      const w = orm > 0 ? roundToPlate(orm * 0.6) : undefined;
+      return {
+        exerciseName: exName,
+        sets: Array.from({ length: 10 }, () => ({ percentage: 60, reps: 10, weight: w })),
+      };
+    }
+
+    const days: DayPlan[] = [
+      {
+        label: 'Day 1 (가슴 + 등)',
+        exercises: [
+          gvtMain('벤치프레스'),
+          gvtMain('바벨 로우'),
+          acc('인클라인 덤벨 플라이', 3, 12),
+          acc('랫풀다운', 3, 12),
+        ],
+      },
+      {
+        label: 'Day 2 (다리 + 코어)',
+        exercises: [
+          gvtMain('스쿼트'),
+          { exerciseName: '루마니안 데드리프트', sets: Array.from({ length: 3 }, () => ({
+            percentage: 50, reps: 10,
+            weight: oneRepMaxes['데드리프트'] ? roundToPlate(oneRepMaxes['데드리프트'] * 0.5) : undefined,
+          })) },
+          acc('카프 레이즈 머신', 4, 15),
+          acc('행잉 레그레이즈', 3, 15),
+        ],
+      },
+      {
+        label: 'Day 3 (어깨 + 팔)',
+        exercises: [
+          gvtMain('오버헤드 프레스'),
+          acc('바벨 컬', 4, 10),
+          acc('스컬크러셔', 4, 10),
+          acc('사이드 레터럴 레이즈', 3, 12),
+        ],
+      },
+    ];
+
+    return { label: `Week ${week}/4 (10×10 60%)`, days };
+  },
+};
+
+// === High Frequency Full Body 4-day (주 4, 12주, 근비대) ===
+const highFreqFullBody4Day: ProgramTemplate = {
+  id: 'hffb4',
+  name: 'High Frequency Full Body 4-day',
+  description: 'Greg Nuckols / SBS. 매번 전신 + 부위 빈도 4회/주. 매타분석 기반 근비대 최적',
+  guide: '【원리】 매 세션 전신 운동. 부위별 주 4회 자극으로 합산 볼륨 ↑ + 회복 시간 분산. 메타분석 기반 hypertrophy 최적 빈도.\n【진행법】 Day1: 백스쿼트+벤치+풀업, Day2: 데드+OHP+로우, Day3: 프론트스쿼트+인클라인+친업, Day4: RDL+덤벨숄더+시티드로우. 메인 4×6, 보조 3×10.\n【증량】 모든 세트 목표 횟수 달성 시 +2.5kg(상체)/+5kg(하체). 정체 시 디로드 1주.\n【대상】 빈도와 볼륨 둘 다 챙기고 싶은 중급자.',
+  type: 'hypertrophy',
+  daysPerWeek: 4,
+  durationWeeks: 12,
+  exercises: ['스쿼트', '벤치프레스', '데드리프트', '오버헤드 프레스', '바벨 로우', '루마니안 데드리프트', '프론트 스쿼트'],
+  getWeekPlan(week: number, oneRepMaxes: Record<string, number>): WeekPlan {
+    function main(exName: string, sets: number, reps: number, pct: number): ExercisePlan {
+      const orm = oneRepMaxes[exName] || 0;
+      const w = orm > 0 ? roundToPlate(orm * pct) : undefined;
+      return {
+        exerciseName: exName,
+        sets: Array.from({ length: sets }, () => ({ percentage: Math.round(pct * 100), reps, weight: w })),
+      };
+    }
+
+    const days: DayPlan[] = [
+      {
+        label: 'Day 1 (스쿼트 + 벤치 + 풀업)',
+        exercises: [
+          main('스쿼트', 4, 6, 0.78),
+          main('벤치프레스', 4, 6, 0.78),
+          main('가중 풀업', 4, 8, 0.70),
+          acc('레그 익스텐션', 3, 12),
+          acc('트라이셉 푸시다운', 3, 12),
+        ],
+      },
+      {
+        label: 'Day 2 (데드 + OHP + 로우)',
+        exercises: [
+          main('데드리프트', 3, 5, 0.78),
+          main('오버헤드 프레스', 4, 6, 0.75),
+          main('바벨 로우', 4, 8, 0.70),
+          acc('레그 컬', 3, 12),
+          acc('사이드 레터럴 레이즈', 3, 12),
+        ],
+      },
+      {
+        label: 'Day 3 (프론트 스쿼트 + 인클라인 + 친업)',
+        exercises: [
+          main('프론트 스쿼트', 4, 8, 0.70),
+          acc('인클라인 덤벨 프레스', 4, 8),
+          acc('가중 친업', 4, 8),
+          acc('레그프레스', 3, 12),
+          acc('덤벨 플라이', 3, 12),
+        ],
+      },
+      {
+        label: 'Day 4 (RDL + 덤벨숄더 + 시티드로우)',
+        exercises: [
+          main('루마니안 데드리프트', 4, 8, 0.70),
+          acc('덤벨 숄더 프레스', 4, 10),
+          acc('시티드 로우 머신', 4, 10),
+          acc('바벨 컬', 3, 10),
+          acc('카프 레이즈 머신', 4, 15),
+        ],
+      },
+    ];
+
+    return { label: `Week ${week}/12`, days };
+  },
+};
+
 export const programTemplates: ProgramTemplate[] = [
   // 주 3일
   startingStrength,
   strongLifts5x5,
+  madcow5x5,
   greyskulllp,
   gzclp,
   linearProgression,
   texasMethod,
+  sbs28Free,
+  rpt,
   fullBody3Day,
+  ppl3Day,
+  gvt,
   calisthenics,
   // 주 4일
   phul,
   upperLower,
+  highFreqFullBody4Day,
+  pushPull4Day,
   nsuns,
   wendler531,
+  wendler531BBB,
   juggernaut,
   candito6week,
   // 주 5~6일
