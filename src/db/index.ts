@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie';
-import type { Exercise, WorkoutSession, Routine, PersonalRecord, InjuryLog, BodyWeightLog, DailyMacroLog, Food, UserSettings } from '../types';
+import type { Exercise, WorkoutSession, Routine, PersonalRecord, InjuryLog, BodyWeightLog, DailyMacroLog, DailyConditionLog, Food, Goal, UserSettings } from '../types';
 
 class WorkoutDB extends Dexie {
   exercises!: Table<Exercise>;
@@ -9,7 +9,9 @@ class WorkoutDB extends Dexie {
   injuryLogs!: Table<InjuryLog>;
   bodyWeightLogs!: Table<BodyWeightLog>;
   dailyMacroLogs!: Table<DailyMacroLog>;
+  conditionLogs!: Table<DailyConditionLog>;
   foods!: Table<Food>;
+  goals!: Table<Goal>;
   settings!: Table<UserSettings>;
 
   constructor() {
@@ -50,6 +52,31 @@ class WorkoutDB extends Dexie {
       bodyWeightLogs: '++id, date',
       dailyMacroLogs: '++id, date',
       foods: '++id, name, category, isCustom',
+      settings: 'key',
+    });
+    this.version(5).stores({
+      exercises: '++id, name, muscleGroup, equipmentType, isCustom',
+      sessions: '++id, date, trainingGoal',
+      routines: '++id, name',
+      personalRecords: '++id, exerciseId, date, sessionId',
+      injuryLogs: '++id, date, bodyPart, isResolved',
+      bodyWeightLogs: '++id, date',
+      dailyMacroLogs: '++id, date',
+      conditionLogs: '++id, date',
+      foods: '++id, name, category, isCustom',
+      settings: 'key',
+    });
+    this.version(6).stores({
+      exercises: '++id, name, muscleGroup, equipmentType, isCustom',
+      sessions: '++id, date, trainingGoal',
+      routines: '++id, name',
+      personalRecords: '++id, exerciseId, date, sessionId',
+      injuryLogs: '++id, date, bodyPart, isResolved',
+      bodyWeightLogs: '++id, date',
+      dailyMacroLogs: '++id, date',
+      conditionLogs: '++id, date',
+      foods: '++id, name, category, isCustom',
+      goals: '++id, type, completedAt',
       settings: 'key',
     });
   }

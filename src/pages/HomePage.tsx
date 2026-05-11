@@ -6,6 +6,7 @@ import { getLocalDate, formatDateKr } from '../hooks/useLocalDate';
 import { useWorkoutContext } from '../hooks/WorkoutContext';
 import { useWorkoutDuration } from '../hooks/useWorkoutDuration';
 import { storage } from '../lib/storage';
+import { generateInsights } from '../lib/insights';
 
 function BodyWeightWidget() {
   const today = getLocalDate();
@@ -76,6 +77,92 @@ function BodyWeightWidget() {
   );
 }
 
+const MUSCLE_GROUPS = ['가슴', '등', '어깨', '이두', '삼두', '하체', '코어'] as const;
+
+function ConditionWidget() {
+  const today = getLocalDate();
+  const log = useLiveQuery(() => db.conditionLogs.where('date').equals(today).first(), [today]);
+  const [sleepInput, setSleepInput] = useState('');
+
+  // 초기값 동기화 (log 변경 시)
+  const sleepValue = log?.sleepHours;
+  const sorePartsList = log?.soreParts || [];
+
+  const updateLog = async (changes: Partial<{ sleepHours: number; soreParts: typeof sorePartsList }>) => {
+    if (log?.id) {
+      await db.conditionLogs.update(log.id, changes);
+    } else {
+      await db.conditionLogs.add({ date: today, ...changes });
+    }
+  };
+
+  const handleSleepBlur = async () => {
+    const h = Number(sleepInput);
+    if (h > 0 && h <= 24 && h !== sleepValue) {
+      await updateLog({ sleepHours: h });
+    }
+  };
+
+  const toggleSore = async (m: typeof MUSCLE_GROUPS[number]) => {
+    const cur = sorePartsList;
+    const next = cur.includes(m) ? cur.filter((x) => x !== m) : [...cur, m];
+    await updateLog({ soreParts: next });
+  };
+
+  return (
+    <section className="mb-4">
+      <div className="bg-surface rounded-xl p-4 border border-border">
+        <div className="flex justify-between items-center mb-3">
+          <span className="text-sm font-semibold">😴 오늘 컨디션</span>
+          {sleepValue !== undefined && (
+            <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+              sleepValue >= 7 ? 'bg-success/15 text-success' :
+              sleepValue >= 6 ? 'bg-warning/15 text-warning' :
+              'bg-danger/15 text-danger'
+            }`}>
+              {sleepValue >= 7 ? '충분' : sleepValue >= 6 ? '부족' : '심각'}
+            </span>
+          )}
+        </div>
+
+        {/* 수면 */}
+        <div className="flex items-center gap-2 mb-3">
+          <label className="text-xs text-text-secondary w-20">어젯밤 수면</label>
+          <input
+            type="number" inputMode="decimal" step="0.5"
+            defaultValue={sleepValue ?? ''}
+            value={sleepInput || (sleepValue !== undefined ? String(sleepValue) : '')}
+            onChange={(e) => setSleepInput(e.target.value)}
+            onBlur={handleSleepBlur}
+            placeholder="0"
+            className="flex-1 bg-surface-light rounded-lg px-3 py-1.5 text-sm font-mono text-center outline-none focus:ring-2 focus:ring-primary"
+          />
+          <span className="text-xs text-text-secondary">시간</span>
+        </div>
+
+        {/* 근육통 chips */}
+        <div>
+          <label className="text-[10px] text-text-secondary mb-1.5 block">근육통 부위 (탭으로 토글)</label>
+          <div className="flex flex-wrap gap-1.5">
+            {MUSCLE_GROUPS.map((m) => {
+              const active = sorePartsList.includes(m);
+              return (
+                <button
+                  key={m}
+                  onClick={() => toggleSore(m)}
+                  className={`px-2.5 py-1 rounded-full text-xs transition-colors ${
+                    active ? 'bg-warning/20 text-warning border border-warning/40' : 'bg-surface-light text-text-secondary border border-transparent'
+                  }`}
+                >{m}</button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function getStreak(dates: string[]): number {
   if (dates.length === 0) return 0;
   const sorted = [...new Set(dates)].sort().reverse();
@@ -123,6 +210,15 @@ export default function HomePage() {
   const allSessions = useLiveQuery(
     () => db.sessions.orderBy('date').reverse().limit(60).toArray()
   );
+
+  // 운동/영양/체중/PR 교차 분석 — 우선순위 내림차순 정렬된 인사이트 목록
+  const insights = useLiveQuery(() => generateInsights(), []);
+
+  // 진행 중 목표
+  const activeGoals = useLiveQuery(async () => {
+    const all = await db.goals.toArray();
+    return all.filter((g) => !g.completedAt);
+  }, []);
 
   // 백업 리마인더 스냅샷 (1회 평가)
   // 페이지 진입 시점을 1회 캡처 (Date.now()를 렌더 중 호출하지 않기 위함)
@@ -224,6 +320,64 @@ export default function HomePage() {
           </section>
         )}
 
+      {/* 오늘의 인사이트 (운동/영양/체중/PR 교차 분석) */}
+      {insights && insights.length > 0 && (
+        <section className="mb-4">
+          <h2 className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-2">오늘의 인사이트</h2>
+          <div className="space-y-2">
+            {insights.slice(0, 3).map((ins) => (
+              <div
+                key={ins.id}
+                className={`rounded-xl p-3 border ${
+                  ins.tone === 'success' ? 'bg-success/10 border-success/30' :
+                  ins.tone === 'warning' ? 'bg-warning/10 border-warning/30' :
+                  'bg-primary/10 border-primary/30'
+                }`}
+              >
+                <div className="flex items-start gap-2">
+                  <span className="text-lg leading-none mt-0.5">{ins.icon}</span>
+                  <div className="flex-1">
+                    <div className={`text-sm font-semibold ${
+                      ins.tone === 'success' ? 'text-success' :
+                      ins.tone === 'warning' ? 'text-warning' :
+                      'text-primary-light'
+                    }`}>{ins.title}</div>
+                    <p className="text-xs text-text-secondary mt-0.5 leading-relaxed">{ins.text}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {insights.length > 3 && (
+              <div className="text-[10px] text-text-secondary text-center">…외 {insights.length - 3}건</div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* 목표 진입 카드 */}
+      <section className="mb-4">
+        <button
+          onClick={() => navigate('/goals')}
+          className={`w-full rounded-xl p-4 text-left transition-colors ${
+            activeGoals && activeGoals.length > 0
+              ? 'bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 active:bg-primary/15'
+              : 'bg-surface border border-border border-dashed active:bg-surface-light'
+          }`}
+        >
+          <div className="flex justify-between items-center">
+            <div>
+              <div className="text-sm font-semibold">🎯 목표</div>
+              <div className="text-xs text-text-secondary mt-0.5">
+                {activeGoals && activeGoals.length > 0
+                  ? `${activeGoals.length}개 진행 중 — 진행률 보기`
+                  : 'PR/체중/운동 횟수 목표 설정하기'}
+              </div>
+            </div>
+            <span className="text-text-secondary">→</span>
+          </div>
+        </button>
+      </section>
+
       {/* 이번 주 진행률 */}
       <div className="bg-surface rounded-xl p-4 mb-4">
         <div className="flex justify-between items-center mb-3">
@@ -323,6 +477,9 @@ export default function HomePage() {
 
       {/* 체중 기록 */}
       <BodyWeightWidget />
+
+      {/* 오늘 컨디션 (수면 + 근육통) */}
+      <ConditionWidget />
 
       {/* 오늘의 운동 */}
       <section className="mb-6">

@@ -81,6 +81,31 @@ export interface BodyWeightLog {
   bodyFat?: number;
 }
 
+export interface DailyConditionLog {
+  id?: number;
+  date: string;            // YYYY-MM-DD
+  sleepHours?: number;     // 수면 시간 (시간 단위)
+  soreParts?: MuscleGroup[]; // 근육통 부위
+  stress?: number;         // 1(낮음) ~ 5(높음)
+  energy?: number;         // 1(낮음) ~ 5(높음)
+  note?: string;
+}
+
+export type GoalType = 'oneRepMax' | 'bodyWeight' | 'weeklyWorkouts';
+
+export interface Goal {
+  id?: number;
+  type: GoalType;
+  exerciseName?: string;   // type === 'oneRepMax' 시 종목명
+  startValue: number;
+  targetValue: number;
+  startDate: string;       // YYYY-MM-DD
+  targetDate: string;
+  createdAt: string;
+  completedAt?: string;    // 달성 시점
+  note?: string;
+}
+
 export interface UserSettings {
   key: string;
   value: string | number | boolean | number[];

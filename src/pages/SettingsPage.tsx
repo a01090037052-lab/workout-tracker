@@ -26,7 +26,9 @@ export default function SettingsPage() {
       injuryLogs: await db.injuryLogs.toArray(),
       bodyWeightLogs: await db.bodyWeightLogs.toArray(),
       dailyMacroLogs: await db.dailyMacroLogs.toArray(),
+      conditionLogs: await db.conditionLogs.toArray(),
       foods: await db.foods.toArray(),
+      goals: await db.goals.toArray(),
       settings: { weightSuggestion: storage.weightSuggestion.raw() },
       programProgress: storage.programProgress.exportAll(),
       nutritionProfile: storage.nutritionProfile.get(),
@@ -84,7 +86,9 @@ export default function SettingsPage() {
           injuryLogs: await db.injuryLogs.toArray(),
           bodyWeightLogs: await db.bodyWeightLogs.toArray(),
           dailyMacroLogs: await db.dailyMacroLogs.toArray(),
+          conditionLogs: await db.conditionLogs.toArray(),
           foods: await db.foods.toArray(),
+          goals: await db.goals.toArray(),
         };
 
         try {
@@ -95,7 +99,9 @@ export default function SettingsPage() {
           await db.injuryLogs.clear();
           await db.exercises.clear();
           await db.dailyMacroLogs.clear();
+          await db.conditionLogs.clear();
           await db.foods.clear();
+          await db.goals.clear();
 
           if (data.exercises?.length) await db.exercises.bulkAdd(data.exercises);
           if (data.sessions?.length) await db.sessions.bulkAdd(data.sessions);
@@ -104,7 +110,9 @@ export default function SettingsPage() {
           if (data.injuryLogs?.length) await db.injuryLogs.bulkAdd(data.injuryLogs);
           if (data.bodyWeightLogs?.length) await db.bodyWeightLogs.bulkAdd(data.bodyWeightLogs);
           if (data.dailyMacroLogs?.length) await db.dailyMacroLogs.bulkAdd(data.dailyMacroLogs);
+          if (data.conditionLogs?.length) await db.conditionLogs.bulkAdd(data.conditionLogs);
           if (data.foods?.length) await db.foods.bulkAdd(data.foods);
+          if (data.goals?.length) await db.goals.bulkAdd(data.goals);
 
           // settings 복원
           if (data.settings?.weightSuggestion) {
@@ -129,7 +137,9 @@ export default function SettingsPage() {
           await db.injuryLogs.clear();
           await db.bodyWeightLogs.clear();
           await db.dailyMacroLogs.clear();
+          await db.conditionLogs.clear();
           await db.foods.clear();
+          await db.goals.clear();
           if (backup.exercises.length) await db.exercises.bulkAdd(backup.exercises);
           if (backup.sessions.length) await db.sessions.bulkAdd(backup.sessions);
           if (backup.routines.length) await db.routines.bulkAdd(backup.routines);
@@ -137,7 +147,9 @@ export default function SettingsPage() {
           if (backup.injuryLogs.length) await db.injuryLogs.bulkAdd(backup.injuryLogs);
           if (backup.bodyWeightLogs.length) await db.bodyWeightLogs.bulkAdd(backup.bodyWeightLogs);
           if (backup.dailyMacroLogs.length) await db.dailyMacroLogs.bulkAdd(backup.dailyMacroLogs);
+          if (backup.conditionLogs.length) await db.conditionLogs.bulkAdd(backup.conditionLogs);
           if (backup.foods.length) await db.foods.bulkAdd(backup.foods);
+          if (backup.goals.length) await db.goals.bulkAdd(backup.goals);
           showToast('복원 실패. 기존 데이터를 유지합니다.');
         }
       } catch {
