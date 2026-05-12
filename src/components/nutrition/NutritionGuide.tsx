@@ -194,6 +194,51 @@ export default function NutritionGuide() {
         </div>
       </section>
 
+      {/* 12. 일반식 기록법 (외식·집밥) */}
+      <section>
+        <h4 className="font-semibold mb-2">12. 일반식 기록법 (외식·집밥처럼 라벨 없는 음식)</h4>
+        <p className="text-text-secondary text-xs mb-2">
+          외식이나 집밥은 정확한 매크로를 알기 어려워요. 영양사가 가장 많이 가르치는 표준은 손바닥 분량법.
+        </p>
+
+        <div className="bg-surface-light rounded-lg p-3 mb-3">
+          <div className="text-xs font-medium mb-2">🖐 손바닥 분량 (영양학 표준)</div>
+          <ul className="text-xs text-text-secondary space-y-1.5 pl-1">
+            <li className="flex justify-between"><span className="text-red-400">단백질 = 손바닥 1개</span><span className="font-mono">≈ 25~30g (P)</span></li>
+            <li className="flex justify-between"><span className="text-yellow-400">탄수 = 주먹 1개</span><span className="font-mono">≈ 30~40g (C)</span></li>
+            <li className="flex justify-between"><span className="text-blue-400">지방 = 엄지 1개</span><span className="font-mono">≈ 10~15g (F)</span></li>
+            <li className="flex justify-between"><span>채소 = 두 손 가득</span><span className="font-mono">100~150g</span></li>
+          </ul>
+          <p className="text-[10px] text-primary-light mt-2">
+            → "✏️ 직접" 모드의 🖐 손바닥 추정 패널로 자동 입력 가능
+          </p>
+        </div>
+
+        <div className="bg-surface-light rounded-lg p-3 mb-3">
+          <div className="text-xs font-medium mb-2">🍱 카테고리 평균 (중간 분량 기준)</div>
+          <ul className="text-[11px] text-text-secondary space-y-1 font-mono">
+            <li>한식 정식·백반: 700kcal · P25 · C90 · F20</li>
+            <li>일식 회·초밥: 500kcal · P30 · C60 · F8</li>
+            <li>양식 (파스타·스테이크): 800kcal · P30 · C60 · F30</li>
+            <li>중식 (짜장·짬뽕): 800kcal · P20 · C100 · F25</li>
+            <li>분식 (떡볶이·김밥): 600kcal · P15 · C80 · F15</li>
+            <li>치킨·피자: 900kcal · P30 · C50 · F50</li>
+            <li>국밥·곰탕: 600kcal · P30 · C50 · F20</li>
+          </ul>
+          <p className="text-[10px] text-primary-light mt-2">
+            → "🍱 추정" 모드에서 카테고리·분량·단백질 비중 선택하면 자동 적용
+          </p>
+        </div>
+
+        <div className="bg-warning/10 border border-warning/30 rounded-lg p-3">
+          <div className="text-xs font-medium text-warning mb-1">⚠ 외식 보수적 추정</div>
+          <p className="text-[11px] text-text-secondary leading-relaxed">
+            외식은 일반적으로 기름·소스가 많아 표시된 칼로리보다 ↑. <b>모르면 추정값 ×1.2 보정</b>이 안전.
+            다이어트 중이면 특히 권장. 추정 모드에서 "보수적 보정" 체크박스로 자동 적용.
+          </p>
+        </div>
+      </section>
+
       {/* 11. 영양 타이밍 (운동 전후) */}
       <section>
         <h4 className="font-semibold mb-2">11. 영양 타이밍 — 운동 전후</h4>

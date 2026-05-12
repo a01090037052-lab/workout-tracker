@@ -514,7 +514,7 @@ function MacroRow({ label, actual, target, pct, color }: { label: string; actual
 // 식사 추가 모달
 // ============================================================
 function AddMealModal({ onAdd, onAddMany, onClose }: { onAdd: (entry: MacroEntry) => void; onAddMany: (entries: MacroEntry[]) => void; onClose: () => void }) {
-  const [mode, setMode] = useState<'search' | 'manual' | 'portion' | 'newFood' | 'template'>('search');
+  const [mode, setMode] = useState<'search' | 'manual' | 'portion' | 'newFood' | 'template' | 'estimate'>('search');
   const [query, setQuery] = useState('');
   const [selectedFood, setSelectedFood] = useState<Food | null>(null);
   const [portionG, setPortionG] = useState('');
@@ -530,6 +530,11 @@ function AddMealModal({ onAdd, onAddMany, onClose }: { onAdd: (entry: MacroEntry
   const [protein, setProtein] = useState('');
   const [carbs, setCarbs] = useState('');
   const [fat, setFat] = useState('');
+  // 손바닥 분량 가이드
+  const [showHandGuide, setShowHandGuide] = useState(false);
+  const [handP, setHandP] = useState(0);
+  const [handC, setHandC] = useState(0);
+  const [handF, setHandF] = useState(0);
 
   const allFoods = useLiveQuery(() => db.foods.toArray(), []);
   const usageFreq = useLiveQuery(() => getFoodUsageFrequency(), []);
@@ -612,6 +617,17 @@ function AddMealModal({ onAdd, onAddMany, onClose }: { onAdd: (entry: MacroEntry
     if (calc > 0) setKcal(String(calc));
   };
 
+  // 손바닥 분량 → P/C/F + kcal 자동 채움 (단백질 손바닥 27g, 탄수 주먹 35g, 지방 엄지 12g)
+  const applyHandGuide = () => {
+    const pg = Math.round(handP * 27);
+    const cg = Math.round(handC * 35);
+    const fg = Math.round(handF * 12);
+    setProtein(String(pg));
+    setCarbs(String(cg));
+    setFat(String(fg));
+    setKcal(String(Math.round(pg * 4 + cg * 4 + fg * 9)));
+  };
+
   const portionRatio = selectedFood ? Math.max(1, Number(portionG) || 0) / 100 : 0;
   const autoMacros = selectedFood ? {
     kcal: Math.round(selectedFood.kcalPer100g * portionRatio),
@@ -641,15 +657,19 @@ function AddMealModal({ onAdd, onAddMany, onClose }: { onAdd: (entry: MacroEntry
           <div className="flex gap-1 mb-3 bg-surface-light/50 rounded-lg p-1">
             <button
               onClick={() => setMode('search')}
-              className={`flex-1 py-1.5 rounded text-xs font-medium ${mode === 'search' ? 'bg-primary text-white' : 'text-text-secondary'}`}
+              className={`flex-1 py-1.5 rounded text-[11px] font-medium ${mode === 'search' ? 'bg-primary text-white' : 'text-text-secondary'}`}
             >🔍 검색</button>
             <button
               onClick={() => setMode('template')}
-              className={`flex-1 py-1.5 rounded text-xs font-medium ${mode === 'template' ? 'bg-primary text-white' : 'text-text-secondary'}`}
+              className={`flex-1 py-1.5 rounded text-[11px] font-medium ${mode === 'template' ? 'bg-primary text-white' : 'text-text-secondary'}`}
             >📋 템플릿</button>
             <button
+              onClick={() => setMode('estimate')}
+              className={`flex-1 py-1.5 rounded text-[11px] font-medium ${mode === 'estimate' ? 'bg-primary text-white' : 'text-text-secondary'}`}
+            >🍱 추정</button>
+            <button
               onClick={() => setMode('manual')}
-              className={`flex-1 py-1.5 rounded text-xs font-medium ${mode === 'manual' ? 'bg-primary text-white' : 'text-text-secondary'}`}
+              className={`flex-1 py-1.5 rounded text-[11px] font-medium ${mode === 'manual' ? 'bg-primary text-white' : 'text-text-secondary'}`}
             >✏️ 직접</button>
           </div>
         )}
@@ -729,6 +749,11 @@ function AddMealModal({ onAdd, onAddMany, onClose }: { onAdd: (entry: MacroEntry
         {/* 템플릿 모드 */}
         {mode === 'template' && (
           <TemplateList onApply={onAddMany} />
+        )}
+
+        {/* 일반식 추정 모드 (외식·집밥 평균치 기반) */}
+        {mode === 'estimate' && (
+          <EstimateForm onAdd={(e) => onAdd(e)} />
         )}
 
         {/* 새 음식 등록 모드 */}
@@ -847,6 +872,34 @@ function AddMealModal({ onAdd, onAddMany, onClose }: { onAdd: (entry: MacroEntry
                 placeholder="예: 닭가슴살 샐러드"
                 className="w-full bg-surface-light rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-primary"
               />
+            </div>
+
+            {/* 손바닥 분량 빠른 추정 */}
+            <div className="bg-surface-light/40 rounded-lg overflow-hidden">
+              <button
+                onClick={() => setShowHandGuide(!showHandGuide)}
+                className="w-full flex justify-between items-center p-2.5 text-xs"
+              >
+                <span className="font-medium">🖐 손바닥 분량으로 추정 (영양사 표준)</span>
+                <span className="text-text-secondary">{showHandGuide ? '접기' : '펼치기'}</span>
+              </button>
+              {showHandGuide && (
+                <div className="px-3 pb-3 space-y-2 border-t border-border">
+                  <p className="text-[10px] text-text-secondary leading-relaxed mt-2">
+                    개수 선택 후 [적용]을 누르면 아래 P/C/F·kcal가 자동 채워져요.
+                  </p>
+                  <HandRow label="단백질 (손바닥)" unit="× 27g" value={handP} onChange={setHandP} colorClass="text-red-400" />
+                  <HandRow label="탄수 (주먹)" unit="× 35g" value={handC} onChange={setHandC} colorClass="text-yellow-400" />
+                  <HandRow label="지방 (엄지)" unit="× 12g" value={handF} onChange={setHandF} colorClass="text-blue-400" />
+                  <div className="text-[10px] text-text-secondary font-mono text-center">
+                    예상: {Math.round(handP * 27)}g P · {Math.round(handC * 35)}g C · {Math.round(handF * 12)}g F · {Math.round(handP * 27 * 4 + handC * 35 * 4 + handF * 12 * 9)} kcal
+                  </div>
+                  <button
+                    onClick={applyHandGuide}
+                    className="w-full py-2 bg-primary/20 text-primary-light rounded-lg text-xs font-medium"
+                  >P/C/F·칼로리 자동 채우기</button>
+                </div>
+              )}
             </div>
 
             <div>
@@ -1338,6 +1391,188 @@ function SaveTemplateModal({ entries, onClose }: { entries: MacroEntry[]; onClos
         >
           저장
         </button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// 일반식 추정 폼 — 외식·집밥 등 영양정보 없는 음식
+// ============================================================
+const ESTIMATE_CATEGORIES = [
+  { name: '한식 정식·백반',           kcal: 700, p: 25, c: 90,  f: 20 },
+  { name: '집밥 (단순)',              kcal: 500, p: 20, c: 70,  f: 15 },
+  { name: '일식 (회·초밥)',           kcal: 500, p: 30, c: 60,  f: 8  },
+  { name: '양식 (파스타·스테이크)',    kcal: 800, p: 30, c: 60,  f: 30 },
+  { name: '중식 (짜장·짬뽕·볶음)',     kcal: 800, p: 20, c: 100, f: 25 },
+  { name: '카페·브런치',              kcal: 600, p: 20, c: 50,  f: 30 },
+  { name: '뷔페 1접시',               kcal: 500, p: 20, c: 60,  f: 20 },
+  { name: '분식 (떡볶이·김밥·라볶이)', kcal: 600, p: 15, c: 80,  f: 15 },
+  { name: '치킨·피자',                kcal: 900, p: 30, c: 50,  f: 50 },
+  { name: '햄버거·패스트푸드',         kcal: 700, p: 25, c: 60,  f: 35 },
+  { name: '국밥·곰탕류',              kcal: 600, p: 30, c: 50,  f: 20 },
+  { name: '구이류 (삼겹·갈비)',        kcal: 800, p: 35, c: 10,  f: 60 },
+] as const;
+
+type SizeOpt = 'sm' | 'md' | 'lg';
+type ProtOpt = 'low' | 'mid' | 'hi';
+
+function EstimateForm({ onAdd }: { onAdd: (entry: MacroEntry) => void }) {
+  const [categoryIdx, setCategoryIdx] = useState(0);
+  const [size, setSize] = useState<SizeOpt>('md');
+  const [protein, setProtein] = useState<ProtOpt>('mid');
+  const [mealType, setMealType] = useState<MealType>(autoMealType());
+  const [conservative, setConservative] = useState(false);
+
+  const sizeFactor = size === 'sm' ? 0.7 : size === 'md' ? 1 : 1.4;
+  const protFactor = protein === 'low' ? 0.7 : protein === 'mid' ? 1 : 1.5;
+  const consvFactor = conservative ? 1.2 : 1;
+
+  const base = ESTIMATE_CATEGORIES[categoryIdx];
+  const estimated = {
+    kcal: Math.round(base.kcal * sizeFactor * consvFactor),
+    protein: Math.round(base.p * sizeFactor * protFactor),
+    carbs: Math.round(base.c * sizeFactor * consvFactor),
+    fat: Math.round(base.f * sizeFactor * consvFactor),
+  };
+
+  const handleAdd = () => {
+    const sizeLabel = size === 'sm' ? '소' : size === 'md' ? '중' : '대';
+    const protLabel = protein === 'low' ? '단백질 적음' : protein === 'mid' ? '보통' : '단백질 많음';
+    onAdd({
+      name: `${base.name} (${sizeLabel}, ${protLabel})${conservative ? ' [+20% 보정]' : ''}`,
+      mealType,
+      ...estimated,
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <p className="text-[11px] text-text-secondary leading-relaxed">
+        외식·집밥처럼 영양 라벨이 없는 음식의 매크로를 카테고리·분량·단백질 비중으로 추정합니다. 정확도는 ±15% 정도.
+      </p>
+
+      <div>
+        <label className="text-xs text-text-secondary mb-1 block">카테고리</label>
+        <select
+          value={categoryIdx}
+          onChange={(e) => setCategoryIdx(Number(e.target.value))}
+          className="w-full bg-surface-light rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary"
+        >
+          {ESTIMATE_CATEGORIES.map((c, i) => (
+            <option key={i} value={i}>{c.name}</option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="text-xs text-text-secondary mb-1 block">분량</label>
+        <div className="grid grid-cols-3 gap-2">
+          {([
+            { v: 'sm', label: '소', sub: '×0.7' },
+            { v: 'md', label: '중', sub: '기본' },
+            { v: 'lg', label: '대', sub: '×1.4' },
+          ] as const).map((opt) => (
+            <button
+              key={opt.v}
+              onClick={() => setSize(opt.v)}
+              className={`py-2 rounded-lg text-sm ${size === opt.v ? 'bg-primary text-white' : 'bg-surface-light text-text-secondary'}`}
+            >
+              {opt.label}
+              <div className="text-[9px] opacity-70">{opt.sub}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <label className="text-xs text-text-secondary mb-1 block">단백질 비중 (육류·생선·계란 비중)</label>
+        <div className="grid grid-cols-3 gap-2">
+          {([
+            { v: 'low', label: '적음', sub: '채소·면 위주' },
+            { v: 'mid', label: '보통', sub: '평균' },
+            { v: 'hi',  label: '많음', sub: '고기·생선 충분' },
+          ] as const).map((opt) => (
+            <button
+              key={opt.v}
+              onClick={() => setProtein(opt.v)}
+              className={`py-2 rounded-lg text-xs ${protein === opt.v ? 'bg-primary text-white' : 'bg-surface-light text-text-secondary'}`}
+            >
+              {opt.label}
+              <div className="text-[9px] opacity-70">{opt.sub}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <label className="flex items-center gap-2 text-xs text-text-secondary cursor-pointer">
+        <input
+          type="checkbox"
+          checked={conservative}
+          onChange={(e) => setConservative(e.target.checked)}
+          className="accent-primary"
+        />
+        외식·소스 많음 — 칼로리·탄수·지방 +20% 보수적 보정
+      </label>
+
+      {/* 미리보기 */}
+      <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
+        <div className="text-[10px] text-text-secondary mb-1">추정 매크로 (미리보기)</div>
+        <div className="text-2xl font-mono font-bold">{estimated.kcal}<span className="text-sm text-text-secondary"> kcal</span></div>
+        <div className="flex gap-3 text-xs font-mono mt-1">
+          <span className="text-red-400">P {estimated.protein}g</span>
+          <span className="text-yellow-400">C {estimated.carbs}g</span>
+          <span className="text-blue-400">F {estimated.fat}g</span>
+        </div>
+      </div>
+
+      <div>
+        <label className="text-xs text-text-secondary mb-1 block">식사 분류</label>
+        <div className="flex gap-2">
+          {MEAL_ORDER.map((m) => (
+            <button
+              key={m}
+              onClick={() => setMealType(m)}
+              className={`flex-1 py-2 rounded-lg text-sm ${mealType === m ? 'bg-primary text-white' : 'bg-surface-light text-text-secondary'}`}
+            >
+              {MEAL_LABELS[m]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <button
+        onClick={handleAdd}
+        className="w-full py-3 bg-primary text-white rounded-xl font-semibold"
+      >
+        추가
+      </button>
+
+      <p className="text-[10px] text-text-secondary text-center">
+        ※ 추정값은 평균치. 정확하면 직접 입력 모드 권장.
+      </p>
+    </div>
+  );
+}
+
+// 손바닥 분량 카운터 (직접 입력 모드의 보조)
+function HandRow({ label, unit, value, onChange, colorClass }: { label: string; unit: string; value: number; onChange: (v: number) => void; colorClass: string }) {
+  return (
+    <div className="flex items-center justify-between bg-surface rounded-lg p-2">
+      <div className="text-xs">
+        <div className={`font-medium ${colorClass}`}>{label}</div>
+        <div className="text-[10px] text-text-secondary">{unit}</div>
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => onChange(Math.max(0, +(value - 0.5).toFixed(1)))}
+          className="w-7 h-7 bg-surface-light rounded-lg text-text-secondary"
+        >−</button>
+        <span className="font-mono text-sm w-10 text-center">{value}개</span>
+        <button
+          onClick={() => onChange(Math.min(8, +(value + 0.5).toFixed(1)))}
+          className="w-7 h-7 bg-surface-light rounded-lg text-text-secondary"
+        >+</button>
       </div>
     </div>
   );
