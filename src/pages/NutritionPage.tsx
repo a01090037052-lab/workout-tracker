@@ -15,6 +15,14 @@ const MEAL_LABELS: Record<MealType, string> = {
 };
 const MEAL_ORDER: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
 
+/** 매크로(g)에서 칼로리 자동 계산 (Atwater 계수) */
+function kcalFromMacros(proteinG: number | string, carbsG: number | string, fatG: number | string): number {
+  const p = Number(proteinG) || 0;
+  const c = Number(carbsG) || 0;
+  const f = Number(fatG) || 0;
+  return Math.round(p * 4 + c * 4 + f * 9);
+}
+
 export default function NutritionPage() {
   const [view, setView] = useState<'today' | 'calculator' | 'trend'>(() =>
     storage.nutritionProfile.get() ? 'today' : 'calculator'
@@ -610,10 +618,7 @@ function AddMealModal({ onAdd, onAddMany, onClose }: { onAdd: (entry: MacroEntry
   };
 
   const autoKcal = () => {
-    const p = Number(protein) || 0;
-    const c = Number(carbs) || 0;
-    const f = Number(fat) || 0;
-    const calc = Math.round(p * 4 + c * 4 + f * 9);
+    const calc = kcalFromMacros(protein, carbs, fat);
     if (calc > 0) setKcal(String(calc));
   };
 
@@ -625,7 +630,7 @@ function AddMealModal({ onAdd, onAddMany, onClose }: { onAdd: (entry: MacroEntry
     setProtein(String(pg));
     setCarbs(String(cg));
     setFat(String(fg));
-    setKcal(String(Math.round(pg * 4 + cg * 4 + fg * 9)));
+    setKcal(String(kcalFromMacros(pg, cg, fg)));
   };
 
   const portionRatio = selectedFood ? Math.max(1, Number(portionG) || 0) / 100 : 0;
@@ -892,7 +897,7 @@ function AddMealModal({ onAdd, onAddMany, onClose }: { onAdd: (entry: MacroEntry
                   <HandRow label="탄수 (주먹)" unit="× 35g" value={handC} onChange={setHandC} colorClass="text-yellow-400" />
                   <HandRow label="지방 (엄지)" unit="× 12g" value={handF} onChange={setHandF} colorClass="text-blue-400" />
                   <div className="text-[10px] text-text-secondary font-mono text-center">
-                    예상: {Math.round(handP * 27)}g P · {Math.round(handC * 35)}g C · {Math.round(handF * 12)}g F · {Math.round(handP * 27 * 4 + handC * 35 * 4 + handF * 12 * 9)} kcal
+                    예상: {Math.round(handP * 27)}g P · {Math.round(handC * 35)}g C · {Math.round(handF * 12)}g F · {kcalFromMacros(handP * 27, handC * 35, handF * 12)} kcal
                   </div>
                   <button
                     onClick={applyHandGuide}
@@ -1928,10 +1933,7 @@ function NewFoodForm({ onSaved, onCancel }: { onSaved: (food: Food) => void; onC
 
   // 매크로로 칼로리 자동 계산
   const autoKcal = () => {
-    const p = Number(protein) || 0;
-    const c = Number(carbs) || 0;
-    const f = Number(fat) || 0;
-    const calc = Math.round(p * 4 + c * 4 + f * 9);
+    const calc = kcalFromMacros(protein, carbs, fat);
     if (calc > 0) setKcal(String(calc));
   };
 
