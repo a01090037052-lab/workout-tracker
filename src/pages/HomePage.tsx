@@ -386,27 +386,29 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* 목표 진입 카드 */}
-      <section className="mb-4">
+      {/* 목표 + 주간 리포트 진입 (가로 2분할) */}
+      <section className="mb-4 grid grid-cols-2 gap-2">
         <button
           onClick={() => navigate('/goals')}
-          className={`w-full rounded-xl p-4 text-left transition-colors ${
+          className={`rounded-xl p-3 text-left transition-colors ${
             activeGoals && activeGoals.length > 0
               ? 'bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 active:bg-primary/15'
               : 'bg-surface border border-border border-dashed active:bg-surface-light'
           }`}
         >
-          <div className="flex justify-between items-center">
-            <div>
-              <div className="text-sm font-semibold">🎯 목표</div>
-              <div className="text-xs text-text-secondary mt-0.5">
-                {activeGoals && activeGoals.length > 0
-                  ? `${activeGoals.length}개 진행 중 — 진행률 보기`
-                  : 'PR/체중/운동 횟수 목표 설정하기'}
-              </div>
-            </div>
-            <span className="text-text-secondary">→</span>
+          <div className="text-sm font-semibold">🎯 목표</div>
+          <div className="text-[10px] text-text-secondary mt-0.5">
+            {activeGoals && activeGoals.length > 0
+              ? `${activeGoals.length}개 진행 중`
+              : 'PR/체중/횟수 목표'}
           </div>
+        </button>
+        <button
+          onClick={() => navigate('/weekly')}
+          className="rounded-xl p-3 text-left bg-gradient-to-br from-success/10 to-success/5 border border-success/20 active:bg-success/15 transition-colors"
+        >
+          <div className="text-sm font-semibold">📊 주간 리포트</div>
+          <div className="text-[10px] text-text-secondary mt-0.5">코치 평가 + 다음 주 행동</div>
         </button>
       </section>
 

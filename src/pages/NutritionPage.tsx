@@ -4,6 +4,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceL
 import { db } from '../db';
 import { storage } from '../lib/storage';
 import { calcBMR, calcTDEE, calcAllScenarios, calcMacros, GOAL_LABELS, GOAL_DESCRIPTIONS, ACTIVITY_LABELS } from '../lib/nutrition';
+import { recommendNextMeal, calcDailyScore, postWorkoutRecommendation, analyzeMealPattern, toMacroEntry, getFoodUsageFrequency, type RecommendedFood } from '../lib/coach';
 import { getLocalDate } from '../hooks/useLocalDate';
 import { FOOD_CATEGORY_LABELS } from '../data/foods';
 import NutritionGuide from '../components/nutrition/NutritionGuide';
@@ -71,6 +72,7 @@ function TodayView({ onNeedProfile }: { onNeedProfile: () => void }) {
   const yesterdayLog = useLiveQuery(() => db.dailyMacroLogs.where('date').equals(yesterday).first(), [yesterday]);
   const todayWorkouts = useLiveQuery(() => db.sessions.where('date').equals(today).toArray(), [today]);
   const hasWorkoutToday = (todayWorkouts?.length ?? 0) > 0;
+  const allFoods = useLiveQuery(() => db.foods.toArray(), []);
   const entries = log?.entries || [];
   const waterMl = log?.waterMl || 0;
   const WATER_TARGET = 2000;
@@ -86,6 +88,21 @@ function TodayView({ onNeedProfile }: { onNeedProfile: () => void }) {
   );
 
   const target = profile ? calcMacros(profile, profile.goal) : null;
+
+  // === 영양 코치 hooks ===
+  const recommendation = useLiveQuery(
+    () => target ? recommendNextMeal(totals, target) : Promise.resolve(null),
+    [totals.kcal, totals.protein, totals.carbs, totals.fat, target?.kcal, target?.protein, target?.carbs, target?.fat],
+  );
+  const postWorkoutRec = useLiveQuery(
+    () => postWorkoutRecommendation(todayWorkouts || [], entries),
+    [todayWorkouts?.length, entries.length],
+  );
+  const dailyScore = useMemo(
+    () => target ? calcDailyScore(entries, totals, target, allFoods || []) : null,
+    [entries, totals.kcal, totals.protein, totals.carbs, totals.fat, target?.kcal, target?.protein, target?.carbs, target?.fat, allFoods],
+  );
+  const pattern = useMemo(() => analyzeMealPattern(entries), [entries]);
 
   const addEntry = async (entry: MacroEntry) => {
     if (log?.id) {
@@ -149,8 +166,14 @@ function TodayView({ onNeedProfile }: { onNeedProfile: () => void }) {
 
   return (
     <div className="space-y-4">
+      {/* 운동 후 영양 추천 (긴급, 90분 이내) */}
+      {postWorkoutRec && <PostWorkoutCard rec={postWorkoutRec} onAdd={addManyEntries} />}
+
       {/* 매크로 합계 카드 */}
       <MacroSummaryCard totals={totals} target={target!} goal={profile.goal} hasWorkout={hasWorkoutToday} />
+
+      {/* 일일 식단 점수 */}
+      {dailyScore && totals.kcal > 0 && <DailyScoreCard score={dailyScore} />}
 
       {/* 물 섭취 카드 */}
       <WaterCard waterMl={waterMl} target={WATER_TARGET} onAdd={updateWater} />
@@ -164,6 +187,9 @@ function TodayView({ onNeedProfile }: { onNeedProfile: () => void }) {
           📋 어제 식단 그대로 복사 ({yesterdayLog?.entries.length}개 항목)
         </button>
       )}
+
+      {/* 다음 식사 추천 (격차 보완) */}
+      {recommendation && <RecommendationCard rec={recommendation} onAdd={addManyEntries} />}
 
       {/* 식사 추가 */}
       <button
@@ -210,6 +236,18 @@ function TodayView({ onNeedProfile }: { onNeedProfile: () => void }) {
         <div className="bg-surface rounded-xl p-8 text-center border border-border border-dashed">
           <div className="text-3xl mb-2">🍽️</div>
           <p className="text-text-secondary text-sm">아직 오늘 식단이 없어요</p>
+        </div>
+      )}
+
+      {/* 식사 패턴 분석 노트 */}
+      {entries.length >= 2 && pattern.notes.length > 0 && (
+        <div className="bg-surface rounded-xl p-3 border border-border">
+          <div className="text-xs font-semibold mb-1.5">🩺 식사 패턴</div>
+          <ul className="space-y-1">
+            {pattern.notes.map((n, i) => (
+              <li key={i} className="text-[11px] text-text-secondary leading-relaxed">• {n}</li>
+            ))}
+          </ul>
         </div>
       )}
 
@@ -494,6 +532,7 @@ function AddMealModal({ onAdd, onAddMany, onClose }: { onAdd: (entry: MacroEntry
   const [fat, setFat] = useState('');
 
   const allFoods = useLiveQuery(() => db.foods.toArray(), []);
+  const usageFreq = useLiveQuery(() => getFoodUsageFrequency(), []);
   // favTick은 의도적 트리거 (storage 변경을 useMemo에 알림)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const favIds = useMemo(() => storage.favoriteFoods.get(), [favTick]);
@@ -510,14 +549,17 @@ function AddMealModal({ onAdd, onAddMany, onClose }: { onAdd: (entry: MacroEntry
     }
     // 검색어 필터
     if (q) list = list.filter((f) => f.name.toLowerCase().includes(q));
-    // 즐겨찾기 우선 정렬
+    // 정렬: 즐겨찾기 우선 → 최근 14일 사용 빈도 우선 (자주 먹는 음식 위로)
     list = [...list].sort((a, b) => {
       const af = a.id !== undefined && favIds.includes(a.id) ? 1 : 0;
       const bf = b.id !== undefined && favIds.includes(b.id) ? 1 : 0;
-      return bf - af;
+      if (bf !== af) return bf - af;
+      const freqA = usageFreq?.get(a.name) || 0;
+      const freqB = usageFreq?.get(b.name) || 0;
+      return freqB - freqA;
     });
     return q ? list : list.slice(0, 50);
-  }, [allFoods, query, categoryFilter, favIds]);
+  }, [allFoods, query, categoryFilter, favIds, usageFreq]);
 
   const toggleFavorite = (e: React.MouseEvent, id: number) => {
     e.stopPropagation();
@@ -1045,6 +1087,125 @@ function CalculatorView({ onSaved }: { onSaved: () => void }) {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+// ============================================================
+// 영양 코치 — 시간 기반 식사 분류 자동 추정
+// ============================================================
+function autoMealType(): MealType {
+  const h = new Date().getHours();
+  if (h < 10) return 'breakfast';
+  if (h < 14) return 'lunch';
+  if (h < 19) return 'dinner';
+  return 'snack';
+}
+
+// ============================================================
+// 운동 후 영양 추천 카드
+// ============================================================
+function PostWorkoutCard({ rec, onAdd }: { rec: { minutesSinceEnd: number; reason: string; foods: RecommendedFood[] }; onAdd: (entries: MacroEntry[]) => void }) {
+  return (
+    <div className="bg-gradient-to-br from-success/15 to-success/5 border border-success/30 rounded-xl p-4">
+      <div className="text-sm font-semibold text-success mb-1">🏋️ 운동 후 영양</div>
+      <p className="text-xs text-text-secondary mb-3 leading-relaxed">{rec.reason}</p>
+      <div className="space-y-1.5">
+        {rec.foods.map((f, i) => (
+          <button
+            key={i}
+            onClick={() => onAdd([toMacroEntry(f, autoMealType())])}
+            className="w-full bg-surface/70 hover:bg-surface rounded-lg p-2.5 text-left text-xs transition-colors"
+          >
+            <div className="flex justify-between items-baseline">
+              <span className="font-medium">{f.name} {f.grams}g</span>
+              <span className="text-success font-mono text-[10px]">+ 추가</span>
+            </div>
+            <div className="text-[10px] text-text-secondary font-mono mt-0.5">
+              {f.kcal}kcal · P{f.protein} · C{f.carbs} · F{f.fat}
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// 일일 식단 점수 카드
+// ============================================================
+function DailyScoreCard({ score }: { score: { total: number; breakdown: { protein: number; calorie: number; balance: number; diversity: number; natural: number }; insights: string[] } }) {
+  const grade = score.total >= 90 ? 'A+' : score.total >= 80 ? 'A' : score.total >= 70 ? 'B' : score.total >= 60 ? 'C' : 'D';
+  const gradeColor = score.total >= 80 ? 'text-success' : score.total >= 60 ? 'text-warning' : 'text-danger';
+  return (
+    <div className="bg-surface rounded-xl p-4 border border-border">
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-sm font-semibold">📊 오늘 식단 점수</span>
+        <div className="flex items-baseline gap-1">
+          <span className={`text-2xl font-mono font-bold ${gradeColor}`}>{score.total}</span>
+          <span className="text-xs text-text-secondary">/ 100</span>
+          <span className={`text-base font-bold ml-1 ${gradeColor}`}>{grade}</span>
+        </div>
+      </div>
+      <div className="grid grid-cols-5 gap-1 mb-2 text-[9px] text-center font-mono">
+        <ScoreBar label="단백질" value={score.breakdown.protein} max={40} />
+        <ScoreBar label="칼로리" value={score.breakdown.calorie} max={20} />
+        <ScoreBar label="균형" value={score.breakdown.balance} max={15} />
+        <ScoreBar label="다양성" value={score.breakdown.diversity} max={15} />
+        <ScoreBar label="자연식" value={score.breakdown.natural} max={10} />
+      </div>
+      {score.insights.length > 0 && (
+        <ul className="space-y-0.5 mt-2">
+          {score.insights.map((ins, i) => (
+            <li key={i} className="text-[11px] text-warning leading-relaxed">• {ins}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function ScoreBar({ label, value, max }: { label: string; value: number; max: number }) {
+  const pct = (value / max) * 100;
+  const color = pct >= 80 ? 'bg-success' : pct >= 50 ? 'bg-warning' : 'bg-danger';
+  return (
+    <div>
+      <div className="text-text-secondary mb-0.5">{label}</div>
+      <div className="h-1 bg-surface-light rounded-full overflow-hidden">
+        <div className={`h-full ${color}`} style={{ width: `${pct}%` }} />
+      </div>
+      <div className="text-text font-medium mt-0.5">{value}/{max}</div>
+    </div>
+  );
+}
+
+// ============================================================
+// 다음 식사 추천 카드
+// ============================================================
+function RecommendationCard({ rec, onAdd }: { rec: { reason: string; primary: string; foods: RecommendedFood[] }; onAdd: (entries: MacroEntry[]) => void }) {
+  return (
+    <div className="bg-primary/10 border border-primary/30 rounded-xl p-4">
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="text-sm font-semibold text-primary-light">🍽️ 다음 식사 추천</span>
+      </div>
+      <p className="text-xs text-text-secondary mb-2.5 leading-relaxed">{rec.reason}</p>
+      <div className="space-y-1.5">
+        {rec.foods.map((f, i) => (
+          <button
+            key={i}
+            onClick={() => onAdd([toMacroEntry(f, autoMealType())])}
+            className="w-full bg-surface/70 hover:bg-surface rounded-lg p-2.5 text-left text-xs transition-colors"
+          >
+            <div className="flex justify-between items-baseline">
+              <span className="font-medium">{f.name} {f.grams}g</span>
+              <span className="text-primary-light text-[10px]">+ 추가</span>
+            </div>
+            <div className="text-[10px] text-text-secondary font-mono mt-0.5">
+              {f.kcal}kcal · P{f.protein} · C{f.carbs} · F{f.fat}
+            </div>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
