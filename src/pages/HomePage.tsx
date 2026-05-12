@@ -11,6 +11,8 @@ import { generateInsights } from '../lib/insights';
 function BodyWeightWidget() {
   const today = getLocalDate();
   const [inputWeight, setInputWeight] = useState('');
+  const [inputBodyFat, setInputBodyFat] = useState('');
+  const [inputMuscle, setInputMuscle] = useState('');
   const [showInput, setShowInput] = useState(false);
 
   const todayLog = useLiveQuery(() => db.bodyWeightLogs.where('date').equals(today).first());
@@ -19,13 +21,21 @@ function BodyWeightWidget() {
   const handleSave = async () => {
     const w = Number(inputWeight);
     if (w <= 0) return;
+    const bf = Number(inputBodyFat);
+    const mm = Number(inputMuscle);
+    const patch: Partial<{ weight: number; bodyFat: number; muscleMass: number }> = { weight: w };
+    if (bf > 0 && bf < 60) patch.bodyFat = bf;
+    if (mm > 0 && mm < 100) patch.muscleMass = mm;
+
     if (todayLog) {
-      await db.bodyWeightLogs.update(todayLog.id!, { weight: w });
+      await db.bodyWeightLogs.update(todayLog.id!, patch);
     } else {
-      await db.bodyWeightLogs.add({ date: today, weight: w });
+      await db.bodyWeightLogs.add({ date: today, ...patch } as { date: string; weight: number });
     }
     setShowInput(false);
     setInputWeight('');
+    setInputBodyFat('');
+    setInputMuscle('');
   };
 
   const prevWeight = recentLogs && recentLogs.length >= 2 ? recentLogs.find((l) => l.date !== today)?.weight : null;
@@ -51,25 +61,47 @@ function BodyWeightWidget() {
             )}
           </div>
           <button
-            onClick={() => { setShowInput(!showInput); setInputWeight(todayLog ? String(todayLog.weight) : ''); }}
+            onClick={() => {
+              setShowInput(!showInput);
+              setInputWeight(todayLog ? String(todayLog.weight) : '');
+              setInputBodyFat(todayLog?.bodyFat ? String(todayLog.bodyFat) : '');
+              setInputMuscle(todayLog?.muscleMass ? String(todayLog.muscleMass) : '');
+            }}
             className="text-xs px-3 py-1.5 bg-primary/10 text-primary-light rounded-lg"
           >
             {todayLog ? '수정' : '기록'}
           </button>
         </div>
         {showInput && (
-          <div className="flex gap-2 mt-3">
+          <div className="mt-3 space-y-2">
             <input
               type="number"
               inputMode="decimal"
               value={inputWeight}
               onChange={(e) => setInputWeight(e.target.value)}
-              placeholder="체중 (kg)"
-              className="flex-1 bg-surface-light rounded-lg px-3 py-2 text-text font-mono outline-none focus:ring-2 focus:ring-primary"
+              placeholder="체중 (kg) *필수"
+              className="w-full bg-surface-light rounded-lg px-3 py-2 text-text font-mono outline-none focus:ring-2 focus:ring-primary"
             />
-            <button onClick={handleSave} className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium">
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="number" inputMode="decimal" step="0.1"
+                value={inputBodyFat}
+                onChange={(e) => setInputBodyFat(e.target.value)}
+                placeholder="체지방률 % (선택)"
+                className="bg-surface-light rounded-lg px-3 py-2 text-sm font-mono outline-none focus:ring-2 focus:ring-primary"
+              />
+              <input
+                type="number" inputMode="decimal" step="0.1"
+                value={inputMuscle}
+                onChange={(e) => setInputMuscle(e.target.value)}
+                placeholder="골격근 kg (선택)"
+                className="bg-surface-light rounded-lg px-3 py-2 text-sm font-mono outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <button onClick={handleSave} className="w-full px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium">
               저장
             </button>
+            <p className="text-[10px] text-text-secondary text-center">체지방률·근육량은 InBody/가정용 체중계 데이터 (있을 때만)</p>
           </div>
         )}
       </div>

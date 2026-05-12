@@ -29,6 +29,7 @@ export default function SettingsPage() {
       conditionLogs: await db.conditionLogs.toArray(),
       foods: await db.foods.toArray(),
       goals: await db.goals.toArray(),
+      mealTemplates: await db.mealTemplates.toArray(),
       settings: { weightSuggestion: storage.weightSuggestion.raw() },
       programProgress: storage.programProgress.exportAll(),
       nutritionProfile: storage.nutritionProfile.get(),
@@ -89,6 +90,7 @@ export default function SettingsPage() {
           conditionLogs: await db.conditionLogs.toArray(),
           foods: await db.foods.toArray(),
           goals: await db.goals.toArray(),
+          mealTemplates: await db.mealTemplates.toArray(),
         };
 
         try {
@@ -102,6 +104,7 @@ export default function SettingsPage() {
           await db.conditionLogs.clear();
           await db.foods.clear();
           await db.goals.clear();
+          await db.mealTemplates.clear();
 
           if (data.exercises?.length) await db.exercises.bulkAdd(data.exercises);
           if (data.sessions?.length) await db.sessions.bulkAdd(data.sessions);
@@ -113,6 +116,7 @@ export default function SettingsPage() {
           if (data.conditionLogs?.length) await db.conditionLogs.bulkAdd(data.conditionLogs);
           if (data.foods?.length) await db.foods.bulkAdd(data.foods);
           if (data.goals?.length) await db.goals.bulkAdd(data.goals);
+          if (data.mealTemplates?.length) await db.mealTemplates.bulkAdd(data.mealTemplates);
 
           // settings 복원
           if (data.settings?.weightSuggestion) {
@@ -140,6 +144,7 @@ export default function SettingsPage() {
           await db.conditionLogs.clear();
           await db.foods.clear();
           await db.goals.clear();
+          await db.mealTemplates.clear();
           if (backup.exercises.length) await db.exercises.bulkAdd(backup.exercises);
           if (backup.sessions.length) await db.sessions.bulkAdd(backup.sessions);
           if (backup.routines.length) await db.routines.bulkAdd(backup.routines);
@@ -150,6 +155,7 @@ export default function SettingsPage() {
           if (backup.conditionLogs.length) await db.conditionLogs.bulkAdd(backup.conditionLogs);
           if (backup.foods.length) await db.foods.bulkAdd(backup.foods);
           if (backup.goals.length) await db.goals.bulkAdd(backup.goals);
+          if (backup.mealTemplates.length) await db.mealTemplates.bulkAdd(backup.mealTemplates);
           showToast('복원 실패. 기존 데이터를 유지합니다.');
         }
       } catch {

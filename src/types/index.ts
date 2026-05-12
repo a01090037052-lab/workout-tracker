@@ -77,8 +77,10 @@ export interface InjuryLog {
 export interface BodyWeightLog {
   id?: number;
   date: string;
-  weight: number;
-  bodyFat?: number;
+  weight: number;        // kg
+  bodyFat?: number;      // % (InBody, 캘리퍼, 가정용 체중계)
+  muscleMass?: number;   // 골격근량 kg (InBody)
+  note?: string;
 }
 
 export interface DailyConditionLog {
@@ -89,6 +91,15 @@ export interface DailyConditionLog {
   stress?: number;         // 1(낮음) ~ 5(높음)
   energy?: number;         // 1(낮음) ~ 5(높음)
   note?: string;
+}
+
+export interface MealTemplate {
+  id?: number;
+  name: string;              // 사용자 지정 이름 (예: "오트밀 아침")
+  entries: MacroEntry[];     // 여러 식품 묶음
+  defaultMealType?: MealType; // 추가 시 기본 식사 분류
+  createdAt: string;
+  lastUsedAt?: string;       // 사용 빈도 기반 정렬
 }
 
 export type GoalType = 'oneRepMax' | 'bodyWeight' | 'weeklyWorkouts';

@@ -1,13 +1,13 @@
 import { useState, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Legend } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Legend, PieChart, Pie, Cell } from 'recharts';
 import { db } from '../db';
 import { storage } from '../lib/storage';
 import { calcBMR, calcTDEE, calcAllScenarios, calcMacros, GOAL_LABELS, GOAL_DESCRIPTIONS, ACTIVITY_LABELS } from '../lib/nutrition';
 import { getLocalDate } from '../hooks/useLocalDate';
 import { FOOD_CATEGORY_LABELS } from '../data/foods';
 import NutritionGuide from '../components/nutrition/NutritionGuide';
-import type { NutritionProfile, MealType, MacroEntry, ActivityLevel, DietGoal, Food, FoodCategory } from '../types';
+import type { NutritionProfile, MealType, MacroEntry, ActivityLevel, DietGoal, Food, FoodCategory, MealTemplate, BodyWeightLog } from '../types';
 
 const MEAL_LABELS: Record<MealType, string> = {
   breakfast: '아침', lunch: '점심', dinner: '저녁', snack: '간식',
@@ -65,9 +65,12 @@ function TodayView({ onNeedProfile }: { onNeedProfile: () => void }) {
   });
   const [profile] = useState(() => storage.nutritionProfile.get());
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
 
   const log = useLiveQuery(() => db.dailyMacroLogs.where('date').equals(today).first(), [today]);
   const yesterdayLog = useLiveQuery(() => db.dailyMacroLogs.where('date').equals(yesterday).first(), [yesterday]);
+  const todayWorkouts = useLiveQuery(() => db.sessions.where('date').equals(today).toArray(), [today]);
+  const hasWorkoutToday = (todayWorkouts?.length ?? 0) > 0;
   const entries = log?.entries || [];
   const waterMl = log?.waterMl || 0;
   const WATER_TARGET = 2000;
@@ -89,6 +92,17 @@ function TodayView({ onNeedProfile }: { onNeedProfile: () => void }) {
       await db.dailyMacroLogs.update(log.id, { entries: [...entries, entry] });
     } else {
       await db.dailyMacroLogs.add({ date: today, entries: [entry] });
+    }
+    setShowAddModal(false);
+  };
+
+  // 템플릿 등 여러 entry 한 번에 추가
+  const addManyEntries = async (newEntries: MacroEntry[]) => {
+    if (!newEntries.length) return;
+    if (log?.id) {
+      await db.dailyMacroLogs.update(log.id, { entries: [...entries, ...newEntries] });
+    } else {
+      await db.dailyMacroLogs.add({ date: today, entries: newEntries, waterMl: 0 });
     }
     setShowAddModal(false);
   };
@@ -136,7 +150,7 @@ function TodayView({ onNeedProfile }: { onNeedProfile: () => void }) {
   return (
     <div className="space-y-4">
       {/* 매크로 합계 카드 */}
-      <MacroSummaryCard totals={totals} target={target!} goal={profile.goal} />
+      <MacroSummaryCard totals={totals} target={target!} goal={profile.goal} hasWorkout={hasWorkoutToday} />
 
       {/* 물 섭취 카드 */}
       <WaterCard waterMl={waterMl} target={WATER_TARGET} onAdd={updateWater} />
@@ -199,7 +213,18 @@ function TodayView({ onNeedProfile }: { onNeedProfile: () => void }) {
         </div>
       )}
 
-      {showAddModal && <AddMealModal onAdd={addEntry} onClose={() => setShowAddModal(false)} />}
+      {/* 템플릿으로 저장 (entries가 있을 때만) */}
+      {entries.length > 0 && (
+        <button
+          onClick={() => setShowSaveTemplateModal(true)}
+          className="w-full mt-2 py-2 text-xs text-text-secondary hover:text-primary border border-border border-dashed rounded-lg transition-colors"
+        >
+          📋 오늘 식단을 템플릿으로 저장
+        </button>
+      )}
+
+      {showAddModal && <AddMealModal onAdd={addEntry} onAddMany={addManyEntries} onClose={() => setShowAddModal(false)} />}
+      {showSaveTemplateModal && <SaveTemplateModal entries={entries} onClose={() => setShowSaveTemplateModal(false)} />}
     </div>
   );
 }
@@ -208,11 +233,12 @@ function TodayView({ onNeedProfile }: { onNeedProfile: () => void }) {
 // 매크로 합계 카드
 // ============================================================
 function MacroSummaryCard({
-  totals, target, goal,
+  totals, target, goal, hasWorkout,
 }: {
   totals: { kcal: number; protein: number; carbs: number; fat: number };
   target: { kcal: number; protein: number; carbs: number; fat: number };
   goal: DietGoal;
+  hasWorkout?: boolean;
 }) {
   const kcalPct = target.kcal > 0 ? Math.min(100, (totals.kcal / target.kcal) * 100) : 0;
   const proteinPct = target.protein > 0 ? Math.min(100, (totals.protein / target.protein) * 100) : 0;
@@ -244,6 +270,190 @@ function MacroSummaryCard({
         <MacroRow label="탄수화물" actual={totals.carbs} target={target.carbs} pct={carbsPct} color="text-yellow-400" />
         <MacroRow label="지방" actual={totals.fat} target={target.fat} pct={fatPct} color="text-blue-400" />
       </div>
+
+      {/* 매크로 비율 도넛 (kcal 기준) */}
+      <MacroPieRatio totals={totals} target={target} />
+
+      {/* 운동-식단 동기화: 운동일/휴식일 칼로리 권장 */}
+      {hasWorkout ? (
+        <div className="mt-3 text-[10px] text-primary-light bg-primary/15 rounded-lg px-2 py-1.5 text-center leading-relaxed">
+          🏋️ 운동일 — 탄수 +30~50g, 칼로리 +200kcal 권장 (글리코겐 회복)
+        </div>
+      ) : (
+        <div className="mt-3 text-[10px] text-text-secondary bg-surface-light/50 rounded-lg px-2 py-1.5 text-center leading-relaxed">
+          🛌 휴식일 — 평소 ±0, 단백질만 유지 (회복용)
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MacroPieRatio({ totals, target }: {
+  totals: { kcal: number; protein: number; carbs: number; fat: number };
+  target: { kcal: number; protein: number; carbs: number; fat: number };
+}) {
+  const pKcal = totals.protein * 4;
+  const cKcal = totals.carbs * 4;
+  const fKcal = totals.fat * 9;
+  const totalKcal = pKcal + cKcal + fKcal;
+
+  if (totalKcal === 0) return null;
+
+  const actualData = [
+    { name: 'P', value: pKcal, color: '#F87171' },
+    { name: 'C', value: cKcal, color: '#FBBF24' },
+    { name: 'F', value: fKcal, color: '#60A5FA' },
+  ];
+
+  const actualPct = {
+    p: Math.round((pKcal / totalKcal) * 100),
+    c: Math.round((cKcal / totalKcal) * 100),
+    f: Math.round((fKcal / totalKcal) * 100),
+  };
+
+  // 권장 비율 (target의 kcal 환산)
+  const tP = target.protein * 4;
+  const tC = target.carbs * 4;
+  const tF = target.fat * 9;
+  const tTotal = tP + tC + tF;
+  const targetPct = tTotal > 0 ? {
+    p: Math.round((tP / tTotal) * 100),
+    c: Math.round((tC / tTotal) * 100),
+    f: Math.round((tF / tTotal) * 100),
+  } : { p: 0, c: 0, f: 0 };
+
+  return (
+    <div className="mt-3 flex items-center gap-3 bg-surface/50 rounded-lg p-2">
+      <div className="w-16 h-16 flex-shrink-0">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie data={actualData} dataKey="value" innerRadius={16} outerRadius={28} cx="50%" cy="50%" stroke="none">
+              {actualData.map((d, i) => <Cell key={i} fill={d.color} />)}
+            </Pie>
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="flex-1">
+        <div className="text-[10px] text-text-secondary mb-1">매크로 비율 (kcal)</div>
+        <div className="flex gap-2 text-[11px] font-mono">
+          <span className="text-red-400">P {actualPct.p}%</span>
+          <span className="text-yellow-400">C {actualPct.c}%</span>
+          <span className="text-blue-400">F {actualPct.f}%</span>
+        </div>
+        {tTotal > 0 && (
+          <div className="text-[9px] text-text-secondary/70 mt-0.5">
+            권장 P{targetPct.p}% · C{targetPct.c}% · F{targetPct.f}%
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// 체성분 분석 카드 (체지방률·근육량 변화 + 다이어트/벌크 평가)
+// ============================================================
+function BodyCompositionAnalysis({ logs, goal }: { logs: BodyWeightLog[]; goal: DietGoal }) {
+  // 체지방·근육 있는 로그만, 최신순 정렬 (logs는 이미 reverse)
+  const withBF = logs.filter((l) => l.bodyFat !== undefined && l.bodyFat > 0);
+  const withMM = logs.filter((l) => l.muscleMass !== undefined && l.muscleMass > 0);
+
+  if (withBF.length < 2 && withMM.length < 2) {
+    return (
+      <div className="bg-surface rounded-xl p-4 border border-border border-dashed">
+        <h3 className="font-semibold text-sm mb-1">📐 체성분 분석</h3>
+        <p className="text-xs text-text-secondary">
+          체지방률·근육량 데이터 2회 이상 필요. 홈 체중 위젯에서 InBody/체중계 데이터 입력하면 자동 분석돼요.
+        </p>
+      </div>
+    );
+  }
+
+  // 최신 vs 가장 오래된 (해당 기간의 시작 vs 끝)
+  const bfChange = withBF.length >= 2
+    ? +(withBF[0].bodyFat! - withBF[withBF.length - 1].bodyFat!).toFixed(1)
+    : null;
+  const mmChange = withMM.length >= 2
+    ? +(withMM[0].muscleMass! - withMM[withMM.length - 1].muscleMass!).toFixed(1)
+    : null;
+  const weightChange = logs.length >= 2
+    ? +(logs[0].weight - logs[logs.length - 1].weight).toFixed(1)
+    : null;
+
+  // 평가
+  let evaluation: { text: string; tone: 'success' | 'warning' | 'info' } | null = null;
+  if (goal === 'cut' || goal === 'cut_aggressive') {
+    if (bfChange !== null && bfChange < -0.5 && (mmChange === null || mmChange >= -0.3)) {
+      evaluation = { text: '✅ 클린 다이어트 — 지방 ↓ + 근육 유지', tone: 'success' };
+    } else if (mmChange !== null && mmChange < -0.5) {
+      evaluation = { text: '⚠ 근손실 동반 — 단백질 ↑, 운동 강도 유지', tone: 'warning' };
+    } else if (bfChange !== null && bfChange >= 0) {
+      evaluation = { text: '⏸ 지방 변화 없음 — 칼로리 적자 부족 가능', tone: 'warning' };
+    }
+  } else if (goal === 'lean_bulk' || goal === 'bulk') {
+    if (mmChange !== null && mmChange > 0.3 && (bfChange === null || bfChange < 1)) {
+      evaluation = { text: '✅ 클린 벌크 — 근육 ↑ + 지방 통제', tone: 'success' };
+    } else if (bfChange !== null && bfChange >= 1.5 && (mmChange === null || mmChange < 0.5)) {
+      evaluation = { text: '⚠ 더티 벌크 경향 — 탄수 약간 줄이거나 운동 볼륨 ↑', tone: 'warning' };
+    } else if (mmChange !== null && mmChange < 0.1) {
+      evaluation = { text: '⏸ 근육 증가 부족 — 단백질·칼로리·운동 강도 점검', tone: 'warning' };
+    }
+  } else {
+    if (Math.abs(weightChange || 0) < 0.5 && Math.abs(bfChange || 0) < 0.5) {
+      evaluation = { text: '✅ 안정적 유지', tone: 'success' };
+    }
+  }
+
+  return (
+    <div className="bg-surface rounded-xl p-4">
+      <h3 className="font-semibold text-sm mb-3">📐 체성분 분석</h3>
+
+      <div className="grid grid-cols-3 gap-2 mb-3">
+        <ChangeStat label="체중" value={weightChange} unit="kg" goalDir={goal === 'cut' || goal === 'cut_aggressive' ? 'down' : goal === 'maintain' ? 'flat' : 'up'} />
+        <ChangeStat label="체지방률" value={bfChange} unit="%p" goalDir="down" />
+        <ChangeStat label="골격근량" value={mmChange} unit="kg" goalDir="up" />
+      </div>
+
+      {evaluation && (
+        <div className={`text-xs p-2.5 rounded-lg flex items-start gap-1.5 ${
+          evaluation.tone === 'success' ? 'bg-success/10 text-success' :
+          evaluation.tone === 'warning' ? 'bg-warning/10 text-warning' :
+          'bg-surface-light text-text-secondary'
+        }`}>
+          <span className="flex-1">{evaluation.text}</span>
+        </div>
+      )}
+
+      <p className="text-[10px] text-text-secondary mt-2">
+        ※ 측정 기준 비교 (기간 내 첫·마지막). 체중계 시간대 일정 유지 권장 (아침 공복).
+      </p>
+    </div>
+  );
+}
+
+function ChangeStat({ label, value, unit, goalDir }: { label: string; value: number | null; unit: string; goalDir: 'up' | 'down' | 'flat' }) {
+  if (value === null) {
+    return (
+      <div className="bg-surface-light rounded-lg p-2 text-center">
+        <div className="text-[10px] text-text-secondary">{label}</div>
+        <div className="text-sm font-mono text-text-secondary/40 mt-0.5">—</div>
+      </div>
+    );
+  }
+  // 목표 방향과 일치하면 success, 반대면 warning, 거의 0이면 neutral
+  const tone: 'success' | 'warning' | 'neutral' =
+    Math.abs(value) < 0.2 ? 'neutral'
+    : goalDir === 'down' ? (value < 0 ? 'success' : 'warning')
+    : goalDir === 'up' ? (value > 0 ? 'success' : 'warning')
+    : 'neutral';
+  return (
+    <div className="bg-surface-light rounded-lg p-2 text-center">
+      <div className="text-[10px] text-text-secondary">{label}</div>
+      <div className={`text-sm font-mono font-bold mt-0.5 ${
+        tone === 'success' ? 'text-success' : tone === 'warning' ? 'text-warning' : 'text-text'
+      }`}>
+        {value > 0 ? '+' : ''}{value}<span className="text-[9px] text-text-secondary ml-0.5">{unit}</span>
+      </div>
     </div>
   );
 }
@@ -265,8 +475,8 @@ function MacroRow({ label, actual, target, pct, color }: { label: string; actual
 // ============================================================
 // 식사 추가 모달
 // ============================================================
-function AddMealModal({ onAdd, onClose }: { onAdd: (entry: MacroEntry) => void; onClose: () => void }) {
-  const [mode, setMode] = useState<'search' | 'manual' | 'portion' | 'newFood'>('search');
+function AddMealModal({ onAdd, onAddMany, onClose }: { onAdd: (entry: MacroEntry) => void; onAddMany: (entries: MacroEntry[]) => void; onClose: () => void }) {
+  const [mode, setMode] = useState<'search' | 'manual' | 'portion' | 'newFood' | 'template'>('search');
   const [query, setQuery] = useState('');
   const [selectedFood, setSelectedFood] = useState<Food | null>(null);
   const [portionG, setPortionG] = useState('');
@@ -384,17 +594,21 @@ function AddMealModal({ onAdd, onClose }: { onAdd: (entry: MacroEntry) => void; 
           <button onClick={onClose} className="text-text-secondary text-2xl leading-none">&times;</button>
         </div>
 
-        {/* 모드 토글 (분량 입력 중엔 숨김) */}
-        {mode !== 'portion' && (
-          <div className="flex gap-2 mb-3 bg-surface-light/50 rounded-lg p-1">
+        {/* 모드 토글 (분량 입력/새 음식 등록 중엔 숨김) */}
+        {mode !== 'portion' && mode !== 'newFood' && (
+          <div className="flex gap-1 mb-3 bg-surface-light/50 rounded-lg p-1">
             <button
               onClick={() => setMode('search')}
               className={`flex-1 py-1.5 rounded text-xs font-medium ${mode === 'search' ? 'bg-primary text-white' : 'text-text-secondary'}`}
-            >🔍 음식 검색</button>
+            >🔍 검색</button>
+            <button
+              onClick={() => setMode('template')}
+              className={`flex-1 py-1.5 rounded text-xs font-medium ${mode === 'template' ? 'bg-primary text-white' : 'text-text-secondary'}`}
+            >📋 템플릿</button>
             <button
               onClick={() => setMode('manual')}
               className={`flex-1 py-1.5 rounded text-xs font-medium ${mode === 'manual' ? 'bg-primary text-white' : 'text-text-secondary'}`}
-            >✏️ 직접 입력</button>
+            >✏️ 직접</button>
           </div>
         )}
 
@@ -468,6 +682,11 @@ function AddMealModal({ onAdd, onClose }: { onAdd: (entry: MacroEntry) => void; 
               + 새 음식 등록
             </button>
           </>
+        )}
+
+        {/* 템플릿 모드 */}
+        {mode === 'template' && (
+          <TemplateList onApply={onAddMany} />
         )}
 
         {/* 새 음식 등록 모드 */}
@@ -830,6 +1049,139 @@ function CalculatorView({ onSaved }: { onSaved: () => void }) {
   );
 }
 
+// ============================================================
+// 식단 템플릿 목록 (식사 추가 모달의 'template' 모드)
+// ============================================================
+function TemplateList({ onApply }: { onApply: (entries: MacroEntry[]) => void }) {
+  const templates = useLiveQuery(() => db.mealTemplates.toArray(), []);
+  const sorted = useMemo(() => {
+    if (!templates) return [];
+    // 최근 사용 순 + 미사용은 생성순
+    return [...templates].sort((a, b) => {
+      const ta = a.lastUsedAt || a.createdAt;
+      const tb = b.lastUsedAt || b.createdAt;
+      return tb.localeCompare(ta);
+    });
+  }, [templates]);
+
+  const applyTemplate = async (t: MealTemplate) => {
+    if (t.id) {
+      await db.mealTemplates.update(t.id, { lastUsedAt: new Date().toISOString() });
+    }
+    onApply(t.entries);
+  };
+
+  const deleteTemplate = async (e: React.MouseEvent, id: number) => {
+    e.stopPropagation();
+    if (confirm('이 템플릿을 삭제할까요?')) {
+      await db.mealTemplates.delete(id);
+    }
+  };
+
+  if (!templates) return <div className="py-8 text-center text-text-secondary text-sm">로딩 중…</div>;
+
+  if (templates.length === 0) {
+    return (
+      <div className="py-8 text-center">
+        <div className="text-3xl mb-2">📋</div>
+        <p className="text-text-secondary text-sm mb-1">저장된 템플릿이 없어요</p>
+        <p className="text-text-secondary text-xs">오늘 식단 화면에서 "📋 오늘 식단을 템플릿으로 저장"을 눌러보세요</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+      {sorted.map((t) => {
+        const totalKcal = t.entries.reduce((a, e) => a + e.kcal, 0);
+        const totalP = Math.round(t.entries.reduce((a, e) => a + e.protein, 0));
+        return (
+          <button
+            key={t.id}
+            onClick={() => applyTemplate(t)}
+            className="w-full bg-surface-light hover:bg-border rounded-lg p-3 text-left transition-colors"
+          >
+            <div className="flex justify-between items-start">
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold truncate">{t.name}</div>
+                <div className="text-[10px] text-text-secondary mt-0.5">
+                  {t.entries.length}개 항목 · {totalKcal}kcal · P{totalP}g
+                </div>
+                {t.lastUsedAt && (
+                  <div className="text-[9px] text-text-secondary/70 mt-0.5">
+                    마지막 사용 {t.lastUsedAt.split('T')[0]}
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={(e) => deleteTemplate(e, t.id!)}
+                className="text-text-secondary/40 hover:text-danger text-xs px-2 py-1"
+              >✕</button>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ============================================================
+// 현재 식단을 템플릿으로 저장
+// ============================================================
+function SaveTemplateModal({ entries, onClose }: { entries: MacroEntry[]; onClose: () => void }) {
+  const [name, setName] = useState('');
+
+  const handleSave = async () => {
+    if (!name.trim() || entries.length === 0) return;
+    await db.mealTemplates.add({
+      name: name.trim(),
+      entries: entries.map((e) => ({ ...e })),
+      createdAt: new Date().toISOString(),
+    });
+    onClose();
+  };
+
+  const totalKcal = entries.reduce((a, e) => a + e.kcal, 0);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center">
+      <div className="bg-surface w-full max-w-[430px] rounded-t-2xl p-4">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-bold">템플릿으로 저장</h3>
+          <button onClick={onClose} className="text-text-secondary text-2xl leading-none">&times;</button>
+        </div>
+
+        <div className="bg-surface-light rounded-lg p-3 mb-3">
+          <div className="text-[10px] text-text-secondary mb-1">저장될 항목 ({entries.length}개, {totalKcal}kcal)</div>
+          <div className="text-xs text-text-secondary space-y-0.5 max-h-32 overflow-y-auto">
+            {entries.map((e, i) => (
+              <div key={i}>• {e.name}</div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mb-3">
+          <label className="text-xs text-text-secondary mb-1 block">템플릿 이름</label>
+          <input
+            type="text" value={name} onChange={(e) => setName(e.target.value)}
+            placeholder="예: 평일 아침 / 다이어트 점심"
+            autoFocus
+            className="w-full bg-surface-light rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-primary"
+          />
+        </div>
+
+        <button
+          onClick={handleSave}
+          disabled={!name.trim()}
+          className="w-full py-3 bg-primary disabled:opacity-40 text-white rounded-xl font-semibold"
+        >
+          저장
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function MacroEditField({ label, value, color, onChange }: { label: string; value: number; color: string; onChange: (v: number) => void }) {
   return (
     <div className="bg-surface rounded-lg p-2">
@@ -1071,6 +1423,9 @@ function TrendView({ onNeedProfile }: { onNeedProfile: () => void }) {
           <div className="text-[10px] text-text-secondary">kg</div>
         </div>
       </div>
+
+      {/* 체성분 분석 (체지방률·근육량 있을 때만) */}
+      <BodyCompositionAnalysis logs={weightLogs || []} goal={profile.goal} />
 
       {/* 체중 추이 */}
       <div className="bg-surface rounded-xl p-4">
