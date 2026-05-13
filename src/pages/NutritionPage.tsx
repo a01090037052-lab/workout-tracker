@@ -77,6 +77,7 @@ function TodayView({ onNeedProfile }: { onNeedProfile: () => void }) {
   const [profile] = useState(() => storage.nutritionProfile.get());
   const [showAddModal, setShowAddModal] = useState(false);
   const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
+  const [showAdjustModal, setShowAdjustModal] = useState(false);
 
   const log = useLiveQuery(() => db.dailyMacroLogs.where('date').equals(today).first(), [today]);
   const yesterdayLog = useLiveQuery(() => db.dailyMacroLogs.where('date').equals(yesterday).first(), [yesterday]);
@@ -180,7 +181,15 @@ function TodayView({ onNeedProfile }: { onNeedProfile: () => void }) {
       {postWorkoutRec && <PostWorkoutCard rec={postWorkoutRec} onAdd={addManyEntries} />}
 
       {/* 매크로 합계 카드 */}
-      <MacroSummaryCard totals={totals} target={target!} goal={profile.goal} hasWorkout={hasWorkoutToday} />
+      <MacroSummaryCard
+        totals={totals}
+        target={target!}
+        goal={profile.goal}
+        hasWorkout={hasWorkoutToday}
+        avgConfidence={entries.length > 0
+          ? entries.reduce((a, e) => a + (e.confidence ?? 1.0), 0) / entries.length
+          : 1.0}
+      />
 
       {/* 일일 식단 점수 */}
       {dailyScore && totals.kcal > 0 && <DailyScoreCard score={dailyScore} />}
@@ -212,6 +221,9 @@ function TodayView({ onNeedProfile }: { onNeedProfile: () => void }) {
           className="py-3 bg-gradient-to-br from-primary/15 to-primary/5 border border-primary/30 rounded-xl text-primary-light text-sm font-medium active:bg-primary/20"
         >🪄 자동 식단</button>
       </div>
+
+      {/* 빠른 일반식 (1탭, 외식·라벨 모르는 음식) */}
+      <QuickAddPanel onAdd={addEntry} />
 
       {/* 식사 목록 (분류별) */}
       {MEAL_ORDER.map((mealType) => {
@@ -265,6 +277,16 @@ function TodayView({ onNeedProfile }: { onNeedProfile: () => void }) {
         </div>
       )}
 
+      {/* 사후 보정 (잊은 음식·야식 빠른 입력) */}
+      {entries.length > 0 && (
+        <button
+          onClick={() => setShowAdjustModal(true)}
+          className="w-full mt-2 py-2 text-xs text-text-secondary hover:text-primary border border-border border-dashed rounded-lg transition-colors"
+        >
+          🌙 잊은 음식 · 야식 빠른 보정
+        </button>
+      )}
+
       {/* 템플릿으로 저장 (entries가 있을 때만) */}
       {entries.length > 0 && (
         <button
@@ -277,6 +299,7 @@ function TodayView({ onNeedProfile }: { onNeedProfile: () => void }) {
 
       {showAddModal && <AddMealModal onAdd={addEntry} onAddMany={addManyEntries} onClose={() => setShowAddModal(false)} />}
       {showSaveTemplateModal && <SaveTemplateModal entries={entries} onClose={() => setShowSaveTemplateModal(false)} />}
+      {showAdjustModal && <AdjustModal onAdd={addEntry} onClose={() => setShowAdjustModal(false)} />}
     </div>
   );
 }
@@ -285,12 +308,13 @@ function TodayView({ onNeedProfile }: { onNeedProfile: () => void }) {
 // 매크로 합계 카드
 // ============================================================
 function MacroSummaryCard({
-  totals, target, goal, hasWorkout,
+  totals, target, goal, hasWorkout, avgConfidence,
 }: {
   totals: { kcal: number; protein: number; carbs: number; fat: number };
   target: { kcal: number; protein: number; carbs: number; fat: number };
   goal: DietGoal;
   hasWorkout?: boolean;
+  avgConfidence?: number;
 }) {
   const kcalPct = target.kcal > 0 ? Math.min(100, (totals.kcal / target.kcal) * 100) : 0;
   const proteinPct = target.protein > 0 ? Math.min(100, (totals.protein / target.protein) * 100) : 0;
@@ -334,6 +358,18 @@ function MacroSummaryCard({
       ) : (
         <div className="mt-3 text-[10px] text-text-secondary bg-surface-light/50 rounded-lg px-2 py-1.5 text-center leading-relaxed">
           🛌 휴식일 — 평소 ±0, 단백질만 유지 (회복용)
+        </div>
+      )}
+
+      {/* 데이터 정확도 (entries 있을 때만) */}
+      {avgConfidence !== undefined && avgConfidence < 1.0 && (
+        <div className={`mt-2 text-[10px] text-center ${
+          avgConfidence >= 0.8 ? 'text-text-secondary' :
+          avgConfidence >= 0.6 ? 'text-warning' :
+          'text-danger'
+        }`}>
+          🎯 평균 정확도 {Math.round(avgConfidence * 100)}%
+          {avgConfidence < 0.6 && ' — 추정·일반식 비율 ↑'}
         </div>
       )}
     </div>
@@ -608,6 +644,7 @@ function AddMealModal({ onAdd, onAddMany, onClose }: { onAdd: (entry: MacroEntry
       protein: preview.p,
       carbs: preview.c,
       fat: preview.f,
+      confidence: hasOverride ? 1.0 : 0.7, // 사용자가 라벨 보고 수정했으면 정확, 아니면 DB 평균
     });
   };
 
@@ -620,6 +657,7 @@ function AddMealModal({ onAdd, onAddMany, onClose }: { onAdd: (entry: MacroEntry
       protein: Math.max(0, Number(protein) || 0),
       carbs: Math.max(0, Number(carbs) || 0),
       fat: Math.max(0, Number(fat) || 0),
+      confidence: 0.7, // 사용자 직접 입력
     });
   };
 
@@ -1454,6 +1492,7 @@ function EstimateForm({ onAdd }: { onAdd: (entry: MacroEntry) => void }) {
       name: `${base.name} (${sizeLabel}, ${protLabel})${conservative ? ' [+20% 보정]' : ''}`,
       mealType,
       ...estimated,
+      confidence: 0.5, // 추정값
     });
   };
 
@@ -1562,6 +1601,143 @@ function EstimateForm({ onAdd }: { onAdd: (entry: MacroEntry) => void }) {
       <p className="text-[10px] text-text-secondary text-center">
         ※ 추정값은 평균치. 정확하면 직접 입력 모드 권장.
       </p>
+    </div>
+  );
+}
+
+// ============================================================
+// 빠른 일반식 1탭 추가 (외식·라벨 모르는 음식)
+// ============================================================
+const QUICK_MEALS = [
+  { name: '한식 한 끼', kcal: 700, protein: 25, carbs: 90, fat: 20 },
+  { name: '집밥 한 끼', kcal: 500, protein: 20, carbs: 70, fat: 15 },
+  { name: '분식 한 끼', kcal: 600, protein: 15, carbs: 80, fat: 15 },
+  { name: '중식 한 끼', kcal: 800, protein: 20, carbs: 100, fat: 25 },
+  { name: '양식 한 끼', kcal: 800, protein: 30, carbs: 60, fat: 30 },
+  { name: '치킨 1조각', kcal: 290, protein: 24, carbs: 10, fat: 17 },
+  { name: '피자 1조각', kcal: 290, protein: 12, carbs: 36, fat: 11 },
+  { name: '햄버거 세트', kcal: 1000, protein: 30, carbs: 90, fat: 50 },
+];
+
+function QuickAddPanel({ onAdd }: { onAdd: (entry: MacroEntry) => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="bg-surface rounded-xl overflow-hidden">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex justify-between items-center p-3 text-sm"
+      >
+        <span className="font-semibold">🍱 빠른 일반식 (1탭, 외식·모르는 음식)</span>
+        <span className="text-xs text-text-secondary">{open ? '접기' : '펼치기'}</span>
+      </button>
+      {open && (
+        <div className="px-3 pb-3 grid grid-cols-2 gap-2 border-t border-border pt-3">
+          {QUICK_MEALS.map((m) => (
+            <button
+              key={m.name}
+              onClick={() => onAdd({
+                name: m.name,
+                mealType: autoMealType(),
+                kcal: m.kcal,
+                protein: m.protein,
+                carbs: m.carbs,
+                fat: m.fat,
+                confidence: 0.3, // 추정값 (외식 평균)
+              })}
+              className="bg-surface-light hover:bg-border rounded-lg p-2 text-left transition-colors"
+            >
+              <div className="text-sm font-medium">{m.name}</div>
+              <div className="text-[10px] text-text-secondary font-mono mt-0.5">
+                {m.kcal}kcal · P{m.protein} · C{m.carbs} · F{m.fat}
+              </div>
+            </button>
+          ))}
+          <p className="col-span-2 text-[10px] text-text-secondary text-center mt-1">
+            ※ 평균 추정값 (정확도 30%). 정확하면 검색·직접 입력 권장.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// 사후 보정 — 잊은 음식·야식 빠른 입력 (정확도 20%)
+// ============================================================
+function AdjustModal({ onAdd, onClose }: { onAdd: (entry: MacroEntry) => void; onClose: () => void }) {
+  const [name, setName] = useState('');
+  const [kcal, setKcal] = useState('');
+  const [protein, setProtein] = useState('');
+
+  const handleSave = () => {
+    const k = Math.max(0, Number(kcal) || 0);
+    if (!name.trim() || k === 0) return;
+    const p = Math.max(0, Number(protein) || 0);
+    // 칼로리에서 단백질 제외한 나머지를 탄수:지방 = 60:40 비율로 추정
+    const remainingKcal = Math.max(0, k - p * 4);
+    const carbs = Math.round((remainingKcal * 0.6) / 4);
+    const fat = Math.round((remainingKcal * 0.4) / 9);
+    onAdd({
+      name: `[보정] ${name.trim()}`,
+      mealType: 'snack',
+      kcal: k,
+      protein: p,
+      carbs,
+      fat,
+      confidence: 0.2, // 사후 보정 — 가장 낮은 신뢰도
+    });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center">
+      <div className="bg-surface w-full max-w-[430px] rounded-t-2xl p-4">
+        <div className="flex justify-between items-center mb-3">
+          <h3 className="text-lg font-bold">🌙 사후 보정</h3>
+          <button onClick={onClose} className="text-text-secondary text-2xl leading-none">&times;</button>
+        </div>
+        <p className="text-[11px] text-text-secondary mb-3 leading-relaxed">
+          잊고 안 적은 음식 · 야식 등을 빠르게 보정. 단백질만 입력하면 나머지는 자동 추정 (탄수:지방 60:40).
+        </p>
+
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs text-text-secondary mb-1 block">메모</label>
+            <input
+              type="text" value={name} onChange={(e) => setName(e.target.value)}
+              placeholder="예: 야식 라면 / 회식 술자리"
+              className="w-full bg-surface-light rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-xs text-text-secondary mb-1 block">칼로리 (kcal)</label>
+              <input
+                type="number" inputMode="decimal" value={kcal} onChange={(e) => setKcal(e.target.value)}
+                placeholder="500"
+                className="w-full bg-surface-light rounded-lg px-3 py-2 font-mono text-center outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-red-400 mb-1 block">단백질 g (선택)</label>
+              <input
+                type="number" inputMode="decimal" value={protein} onChange={(e) => setProtein(e.target.value)}
+                placeholder="0"
+                className="w-full bg-surface-light rounded-lg px-3 py-2 font-mono text-center outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+          </div>
+        </div>
+
+        <button
+          onClick={handleSave}
+          disabled={!name.trim() || Number(kcal) <= 0}
+          className="w-full mt-4 py-3 bg-primary disabled:opacity-40 text-white rounded-xl font-semibold"
+        >보정 추가</button>
+        <p className="text-[10px] text-text-secondary text-center mt-2">
+          ※ 정확도 20% — 식단 점수에서 페널티가 있을 수 있어요.
+        </p>
+      </div>
     </div>
   );
 }

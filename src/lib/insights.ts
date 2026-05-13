@@ -478,6 +478,22 @@ export async function generateInsights(): Promise<Insight[]> {
     }
   }
 
+  // === [C신규] 추정·외식 비율 ↑ (낮은 신뢰도 entry) ===
+  const allEntries = thisMacroLogs.flatMap((l) => l.entries);
+  if (allEntries.length >= 10) {
+    const lowConf = allEntries.filter((e) => (e.confidence ?? 1.0) < 0.5).length;
+    const lowConfRatio = lowConf / allEntries.length;
+    if (lowConfRatio > 0.5) {
+      insights.push({
+        id: 'low_confidence_ratio',
+        icon: '🎯',
+        title: '추정·외식 비율 ↑',
+        text: `이번 주 ${Math.round(lowConfRatio * 100)}%가 추정값 — 매크로 결과 ±15% 오차 가능, 직접 입력 늘리면 정확도 ↑`,
+        tone: 'info', priority: 4,
+      });
+    }
+  }
+
   // === [I신규] 단백질 매끼 분산 부족 (오늘 1끼에 70%+) ===
   const todayLog = macroLogs.find((l) => l.date === getTodayStr());
   if (todayLog && todayLog.entries.length >= 2) {

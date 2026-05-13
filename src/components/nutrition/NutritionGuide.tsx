@@ -239,6 +239,43 @@ export default function NutritionGuide() {
         </div>
       </section>
 
+      {/* 13. 외식 자주 하는 사람 가이드 (라벨 모르는 음식) */}
+      <section>
+        <h4 className="font-semibold mb-2">13. 외식·라벨 모르는 음식 자주 먹는 사람</h4>
+        <p className="text-text-secondary text-xs mb-2">
+          외식·집밥·일반식 위주라도 추적은 의미 있어요. 단 정확도 한계를 받아들이고 패턴을 보세요.
+        </p>
+
+        <div className="bg-surface-light rounded-lg p-3 mb-2 text-xs">
+          <div className="font-medium mb-2">📌 4가지 베테랑 원칙</div>
+          <ol className="space-y-1.5 pl-4 list-decimal text-text-secondary">
+            <li><b>단백질 우선 선택</b> — 외식 메뉴에서 단백질 풍부한 것 (찜닭·국밥·구이) 우선. 매크로 정확하지 않아도 단백질 충분히 챙기면 80% 성공</li>
+            <li><b>분량 시각화</b> — 손바닥 분량법(섹션 12)으로 즉시 추정. 매번 정확할 필요 X</li>
+            <li><b>패턴 추적</b> — 매크로 ±15% 오차는 무시 가능. 4주 추세 (체중·근육) 보면서 페이스 조정</li>
+            <li><b>+20% 보수적 보정</b> — 다이어트 중이면 외식 칼로리 ×1.2. 매크로 카드 신뢰도 표시 확인</li>
+          </ol>
+        </div>
+
+        <div className="bg-surface-light rounded-lg p-3 mb-2 text-xs">
+          <div className="font-medium mb-2">🛠 앱 사용 흐름 (외식 위주)</div>
+          <ul className="space-y-1 pl-4 list-disc text-text-secondary text-[11px]">
+            <li>🍱 빠른 일반식: 1탭 추가 — 가장 빠름, 정확도 30%</li>
+            <li>🍱 추정 모드: 카테고리·분량·단백질 비중 선택 — 정확도 50%</li>
+            <li>🖐 손바닥 분량: 직접 입력 모드의 빠른 채움 — 정확도 50%</li>
+            <li>🌙 사후 보정: 자기 전 잊은 음식 빠른 입력 — 정확도 20%</li>
+            <li>검색·DB 음식: 라벨 본 음식만 — 정확도 100%</li>
+          </ul>
+        </div>
+
+        <div className="bg-primary/10 border border-primary/30 rounded-lg p-3">
+          <div className="text-xs font-medium text-primary-light mb-1">💡 핵심 메시지</div>
+          <p className="text-[11px] text-text-secondary leading-relaxed">
+            완벽한 매크로 추적 ≠ 좋은 결과. <b>일관된 기록 + 4주 추세 인지 + 단백질 충분</b>이 외식 위주 사용자의 80%를 결정합니다.
+            오차에 집착하지 말고 패턴을 보세요.
+          </p>
+        </div>
+      </section>
+
       {/* 11. 영양 타이밍 (운동 전후) */}
       <section>
         <h4 className="font-semibold mb-2">11. 영양 타이밍 — 운동 전후</h4>

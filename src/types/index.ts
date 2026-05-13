@@ -179,6 +179,8 @@ export interface MacroEntry {
   carbs: number;         // g
   fat: number;           // g
   mealType: MealType;
+  // 정확도 (0~1): 1=라벨/측정, 0.7=DB 검색, 0.5=추정/손바닥, 0.3=빠른 일반식, 0.2=사후 보정
+  confidence?: number;
 }
 
 export interface DailyMacroLog {

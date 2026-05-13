@@ -109,8 +109,8 @@ export async function recommendNextMeal(
   return { reason, primary, remaining, foods };
 }
 
-/** RecommendedFood → MacroEntry 변환 (식사 추가용) */
-export function toMacroEntry(rec: RecommendedFood, mealType: MacroEntry['mealType']): MacroEntry {
+/** RecommendedFood → MacroEntry 변환 (식사 추가용). confidence: 0.7=추천(DB) 기본 */
+export function toMacroEntry(rec: RecommendedFood, mealType: MacroEntry['mealType'], confidence: number = 0.7): MacroEntry {
   return {
     name: `${rec.name} ${rec.grams}g`,
     mealType,
@@ -118,6 +118,7 @@ export function toMacroEntry(rec: RecommendedFood, mealType: MacroEntry['mealTyp
     protein: rec.protein,
     carbs: rec.carbs,
     fat: rec.fat,
+    confidence,
   };
 }
 
