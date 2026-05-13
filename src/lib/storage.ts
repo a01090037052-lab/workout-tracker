@@ -1,4 +1,4 @@
-import type { WorkoutExercise, Condition, TrainingGoal, NutritionProfile } from '../types';
+import type { WorkoutExercise, Condition, TrainingGoal, NutritionProfile, DietPreferences } from '../types';
 
 // 모든 localStorage 키를 한 곳에 모아 오타 방지
 const KEYS = {
@@ -161,6 +161,15 @@ export const storage = {
     },
     set(enabled: boolean) {
       localStorage.setItem('programAutoApplyPR', enabled ? 'on' : 'off');
+    },
+  },
+
+  dietPreferences: {
+    get(): DietPreferences {
+      return readJSON<DietPreferences>('dietPreferences') || { excludedFoodIds: [], simpleMode: false };
+    },
+    set(prefs: DietPreferences) {
+      writeJSON('dietPreferences', prefs);
     },
   },
 };

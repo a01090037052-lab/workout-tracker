@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Legend, PieChart, Pie, Cell } from 'recharts';
 import { db } from '../db';
@@ -65,6 +66,7 @@ export default function NutritionPage() {
 // 오늘 식단 view
 // ============================================================
 function TodayView({ onNeedProfile }: { onNeedProfile: () => void }) {
+  const navigate = useNavigate();
   const today = getLocalDate();
   const [yesterday] = useState(() => {
     const d = new Date();
@@ -199,13 +201,17 @@ function TodayView({ onNeedProfile }: { onNeedProfile: () => void }) {
       {/* 다음 식사 추천 (격차 보완) */}
       {recommendation && <RecommendationCard rec={recommendation} onAdd={addManyEntries} />}
 
-      {/* 식사 추가 */}
-      <button
-        onClick={() => setShowAddModal(true)}
-        className="w-full py-3 border-2 border-dashed border-border rounded-xl text-text-secondary hover:border-primary hover:text-primary transition-colors"
-      >
-        + 식사 추가
-      </button>
+      {/* 식사 추가 + 자동 식단 (2분할) */}
+      <div className="grid grid-cols-3 gap-2">
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="col-span-2 py-3 border-2 border-dashed border-border rounded-xl text-text-secondary hover:border-primary hover:text-primary transition-colors text-sm"
+        >+ 식사 추가</button>
+        <button
+          onClick={() => navigate('/meal-planner')}
+          className="py-3 bg-gradient-to-br from-primary/15 to-primary/5 border border-primary/30 rounded-xl text-primary-light text-sm font-medium active:bg-primary/20"
+        >🪄 자동 식단</button>
+      </div>
 
       {/* 식사 목록 (분류별) */}
       {MEAL_ORDER.map((mealType) => {

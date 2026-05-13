@@ -15,6 +15,7 @@ const ProgramPage = lazy(() => import('./pages/ProgramPage'));
 const NutritionPage = lazy(() => import('./pages/NutritionPage'));
 const GoalsPage = lazy(() => import('./pages/GoalsPage'));
 const WeeklyReportPage = lazy(() => import('./pages/WeeklyReportPage'));
+const MealPlannerPage = lazy(() => import('./pages/MealPlannerPage'));
 
 function App() {
   useEffect(() => {
@@ -38,6 +39,7 @@ function App() {
                 <Route path="/nutrition" element={<NutritionPage />} />
                 <Route path="/goals" element={<GoalsPage />} />
                 <Route path="/weekly" element={<WeeklyReportPage />} />
+                <Route path="/meal-planner" element={<MealPlannerPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>

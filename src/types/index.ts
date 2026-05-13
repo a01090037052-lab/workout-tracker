@@ -102,6 +102,40 @@ export interface MealTemplate {
   lastUsedAt?: string;       // 사용 빈도 기반 정렬
 }
 
+// 식단 자동 짜기 선호도
+export interface DietPreferences {
+  excludedFoodIds: number[];   // 알레르기/싫어하는 음식 (Food.id)
+  simpleMode: boolean;         // 시간 제약 — 끼니별 음식 수 줄임
+}
+
+// 자동 식단 결과
+export interface PlannedItem {
+  foodId: number;
+  foodName: string;
+  category: FoodCategory;
+  grams: number;
+  kcal: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+}
+
+export interface PlannedMeal {
+  mealType: MealType;
+  ratio: number;               // 끼니별 칼로리 비율 (0~1)
+  targetKcal: number;
+  items: PlannedItem[];
+}
+
+export interface MealPlanResult {
+  meals: PlannedMeal[];
+  totalKcal: number;
+  totalProtein: number;
+  totalCarbs: number;
+  totalFat: number;
+  matchRatio: number;          // 목표 칼로리 충족 비율
+}
+
 export type GoalType = 'oneRepMax' | 'bodyWeight' | 'weeklyWorkouts';
 
 export interface Goal {

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'workout-tracker-v13';
+const CACHE_NAME = 'workout-tracker-v14';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
