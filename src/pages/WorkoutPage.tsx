@@ -76,9 +76,11 @@ export default function WorkoutPage() {
       requestAnimationFrame(async () => {
         try {
           const sorted = [...state.exercises!].sort((a, b) => a.order - b.order);
+          const fromRoutineOrProgram = !!(state.routineId || state.programId);
           for (const ex of sorted) {
             const initialSets = (state.fromProgram && ex.setsDetail) ? ex.setsDetail : undefined;
-            await workout.addExercise(ex.exerciseId, ex.sets, initialSets);
+            // 루틴·프로그램은 정의된 세트 수를 정확히 따름 (이전 기록 세트 수에 영향 X)
+            await workout.addExercise(ex.exerciseId, ex.sets, initialSets, { exactSets: fromRoutineOrProgram });
           }
         } catch (e) {
           console.error('운동 추가 실패:', e);

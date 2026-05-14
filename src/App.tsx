@@ -3,6 +3,7 @@ import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { seedExercises, seedFoods } from './db/seed';
 import { WorkoutProvider } from './hooks/WorkoutContext';
 import BottomNav from './components/common/BottomNav';
+import ErrorBoundary from './components/common/ErrorBoundary';
 import HomePage from './pages/HomePage';
 import WorkoutPage from './pages/WorkoutPage';
 
@@ -25,6 +26,7 @@ function App() {
 
   return (
     <HashRouter>
+      <ErrorBoundary>
       <WorkoutProvider>
         <div className="flex flex-col min-h-[100dvh]">
           <main className="flex-1 pb-16 overflow-y-auto">
@@ -48,6 +50,7 @@ function App() {
           <BottomNav />
         </div>
       </WorkoutProvider>
+      </ErrorBoundary>
     </HashRouter>
   );
 }

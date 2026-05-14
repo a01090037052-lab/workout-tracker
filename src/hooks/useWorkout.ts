@@ -56,6 +56,7 @@ export function useWorkout() {
     exerciseId: number,
     numSets: number = 1,
     initialSets?: { weight: number; reps: number }[],
+    options: { exactSets?: boolean } = {},
   ) => {
     let prevSets: { weight: number; reps: number }[] = [];
     if (!initialSets) {
@@ -72,7 +73,13 @@ export function useWorkout() {
     }
 
     const source = initialSets || prevSets;
-    const actualSets = initialSets ? initialSets.length : Math.max(numSets, prevSets.length || numSets);
+    // exactSets=true: 호출자가 명시한 numSets를 정확히 따름 (루틴·프로그램)
+    // 그 외: 이전 기록 세트 수가 더 많으면 그 수 사용 (운동 중 종목 추가 시 편의)
+    const actualSets = initialSets
+      ? initialSets.length
+      : options.exactSets
+        ? numSets
+        : Math.max(numSets, prevSets.length || numSets);
 
     setExercises((prev) => {
       if (prev.some((e) => e.exerciseId === exerciseId)) return prev;
