@@ -1,6 +1,7 @@
 import { useEffect, lazy, Suspense } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { seedExercises, seedFoods } from './db/seed';
+import { db } from './db';
 import { WorkoutProvider } from './hooks/WorkoutContext';
 import BottomNav from './components/common/BottomNav';
 import ErrorBoundary from './components/common/ErrorBoundary';
@@ -22,6 +23,21 @@ function App() {
   useEffect(() => {
     seedExercises();
     seedFoods();
+  }, []);
+
+  // 백그라운드 → 포그라운드 전환 시 dexie connection 자동 재연결
+  // (iOS Safari PWA 등에서 백그라운드 진입 시 IndexedDB 연결이 종료될 수 있음)
+  useEffect(() => {
+    const handleVisibility = async () => {
+      if (document.visibilityState !== 'visible') return;
+      try {
+        if (!db.isOpen()) await db.open();
+      } catch (e) {
+        console.error('[App] db.open() failed on visibility:', e);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, []);
 
   return (
