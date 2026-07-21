@@ -21,8 +21,10 @@ const MealPlannerPage = lazy(() => import('./pages/MealPlannerPage'));
 
 function App() {
   useEffect(() => {
-    seedExercises();
-    seedFoods();
+    // 시드는 여러 번 await하므로 중간 실패 시 버전이 기록되지 않아 다음 실행에서 재시도된다.
+    // (멱등하게 설계되어 있어 재시도해도 안전) 실패를 삼켜 앱 구동은 막지 않는다.
+    seedExercises().catch((e) => console.error('[seedExercises]', e));
+    seedFoods().catch((e) => console.error('[seedFoods]', e));
   }, []);
 
   // 백그라운드 → 포그라운드 전환 시 dexie connection 자동 재연결

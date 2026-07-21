@@ -35,19 +35,24 @@ function writeJSON(key: string, value: unknown) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* quota or private mode */ }
 }
 
+// Safari 시크릿 모드/용량 초과 시 setItem이 throw하므로 전 경로를 감싼다
+function writeRaw(key: string, value: string) {
+  try { localStorage.setItem(key, value); } catch { /* quota or private mode */ }
+}
+
 export const storage = {
   weightSuggestion: {
     get(): boolean {
       return localStorage.getItem(KEYS.weightSuggestion) !== 'off';
     },
     set(enabled: boolean) {
-      localStorage.setItem(KEYS.weightSuggestion, enabled ? 'on' : 'off');
+      writeRaw(KEYS.weightSuggestion, enabled ? 'on' : 'off');
     },
     raw(): string {
       return localStorage.getItem(KEYS.weightSuggestion) || 'on';
     },
     setRaw(value: string) {
-      localStorage.setItem(KEYS.weightSuggestion, value);
+      writeRaw(KEYS.weightSuggestion, value);
     },
   },
 
@@ -68,7 +73,7 @@ export const storage = {
       return Number(localStorage.getItem(KEYS.lastBackupAt) || 0);
     },
     setNow() {
-      localStorage.setItem(KEYS.lastBackupAt, String(Date.now()));
+      writeRaw(KEYS.lastBackupAt, String(Date.now()));
     },
   },
 
@@ -77,7 +82,7 @@ export const storage = {
       return Number(localStorage.getItem(KEYS.backupSnoozedUntil) || 0);
     },
     set(ms: number) {
-      localStorage.setItem(KEYS.backupSnoozedUntil, String(ms));
+      writeRaw(KEYS.backupSnoozedUntil, String(ms));
     },
     clear() {
       localStorage.removeItem(KEYS.backupSnoozedUntil);
@@ -89,7 +94,7 @@ export const storage = {
       return localStorage.getItem(KEYS.activeProgramId);
     },
     set(id: string | null) {
-      if (id) localStorage.setItem(KEYS.activeProgramId, id);
+      if (id) writeRaw(KEYS.activeProgramId, id);
       else localStorage.removeItem(KEYS.activeProgramId);
     },
   },
@@ -118,7 +123,7 @@ export const storage = {
     importAll(map: Record<string, string>) {
       for (const [key, value] of Object.entries(map)) {
         if (key.startsWith(KEYS.programProgressPrefix) || key === KEYS.activeProgramId) {
-          localStorage.setItem(key, value);
+          writeRaw(key, value);
         }
       }
     },
@@ -160,7 +165,7 @@ export const storage = {
       return localStorage.getItem('programAutoApplyPR') !== 'off';
     },
     set(enabled: boolean) {
-      localStorage.setItem('programAutoApplyPR', enabled ? 'on' : 'off');
+      writeRaw('programAutoApplyPR', enabled ? 'on' : 'off');
     },
   },
 

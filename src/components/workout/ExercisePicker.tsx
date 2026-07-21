@@ -32,12 +32,19 @@ export default function ExercisePicker({ onSelect, onClose }: Props) {
   const [selectedGroup, setSelectedGroup] = useState<MuscleGroup | null>(null);
   const [selectedEquip, setSelectedEquip] = useState<EquipmentType | null>(null);
 
-  const exercises = useLiveQuery(() => db.exercises.toArray(), []);
+  const exercises = useLiveQuery(() => db.exercises.toArray().catch(() => []), []);
 
-  // 미해결 부상 조회
-  const activeInjuries = useLiveQuery(() =>
-    db.injuryLogs.where('isResolved').equals(0).toArray()
-  );
+  // 미해결 부상 조회.
+  // isResolved는 boolean으로 저장되는데 IndexedDB는 boolean을 인덱싱하지 못해
+  // where('isResolved').equals(0)이 항상 빈 배열을 반환했음 → JS 필터로 변경
+  const activeInjuries = useLiveQuery(async () => {
+    try {
+      const all = await db.injuryLogs.toArray();
+      return all.filter((i) => !i.isResolved);
+    } catch {
+      return [];
+    }
+  }, []);
 
   const getInjuryWarning = (muscleGroup: MuscleGroup): string | null => {
     if (!activeInjuries || activeInjuries.length === 0) return null;

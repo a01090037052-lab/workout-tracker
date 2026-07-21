@@ -48,11 +48,20 @@ export default function ExerciseCard({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showWarmup, setShowWarmup] = useState(false);
 
-  const exerciseInfo = useLiveQuery(() => db.exercises.get(exercise.exerciseId), [exercise.exerciseId]);
+  // useLiveQuery는 rejection을 렌더 중 throw하므로 각 쿼리를 개별 격리.
+  // (백그라운드 전환으로 IndexedDB 연결이 끊겨도 카드 하나만 비어 보이고 앱은 살아있음)
+  const exerciseInfo = useLiveQuery(
+    () => db.exercises.get(exercise.exerciseId).catch(() => undefined),
+    [exercise.exerciseId]
+  );
   const previousSets = usePreviousRecord(exercise.exerciseId);
   const currentPR = useLiveQuery(async () => {
-    const prs = await db.personalRecords.where('exerciseId').equals(exercise.exerciseId).sortBy('estimated1RM');
-    return prs[prs.length - 1];
+    try {
+      const prs = await db.personalRecords.where('exerciseId').equals(exercise.exerciseId).sortBy('estimated1RM');
+      return prs[prs.length - 1];
+    } catch {
+      return undefined;
+    }
   }, [exercise.exerciseId]);
   const estimated1RM = currentPR?.estimated1RM;
   const insight = useSmartInsight(exercise.exerciseId);
@@ -64,7 +73,8 @@ export default function ExerciseCard({
   const colorClass = muscleColors[exerciseInfo.muscleGroup] || 'from-surface to-surface-light border-border';
   const dotClass = muscleDots[exerciseInfo.muscleGroup] || 'bg-text-secondary';
   const isBodyweight = exerciseInfo.equipmentType === '맨몸';
-  const { isCompound } = classifyExercise(exerciseInfo.name, exerciseInfo.secondaryMuscle.length);
+  // 백업 복원 등으로 필드가 빠진 레코드가 들어올 수 있어 방어
+  const { isCompound } = classifyExercise(exerciseInfo.name ?? '', exerciseInfo.secondaryMuscle?.length ?? 0);
 
   const handleComplete = (setIndex: number) => {
     const set = exercise.sets[setIndex];

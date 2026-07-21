@@ -3,8 +3,12 @@ import { useState } from 'react';
 const DEFAULT_BAR = 20;
 const DEFAULT_PLATES = [20, 15, 10, 5, 2.5];
 
+const MAX_WEIGHT = 500;
+
 function calculatePlates(targetWeight: number, barWeight: number, availablePlates: number[]): number[] {
-  let remaining = (targetWeight - barWeight) / 2;
+  // 상한을 두지 않으면 큰 값 입력 시 while 루프가 수백만 번 돌아 탭이 멈춘다
+  const safeTarget = Math.min(Number(targetWeight) || 0, MAX_WEIGHT);
+  let remaining = (safeTarget - barWeight) / 2;
   if (remaining <= 0) return [];
 
   const plates: number[] = [];
@@ -42,8 +46,9 @@ export default function PlateCalculator({ onClose }: Props) {
           <label className="text-sm text-text-secondary mb-1 block">목표 무게 (kg)</label>
           <input
             type="number"
+            max={MAX_WEIGHT}
             value={targetWeight}
-            onChange={(e) => setTargetWeight(Number(e.target.value))}
+            onChange={(e) => setTargetWeight(Math.min(Number(e.target.value) || 0, MAX_WEIGHT))}
             className="w-full bg-surface-light rounded-lg px-4 py-3 text-center text-xl font-bold outline-none focus:ring-2 focus:ring-primary"
           />
         </div>

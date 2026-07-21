@@ -12,14 +12,26 @@ export interface PRAlert {
   estimated1RM: number;
 }
 
+const TRAINING_GOALS: TrainingGoal[] = ['hypertrophy', 'strength', 'endurance'];
+const CONDITIONS: Condition[] = ['good', 'normal', 'tired'];
+
 export function useWorkout() {
   const [initialState] = useState(() => storage.activeWorkout.get());
 
   const [isActive, setIsActive] = useState(initialState?.isActive || false);
-  const [exercises, setExercises] = useState<WorkoutExercise[]>(initialState?.exercises || []);
+  const [exercises, setExercises] = useState<WorkoutExercise[]>(
+    Array.isArray(initialState?.exercises) ? initialState.exercises : []
+  );
   const [startTimeMs, setStartTimeMs] = useState<number>(initialState?.startTime || 0);
-  const [condition, setCondition] = useState<Condition>(initialState?.condition || 'normal');
-  const [trainingGoal, setTrainingGoal] = useState<TrainingGoal>(initialState?.trainingGoal || 'hypertrophy');
+  // localStorage는 구버전 스키마/손상된 값이 들어올 수 있어 enum 검증 후 사용
+  const [condition, setCondition] = useState<Condition>(
+    CONDITIONS.includes(initialState?.condition as Condition) ? (initialState!.condition as Condition) : 'normal'
+  );
+  const [trainingGoal, setTrainingGoal] = useState<TrainingGoal>(
+    TRAINING_GOALS.includes(initialState?.trainingGoal as TrainingGoal)
+      ? (initialState!.trainingGoal as TrainingGoal)
+      : 'hypertrophy'
+  );
   const [prAlert, setPRAlert] = useState<PRAlert | null>(null);
   const [routineId, setRoutineId] = useState<number | undefined>(initialState?.routineId);
   const [programInfo, setProgramInfo] = useState<{ programId: string; week: number; day: number } | undefined>(

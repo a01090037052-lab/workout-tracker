@@ -138,7 +138,15 @@ function AddGoalModal({ onClose }: { onClose: () => void }) {
     return d.toISOString().split('T')[0];
   });
 
-  const exercises = useLiveQuery(() => db.exercises.where('isCustom').equals(0).toArray(), []);
+  // isCustom은 boolean이라 IndexedDB 인덱스로 조회되지 않음 → JS 필터 사용
+  // (기존 where('isCustom').equals(0)은 항상 빈 목록을 반환했음)
+  const exercises = useLiveQuery(async () => {
+    try {
+      return await db.exercises.toArray();
+    } catch {
+      return [];
+    }
+  }, []);
 
   // 종목 선택 시 PR로 시작값 자동 채움
   const autoFillStart = async () => {

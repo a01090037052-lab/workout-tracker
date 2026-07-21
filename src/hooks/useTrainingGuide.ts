@@ -44,19 +44,23 @@ export function checkGoalMismatch(goal: TrainingGoal, zone: TrainingZone): strin
   return null;
 }
 
+// goal은 localStorage에서 온 미검증 값일 수 있어 default 필수.
+// (default가 없으면 undefined 반환 → 호출부의 repRange.min에서 렌더 중 TypeError)
 export function getRecommendedRestTime(goal: TrainingGoal): number {
   switch (goal) {
     case 'strength': return 180;
-    case 'hypertrophy': return 90;
     case 'endurance': return 45;
+    case 'hypertrophy':
+    default: return 90;
   }
 }
 
 export function getRepRange(goal: TrainingGoal): { min: number; max: number; label: string } {
   switch (goal) {
     case 'strength': return { min: 1, max: 5, label: '1~5회' };
-    case 'hypertrophy': return { min: 8, max: 12, label: '8~12회' };
     case 'endurance': return { min: 15, max: 20, label: '15~20회' };
+    case 'hypertrophy':
+    default: return { min: 8, max: 12, label: '8~12회' };
   }
 }
 

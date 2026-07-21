@@ -54,8 +54,12 @@ export default function WorkoutPage() {
 
   // 활성 부상 (해결 안 된 것)
   const activeInjuries = useLiveQuery(async () => {
-    const all = await db.injuryLogs.toArray();
-    return all.filter((i) => !i.isResolved);
+    try {
+      const all = await db.injuryLogs.toArray();
+      return all.filter((i) => !i.isResolved);
+    } catch {
+      return [];
+    }
   }, []);
 
   // 루틴/프로그램으로 운동 시작
@@ -356,6 +360,7 @@ export default function WorkoutPage() {
               </button>
               <button
                 onClick={async () => {
+                 try {
                   const result = await workout.finishWorkout();
                   setShowFinishConfirm(false);
                   if (result) {
@@ -384,6 +389,13 @@ export default function WorkoutPage() {
                     setToast('완료된 세트가 없어요. 무게와 횟수를 입력 후 ✓ 버튼을 눌러주세요.');
                     setTimeout(() => setToast(''), 4000);
                   }
+                 } catch (e) {
+                  // 저장 실패(용량 초과/DB 연결 종료)를 조용히 삼키면 기록이 유실됨
+                  console.error('[finishWorkout]', e);
+                  setShowFinishConfirm(false);
+                  setToast('저장에 실패했어요. 기록은 남아있으니 다시 시도해주세요.');
+                  setTimeout(() => setToast(''), 5000);
+                 }
                 }}
                 className="flex-1 py-2.5 bg-success text-white rounded-lg text-sm font-semibold"
               >
