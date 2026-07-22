@@ -46,7 +46,10 @@ function App() {
     <HashRouter>
       <ErrorBoundary>
       <WorkoutProvider>
-        <div className="flex flex-col min-h-[100dvh]">
+        {/* 상단: 노치/상태바(시계) 높이만큼 여백. black-translucent로 설치된 기존 앱도
+            콘텐츠가 시계에 가리지 않게 함(메타 태그는 재설치 전까지 안 바뀌므로 코드로 처리).
+            새 설치본(black)에선 inset-top이 0이라 여백 안 생김. */}
+        <div className="flex flex-col min-h-[100dvh]" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
           {/* 하단 고정 내비 + iOS 홈 인디케이터 높이만큼 여유를 둬 콘텐츠가 안 가리게 */}
           <main
             className="flex-1 overflow-y-auto"
