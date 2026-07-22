@@ -247,8 +247,9 @@ function TodayView({ onNeedProfile }: { onNeedProfile: () => void }) {
                   </div>
                 </div>
                 <button
-                  onClick={() => removeEntry(i)}
-                  className="text-text-secondary/40 hover:text-danger ml-2 text-xs px-2 py-1"
+                  onClick={() => { if (confirm(`'${e.name}' 기록을 삭제할까요?`)) removeEntry(i); }}
+                  aria-label={`${e.name} 삭제`}
+                  className="ml-2 w-11 h-11 flex items-center justify-center rounded-lg text-text-secondary active:bg-danger/15 active:text-danger shrink-0"
                 >
                   ✕
                 </button>
@@ -316,10 +317,12 @@ function MacroSummaryCard({
   hasWorkout?: boolean;
   avgConfidence?: number;
 }) {
-  const kcalPct = target.kcal > 0 ? Math.min(100, (totals.kcal / target.kcal) * 100) : 0;
-  const proteinPct = target.protein > 0 ? Math.min(100, (totals.protein / target.protein) * 100) : 0;
-  const carbsPct = target.carbs > 0 ? Math.min(100, (totals.carbs / target.carbs) * 100) : 0;
-  const fatPct = target.fat > 0 ? Math.min(100, (totals.fat / target.fat) * 100) : 0;
+  // 실제 비율(캡핑 안 함) — 라벨·색상용. 막대 너비만 Math.min(100)으로 제한한다.
+  // 예전엔 여기서 100으로 캡핑해 과식(3000/2000)이 초록 100%로 보이고 경고 분기가 죽어 있었음.
+  const kcalPct = target.kcal > 0 ? (totals.kcal / target.kcal) * 100 : 0;
+  const proteinPct = target.protein > 0 ? (totals.protein / target.protein) * 100 : 0;
+  const carbsPct = target.carbs > 0 ? (totals.carbs / target.carbs) * 100 : 0;
+  const fatPct = target.fat > 0 ? (totals.fat / target.fat) * 100 : 0;
 
   return (
     <div className="bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-4">
@@ -337,7 +340,7 @@ function MacroSummaryCard({
       <div className="h-2 bg-surface-light rounded-full overflow-hidden mb-3">
         <div
           className={`h-full rounded-full transition-all ${kcalPct > 110 ? 'bg-warning' : 'bg-primary'}`}
-          style={{ width: `${kcalPct}%` }}
+          style={{ width: `${Math.min(100, kcalPct)}%` }}
         />
       </div>
 
@@ -552,9 +555,10 @@ function MacroRow({ label, actual, target, pct, color }: { label: string; actual
       <div className={`text-[10px] ${color}`}>{label}</div>
       <div className="text-sm font-mono font-semibold mt-0.5">
         {actual}<span className="text-text-secondary text-[10px]">/{target}g</span>
+        {pct > 110 && <span className="text-warning text-[10px] ml-0.5">{Math.round(pct)}%</span>}
       </div>
       <div className="h-1 bg-surface-light rounded-full mt-1 overflow-hidden">
-        <div className="h-full bg-primary rounded-full" style={{ width: `${pct}%` }} />
+        <div className={`h-full rounded-full ${pct > 110 ? 'bg-warning' : 'bg-primary'}`} style={{ width: `${Math.min(100, pct)}%` }} />
       </div>
     </div>
   );
@@ -1091,11 +1095,10 @@ function CalculatorView({ onSaved }: { onSaved: () => void }) {
 
         <div>
           <label className="text-xs text-text-secondary mb-1 block">체지방률 % (선택, 더 정확한 계산)</label>
-          <input
-            type="number" inputMode="decimal" value={profile.bodyFat ?? ''}
-            onChange={(e) => setProfile({ ...profile, bodyFat: e.target.value === '' ? undefined : Number(e.target.value) })}
+          <OptionalDecimalInput
+            value={profile.bodyFat}
+            onChange={(v) => setProfile({ ...profile, bodyFat: v })}
             placeholder="모르면 비워두기"
-            className="w-full bg-surface-light rounded-lg px-4 py-2 text-sm font-mono outline-none focus:ring-2 focus:ring-primary"
           />
           {profile.bodyFat !== undefined && (
             <p className="text-[10px] text-primary-light mt-1">Katch-McArdle 공식 사용 (더 정확)</p>
@@ -1766,13 +1769,18 @@ function HandRow({ label, unit, value, onChange, colorClass }: { label: string; 
 }
 
 function MacroEditField({ label, value, color, onChange }: { label: string; value: number; color: string; onChange: (v: number) => void }) {
+  // 숫자 state를 직접 쓰면 "12." 입력 중 소수점이 사라진다 → 편집 중 문자열 버퍼 유지
+  const [draft, setDraft] = useState<string | null>(null);
+  const display = draft !== null ? draft : (value ? String(value) : '');
   return (
     <div className="bg-surface rounded-lg p-2">
       <div className={`text-[9px] ${color} text-center`}>{label}</div>
       <input
-        type="number" inputMode="decimal"
-        value={value || ''}
-        onChange={(e) => onChange(Math.max(0, Number(e.target.value) || 0))}
+        type="text" inputMode="decimal"
+        value={display}
+        onFocus={(e) => { setDraft(value ? String(value) : ''); e.target.select(); }}
+        onChange={(e) => setDraft(e.target.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1'))}
+        onBlur={() => { if (draft !== null) { onChange(Math.max(0, Number(draft) || 0)); setDraft(null); } }}
         className="w-full bg-transparent text-center text-base font-mono font-semibold outline-none focus:bg-surface-light/50 rounded mt-0.5"
       />
     </div>
@@ -1802,13 +1810,36 @@ function WaterCard({ waterMl, target, onAdd }: { waterMl: number; target: number
   );
 }
 
+// 비워둘 수 있는 소수 입력 (체지방률 등). 빈 값 → undefined
+function OptionalDecimalInput({ value, onChange, placeholder }: { value: number | undefined; onChange: (v: number | undefined) => void; placeholder?: string }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const display = draft !== null ? draft : (value !== undefined ? String(value) : '');
+  return (
+    <input
+      type="text" inputMode="decimal"
+      value={display}
+      onFocus={(e) => { setDraft(value !== undefined ? String(value) : ''); e.target.select(); }}
+      onChange={(e) => setDraft(e.target.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1'))}
+      onBlur={() => { if (draft !== null) { onChange(draft === '' ? undefined : Math.max(0, Number(draft) || 0)); setDraft(null); } }}
+      placeholder={placeholder}
+      className="w-full bg-surface-light rounded-lg px-4 py-2 text-sm font-mono outline-none focus:ring-2 focus:ring-primary"
+    />
+  );
+}
+
 function NumberField({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+  // 체중(70.5) 등 소수 입력을 위해 편집 중 문자열 버퍼 유지
+  const [draft, setDraft] = useState<string | null>(null);
+  const display = draft !== null ? draft : (value ? String(value) : '');
   return (
     <div>
       <label className="text-xs text-text-secondary mb-1 block">{label}</label>
       <input
-        type="number" inputMode="decimal" value={value || ''}
-        onChange={(e) => onChange(Math.max(0, Number(e.target.value) || 0))}
+        type="text" inputMode="decimal"
+        value={display}
+        onFocus={(e) => { setDraft(value ? String(value) : ''); e.target.select(); }}
+        onChange={(e) => setDraft(e.target.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1'))}
+        onBlur={() => { if (draft !== null) { onChange(Math.max(0, Number(draft) || 0)); setDraft(null); } }}
         className="w-full bg-surface-light rounded-lg px-3 py-2 text-sm font-mono text-center outline-none focus:ring-2 focus:ring-primary"
       />
     </div>

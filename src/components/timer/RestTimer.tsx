@@ -107,7 +107,7 @@ export default function RestTimer({ defaultTime, onClose }: Props) {
   // 미니 바 모드
   if (!expanded) {
     return (
-      <div className="fixed bottom-16 left-1/2 -translate-x-1/2 w-[calc(100%-32px)] max-w-[400px] z-40">
+      <div className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 w-[calc(100%-32px)] max-w-[400px] z-40">
         <div className={`rounded-xl p-3 shadow-lg border ${
           isExpired ? 'bg-success/90 border-success' : 'bg-surface border-border'
         }`}>

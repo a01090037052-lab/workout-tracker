@@ -208,7 +208,8 @@ export default function WorkoutPage() {
   );
 
   return (
-    <div className="p-4">
+    <div className={`p-4 ${showRestTimer ? 'pb-28' : ''}`}>
+      {/* 휴식 타이머 미니바가 뜰 때 마지막 세트 컨트롤이 가리지 않도록 하단 여백 추가 */}
       {/* 상단 운동 정보 (sticky) */}
       <div className="flex justify-between items-center mb-4 sticky top-0 z-10 bg-bg py-2 -mx-4 px-4">
         <div>

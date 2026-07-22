@@ -114,7 +114,9 @@ const MUSCLE_GROUPS = ['가슴', '등', '어깨', '이두', '삼두', '하체', 
 function ConditionWidget() {
   const today = getLocalDate();
   const log = useLiveQuery(() => db.conditionLogs.where('date').equals(today).first(), [today]);
-  const [sleepInput, setSleepInput] = useState('');
+  // null = 편집 안 함(저장값 표시), 문자열 = 편집 중. defaultValue+value 혼용으로
+  // 값을 비울 수 없던 문제 + controlled/uncontrolled 경고 제거
+  const [sleepInput, setSleepInput] = useState<string | null>(null);
 
   // 초기값 동기화 (log 변경 시)
   const sleepValue = log?.sleepHours;
@@ -129,10 +131,12 @@ function ConditionWidget() {
   };
 
   const handleSleepBlur = async () => {
+    if (sleepInput === null) return;
     const h = Number(sleepInput);
     if (h > 0 && h <= 24 && h !== sleepValue) {
       await updateLog({ sleepHours: h });
     }
+    setSleepInput(null);
   };
 
   const toggleSore = async (m: typeof MUSCLE_GROUPS[number]) => {
@@ -161,13 +165,13 @@ function ConditionWidget() {
         <div className="flex items-center gap-2 mb-3">
           <label className="text-xs text-text-secondary w-20">어젯밤 수면</label>
           <input
-            type="number" inputMode="decimal" step="0.5"
-            defaultValue={sleepValue ?? ''}
-            value={sleepInput || (sleepValue !== undefined ? String(sleepValue) : '')}
-            onChange={(e) => setSleepInput(e.target.value)}
+            type="text" inputMode="decimal"
+            value={sleepInput !== null ? sleepInput : (sleepValue !== undefined ? String(sleepValue) : '')}
+            onFocus={() => setSleepInput(sleepValue !== undefined ? String(sleepValue) : '')}
+            onChange={(e) => setSleepInput(e.target.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1'))}
             onBlur={handleSleepBlur}
             placeholder="0"
-            className="flex-1 bg-surface-light rounded-lg px-3 py-1.5 text-sm font-mono text-center outline-none focus:ring-2 focus:ring-primary"
+            className="flex-1 bg-surface-light rounded-lg px-3 py-3 text-sm font-mono text-center outline-none focus:ring-2 focus:ring-primary"
           />
           <span className="text-xs text-text-secondary">시간</span>
         </div>
@@ -182,7 +186,7 @@ function ConditionWidget() {
                 <button
                   key={m}
                   onClick={() => toggleSore(m)}
-                  className={`px-2.5 py-1 rounded-full text-xs transition-colors ${
+                  className={`px-3.5 min-h-[40px] rounded-full text-xs transition-colors active:scale-95 ${
                     active ? 'bg-warning/20 text-warning border border-warning/40' : 'bg-surface-light text-text-secondary border border-transparent'
                   }`}
                 >{m}</button>
@@ -222,7 +226,8 @@ function getWeekDays(): string[] {
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(startOfWeek);
     d.setDate(startOfWeek.getDate() + i);
-    return d.toISOString().split('T')[0];
+    // toISOString()은 UTC라 KST 오전엔 하루 밀린다 → 로컬 포맷터 사용
+    return getLocalDate(d);
   });
 }
 

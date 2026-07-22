@@ -16,7 +16,10 @@ export default function BottomNav() {
   const { isActive: workoutIsActive } = useWorkoutContext();
 
   return (
-    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-surface/80 backdrop-blur-xl border-t border-border/50">
+    <nav
+      className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-surface/80 backdrop-blur-xl border-t border-border/50"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
       <div className="flex justify-around items-center h-16 px-2">
         {tabs.map((tab) => {
           const isActive = location.pathname === tab.path;

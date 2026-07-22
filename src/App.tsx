@@ -47,7 +47,11 @@ function App() {
       <ErrorBoundary>
       <WorkoutProvider>
         <div className="flex flex-col min-h-[100dvh]">
-          <main className="flex-1 pb-16 overflow-y-auto">
+          {/* 하단 고정 내비 + iOS 홈 인디케이터 높이만큼 여유를 둬 콘텐츠가 안 가리게 */}
+          <main
+            className="flex-1 overflow-y-auto"
+            style={{ paddingBottom: 'calc(4rem + env(safe-area-inset-bottom))' }}
+          >
             <Suspense fallback={<div className="p-8 text-center text-text-secondary text-sm">로딩 중…</div>}>
               <Routes>
                 <Route path="/" element={<HomePage />} />

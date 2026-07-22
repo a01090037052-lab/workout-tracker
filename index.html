@@ -3,10 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/workout-tracker/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta name="theme-color" content="#6366F1" />
+    <link rel="apple-touch-icon" href="/workout-tracker/apple-touch-icon.png" />
+    <!-- viewport-fit=cover: env(safe-area-inset-*)가 실제 값을 반환하도록 (없으면 0) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#0F172A" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- black: 상태바가 콘텐츠를 덮지 않고 그 아래에서 시작 (notch 겹침 방지) -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="운동기록" />
     <link rel="manifest" href="/workout-tracker/manifest.json" />
     <title>운동 기록</title>

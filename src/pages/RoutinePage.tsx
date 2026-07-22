@@ -102,9 +102,9 @@ function RoutineCard({
     <div className="bg-surface rounded-xl p-4">
       <div className="flex justify-between items-start mb-2">
         <h3 className="font-semibold text-lg">{routine.name}</h3>
-        <div className="flex gap-2">
-          <button onClick={onEdit} className="text-xs text-text-secondary hover:text-primary">편집</button>
-          <button onClick={() => setShowDeleteConfirm(true)} className="text-xs text-text-secondary hover:text-danger">삭제</button>
+        <div className="flex gap-1">
+          <button onClick={onEdit} aria-label="편집" className="min-w-11 h-11 px-3 flex items-center justify-center text-sm text-text-secondary active:text-primary active:bg-surface-light rounded-lg">편집</button>
+          <button onClick={() => setShowDeleteConfirm(true)} aria-label="삭제" className="min-w-11 h-11 px-3 flex items-center justify-center text-sm text-text-secondary active:text-danger active:bg-danger/10 rounded-lg">삭제</button>
         </div>
       </div>
 

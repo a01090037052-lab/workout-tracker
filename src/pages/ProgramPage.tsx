@@ -285,13 +285,13 @@ export default function ProgramPage() {
         <div className="flex gap-1.5">
           <button
             onClick={() => { const next = !autoPR; storage.programAutoApplyPR.set(next); setAutoPR(next); }}
-            className={`text-[10px] px-2 py-1 rounded-lg ${autoPR ? 'bg-success/15 text-success' : 'bg-surface-light text-text-secondary'}`}
+            className={`text-xs px-3 min-h-[40px] rounded-lg active:scale-95 ${autoPR ? 'bg-success/15 text-success' : 'bg-surface-light text-text-secondary'}`}
             title={autoPR ? 'PR 갱신 시 1RM 자동 반영 (사이클 도중 무게 점프 가능)' : '1RM 수동 갱신 (사이클 시작 시 직접)'}
           >PR자동 {autoPR ? 'ON' : 'OFF'}</button>
-          <button onClick={() => setShowGuide(!showGuide)} className="text-[10px] text-primary-light px-2 py-1 bg-primary/10 rounded-lg">
+          <button onClick={() => setShowGuide(!showGuide)} className="text-xs text-primary-light px-3 min-h-[40px] bg-primary/10 rounded-lg active:scale-95">
             {showGuide ? '접기' : '📖 가이드'}
           </button>
-          <button onClick={() => setSetupMode(true)} className="text-[10px] text-text-secondary px-2 py-1 bg-surface-light rounded-lg">
+          <button onClick={() => setSetupMode(true)} className="text-xs text-text-secondary px-3 min-h-[40px] bg-surface-light rounded-lg active:scale-95">
             1RM 수정
           </button>
         </div>
@@ -313,7 +313,7 @@ export default function ProgramPage() {
             <div key={exName} className={`bg-surface rounded-lg px-3 py-1.5 flex-shrink-0 ${isUpdated ? 'border border-success/30' : ''}`}>
               <span className="text-[10px] text-text-secondary">{exName}</span>
               <span className="text-xs font-mono font-bold ml-1">{currentValue || '?'}kg</span>
-              {isUpdated && <span className="text-[8px] text-success ml-1">PR</span>}
+              {isUpdated && <span className="text-[10px] text-success ml-1 font-semibold">PR</span>}
             </div>
           );
         })}
@@ -322,13 +322,13 @@ export default function ProgramPage() {
       {/* 주차 선택 */}
       <div className="flex items-center justify-between bg-surface rounded-xl p-3 mb-2">
         <button onClick={() => setProgress({ ...progress, currentWeek: Math.max(1, progress.currentWeek - 1) })}
-          disabled={progress.currentWeek <= 1} className="px-3 py-1 text-text-secondary disabled:opacity-30">◀</button>
+          disabled={progress.currentWeek <= 1} aria-label="이전 주" className="w-11 h-11 flex items-center justify-center text-text-secondary disabled:opacity-30 active:bg-surface-light rounded-lg">◀</button>
         <div className="text-center">
           <div className="font-bold">{weekPlan.label}</div>
           <div className="text-xs text-text-secondary">{progress.currentWeek} / {selectedProgram.durationWeeks}주 · {weekCompletedCount()}/{weekPlan.days.length}일 완료</div>
         </div>
         <button onClick={() => setProgress({ ...progress, currentWeek: Math.min(selectedProgram.durationWeeks, progress.currentWeek + 1) })}
-          disabled={isLastWeek} className="px-3 py-1 text-text-secondary disabled:opacity-30">▶</button>
+          disabled={isLastWeek} aria-label="다음 주" className="w-11 h-11 flex items-center justify-center text-text-secondary disabled:opacity-30 active:bg-surface-light rounded-lg">▶</button>
       </div>
 
       {/* 주간 진행 바 */}

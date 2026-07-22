@@ -215,13 +215,13 @@ function ItemRow({ item, onSwap, onRemove }: { item: PlannedItem; onSwap: () => 
       </div>
       <button
         onClick={onSwap}
-        className="text-[10px] px-2 py-1 bg-primary/15 text-primary-light rounded"
-        title="다른 음식으로 교체"
+        aria-label="다른 음식으로 교체"
+        className="w-11 h-11 flex items-center justify-center bg-primary/15 text-primary-light rounded-lg active:bg-primary/25 shrink-0"
       >🔄</button>
       <button
         onClick={onRemove}
-        className="text-[10px] px-2 py-1 text-text-secondary/40 hover:text-danger"
-        title="이 항목 제외"
+        aria-label="이 항목 제외"
+        className="w-11 h-11 flex items-center justify-center text-text-secondary rounded-lg active:text-danger active:bg-danger/10 shrink-0"
       >✕</button>
     </div>
   );

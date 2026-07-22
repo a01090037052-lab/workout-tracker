@@ -78,6 +78,12 @@ export default function SettingsPage() {
           return;
         }
 
+        // 가져오기는 기존 데이터를 전부 대체하는 파괴적 동작 → 명시적 확인
+        // (초기화엔 확인이 있는데 가져오기엔 없어 실수로 덮어쓰는 위험이 있었음)
+        if (!confirm(`현재 데이터를 모두 이 백업으로 대체합니다.\n(운동 ${data.sessions?.length || 0}건 · 종목 ${data.exercises?.length || 0}개)\n계속할까요?`)) {
+          return;
+        }
+
         // 안전한 복원: 기존 데이터 백업 후 시도, 실패 시 롤백
         const backup = {
           exercises: await db.exercises.toArray(),

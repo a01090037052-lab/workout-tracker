@@ -75,6 +75,19 @@ export default function SetRow({
     setRepsDraft(null);
   };
 
+  // ± 버튼은 방금 타이핑한(아직 미확정) 값을 기준으로 증감해야 한다.
+  // set.weight(직전 렌더의 prop)를 쓰면 타이핑한 값이 버려진다.
+  const nudgeWeight = (delta: number) => {
+    const base = weightDraft !== null ? (Number(weightDraft) || 0) : (set.weight || 0);
+    setWeightDraft(null);
+    onUpdate({ weight: Math.max(0, Math.min(999, base + delta)) });
+  };
+  const nudgeReps = (delta: number) => {
+    const base = repsDraft !== null ? (Math.floor(Number(repsDraft)) || 0) : (set.reps || 0);
+    setRepsDraft(null);
+    onUpdate({ reps: Math.max(0, Math.min(999, base + delta)) });
+  };
+
   const zone = set.isCompleted && estimated1RM
     ? getTrainingZone(set.weight, set.reps, estimated1RM)
     : null;
@@ -119,9 +132,12 @@ export default function SetRow({
           {summary}
         </span>
         {zone && <span className={`text-xs ${zone.color}`}>{zone.icon}</span>}
-        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0 ${
-          set.isCompleted ? 'bg-success text-white' : 'border border-border text-transparent'
-        }`}>✓</span>
+        {/* 완료 세트는 상태 표시(초록 ✓), 미완료는 펼치기 힌트(›) — 체크박스로 오인 방지 */}
+        {set.isCompleted ? (
+          <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0 bg-success text-white">✓</span>
+        ) : (
+          <span className="w-6 h-6 flex items-center justify-center text-lg text-text-secondary/50 shrink-0">›</span>
+        )}
       </button>
     );
   }
@@ -158,7 +174,8 @@ export default function SetRow({
       {/* 무게: ± 버튼이 주력 컨트롤 (자주 하는 건 65→67.5처럼 고치는 것) */}
       <div className="flex items-center gap-2 mb-2">
         <button
-          onClick={() => { commitWeight(); onUpdate({ weight: Math.max(0, (set.weight || 0) - weightStep) }); }}
+          onClick={() => nudgeWeight(-weightStep)}
+          aria-label="무게 줄이기"
           className="w-14 h-14 rounded-xl bg-surface text-2xl text-text-secondary active:bg-border shrink-0"
         >−</button>
         <div className="relative flex-1">
@@ -179,7 +196,8 @@ export default function SetRow({
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-secondary">{isBodyweight ? '+kg' : 'kg'}</span>
         </div>
         <button
-          onClick={() => { commitWeight(); onUpdate({ weight: Math.min(999, (set.weight || 0) + weightStep) }); }}
+          onClick={() => nudgeWeight(weightStep)}
+          aria-label="무게 늘리기"
           className="w-14 h-14 rounded-xl bg-surface text-2xl text-text-secondary active:bg-border shrink-0"
         >+</button>
       </div>
@@ -204,7 +222,8 @@ export default function SetRow({
       <div className="flex items-center gap-2 mb-3">
         <span className="text-xs text-text-secondary w-8">횟수</span>
         <button
-          onClick={() => { commitReps(); onUpdate({ reps: Math.max(0, (set.reps || 0) - 1) }); }}
+          onClick={() => nudgeReps(-1)}
+          aria-label="횟수 줄이기"
           className="w-12 h-12 rounded-xl bg-surface text-xl text-text-secondary active:bg-border shrink-0"
         >−</button>
         <div className="relative flex-1">
@@ -226,7 +245,8 @@ export default function SetRow({
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-secondary">회</span>
         </div>
         <button
-          onClick={() => { commitReps(); onUpdate({ reps: Math.min(999, (set.reps || 0) + 1) }); }}
+          onClick={() => nudgeReps(1)}
+          aria-label="횟수 늘리기"
           className="w-12 h-12 rounded-xl bg-surface text-xl text-text-secondary active:bg-border shrink-0"
         >+</button>
       </div>

@@ -92,19 +92,22 @@ export default function RoutineEditor({ routine, onSave, onClose }: Props) {
                       <span className="font-medium text-sm">{info?.name || '...'}</span>
                       <span className="text-xs text-text-secondary ml-2">{info?.muscleGroup}</span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
                       <button
                         onClick={() => updateSets(se.exerciseId, se.sets - 1)}
-                        className="w-7 h-7 bg-border rounded text-sm"
-                      >-</button>
-                      <span className="text-sm w-8 text-center">{se.sets}세트</span>
+                        aria-label="세트 줄이기"
+                        className="w-11 h-11 bg-border rounded-lg text-lg active:bg-surface"
+                      >−</button>
+                      <span className="text-sm w-10 text-center">{se.sets}세트</span>
                       <button
                         onClick={() => updateSets(se.exerciseId, se.sets + 1)}
-                        className="w-7 h-7 bg-border rounded text-sm"
+                        aria-label="세트 늘리기"
+                        className="w-11 h-11 bg-border rounded-lg text-lg active:bg-surface"
                       >+</button>
                       <button
                         onClick={() => removeExercise(se.exerciseId)}
-                        className="text-danger text-xs ml-2"
+                        aria-label="종목 삭제"
+                        className="w-11 h-11 flex items-center justify-center text-danger text-base active:bg-danger/10 rounded-lg"
                       >✕</button>
                     </div>
                   </div>
