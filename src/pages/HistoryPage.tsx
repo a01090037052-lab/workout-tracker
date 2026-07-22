@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { formatDateKr } from '../hooks/useLocalDate';
 import { recalculatePRs } from '../hooks/useRecalculatePR';
+import ExercisePicker from '../components/workout/ExercisePicker';
 import type { WorkoutSession, WorkoutExercise } from '../types';
 
 function formatDuration(seconds: number) {
@@ -59,6 +60,7 @@ function SessionDetail({ session: initialSession, onClose }: { session: WorkoutS
   const [isEditing, setIsEditing] = useState(false);
   const [editExercises, setEditExercises] = useState<WorkoutExercise[]>(initialSession.exercises);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
   const [toast, setToast] = useState('');
 
   const exercises = useLiveQuery(async () => {
@@ -126,6 +128,20 @@ function SessionDetail({ session: initialSession, onClose }: { session: WorkoutS
     setEditExercises((prev) => prev.filter((_, i) => i !== exIdx));
   };
 
+  const addExercise = (exerciseId: number) => {
+    setShowPicker(false);
+    setEditExercises((prev) => {
+      if (prev.some((e) => e.exerciseId === exerciseId)) return prev; // 중복 방지
+      // 과거 기록이므로 완료된 세트 1개로 시작 (사용자가 무게·횟수 입력).
+      // reps가 0이면 저장 시 필터로 제거되므로 사용자가 값을 채워야 남는다.
+      return [...prev, {
+        exerciseId,
+        order: prev.length,
+        sets: [{ setNumber: 1, weight: 0, reps: 0, setType: 'normal', isCompleted: true, isPR: false }],
+      }];
+    });
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center">
       <div className="bg-surface w-full max-w-[430px] rounded-t-2xl max-h-[85dvh] flex flex-col">
@@ -170,10 +186,16 @@ function SessionDetail({ session: initialSession, onClose }: { session: WorkoutS
                 updateSetField={updateSetField} removeSet={removeSet} />
               {isEditing && (
                 <button onClick={() => addSet(exIdx)}
-                  className="w-full mt-1 py-2 text-xs text-primary-light hover:bg-primary/10 rounded-lg">+ 세트 추가</button>
+                  className="w-full mt-1 py-2 text-xs text-primary-light active:bg-primary/10 rounded-lg">+ 세트 추가</button>
               )}
             </div>
           ))}
+          {isEditing && (
+            <button onClick={() => setShowPicker(true)}
+              className="w-full py-3 border-2 border-dashed border-border rounded-xl text-sm text-text-secondary active:border-primary active:text-primary">
+              + 운동 추가
+            </button>
+          )}
         </div>
 
         {/* 하단 버튼 */}
@@ -201,6 +223,10 @@ function SessionDetail({ session: initialSession, onClose }: { session: WorkoutS
           </div>
         )}
       </div>
+
+      {showPicker && (
+        <ExercisePicker onSelect={addExercise} onClose={() => setShowPicker(false)} />
+      )}
     </div>
   );
 }

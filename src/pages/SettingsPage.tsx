@@ -2,13 +2,14 @@ import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { storage } from '../lib/storage';
-import type { MuscleGroup, EquipmentType } from '../types';
+import type { MuscleGroup, EquipmentType, Exercise } from '../types';
 
 const muscleGroups: MuscleGroup[] = ['가슴', '등', '어깨', '이두', '삼두', '하체', '코어'];
 const equipmentTypes: EquipmentType[] = ['바벨', '덤벨', '머신', '케이블', '맨몸'];
 
 export default function SettingsPage() {
   const [showAddExercise, setShowAddExercise] = useState(false);
+  const [editingExercise, setEditingExercise] = useState<Exercise | null>(null);
   const [toast, setToast] = useState('');
 
   const showToast = (msg: string) => {
@@ -240,18 +241,22 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      {/* 커스텀 운동 추가 */}
+      {/* 커스텀 운동 관리 */}
       <section className="bg-surface rounded-xl p-4 mb-4">
         <div className="flex justify-between items-center mb-3">
           <h2 className="font-semibold">운동 종목 관리</h2>
           <button
             onClick={() => setShowAddExercise(true)}
-            className="px-3 py-1.5 bg-primary text-white rounded-lg text-sm"
+            className="px-3 h-10 bg-primary text-white rounded-lg text-sm active:scale-95"
           >
             + 추가
           </button>
         </div>
-        <p className="text-sm text-text-secondary">기본 {exerciseCount ?? 0}개 종목이 등록되어 있습니다</p>
+        <CustomExerciseList
+          onEdit={(ex) => setEditingExercise(ex)}
+          onDeleted={(name) => showToast(`'${name}' 삭제됨`)}
+        />
+        <p className="text-xs text-text-secondary mt-2">전체 {exerciseCount ?? 0}개 종목 (기본 종목은 수정·삭제할 수 없어요)</p>
       </section>
 
       {/* 부상 이력 관리 */}
@@ -289,11 +294,18 @@ export default function SettingsPage() {
         <p className="text-xs text-text-secondary mt-1">데이터는 기기에 로컬로 저장됩니다</p>
       </section>
 
-      {/* 커스텀 운동 추가 모달 */}
+      {/* 커스텀 운동 추가/수정 모달 */}
       {showAddExercise && (
         <AddExerciseModal
           onClose={() => setShowAddExercise(false)}
           onSaved={() => { setShowAddExercise(false); showToast('운동이 추가되었습니다'); }}
+        />
+      )}
+      {editingExercise && (
+        <AddExerciseModal
+          editExercise={editingExercise}
+          onClose={() => setEditingExercise(null)}
+          onSaved={() => { setEditingExercise(null); showToast('운동이 수정되었습니다'); }}
         />
       )}
 
@@ -323,23 +335,102 @@ export default function SettingsPage() {
   );
 }
 
-// 커스텀 운동 추가 모달
-function AddExerciseModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
-  const [name, setName] = useState('');
-  const [muscleGroup, setMuscleGroup] = useState<MuscleGroup>('가슴');
-  const [equipmentType, setEquipmentType] = useState<EquipmentType>('바벨');
-  const [description, setDescription] = useState('');
+// 커스텀 운동 목록 (수정·삭제). 기본 종목은 재설치로 복구되므로 관리 대상에서 제외.
+function CustomExerciseList({ onEdit, onDeleted }: { onEdit: (ex: Exercise) => void; onDeleted: (name: string) => void }) {
+  const [confirmId, setConfirmId] = useState<number | null>(null);
+  const [usageMsg, setUsageMsg] = useState('');
+
+  // isCustom은 boolean이라 인덱스 조회 불가 → toArray 후 필터
+  const customExercises = useLiveQuery(async () => {
+    try {
+      const all = await db.exercises.toArray();
+      return all.filter((e) => e.isCustom === true);
+    } catch {
+      return [];
+    }
+  }, []);
+
+  // 삭제 전 이 종목이 과거 기록에서 쓰였는지 확인
+  const startDelete = async (ex: Exercise) => {
+    if (ex.id === undefined) return;
+    let count = 0;
+    try {
+      const sessions = await db.sessions.toArray();
+      count = sessions.filter((s) => s.exercises.some((e) => e.exerciseId === ex.id)).length;
+    } catch { /* best-effort */ }
+    setUsageMsg(count > 0
+      ? `'${ex.name}'은(는) ${count}개 기록에서 사용 중이에요. 삭제하면 그 기록에서 '알 수 없는 운동'으로 표시됩니다.`
+      : `'${ex.name}'을(를) 삭제할까요?`);
+    setConfirmId(ex.id);
+  };
+
+  const confirmDelete = async (ex: Exercise) => {
+    if (ex.id === undefined) return;
+    await db.exercises.delete(ex.id);
+    setConfirmId(null);
+    onDeleted(ex.name);
+  };
+
+  if (!customExercises) return <p className="text-sm text-text-secondary">불러오는 중…</p>;
+  if (customExercises.length === 0) {
+    return <p className="text-sm text-text-secondary">직접 추가한 종목이 여기에 표시됩니다. 기본 종목은 수정·삭제할 수 없어요.</p>;
+  }
+
+  return (
+    <div className="space-y-2">
+      {customExercises.map((ex) => (
+        <div key={ex.id} className="bg-surface-light rounded-lg p-2">
+          <div className="flex items-center justify-between">
+            <div className="min-w-0">
+              <span className="text-sm font-medium">{ex.name}</span>
+              <span className="text-xs text-text-secondary ml-2">{ex.muscleGroup} · {ex.equipmentType}</span>
+            </div>
+            <div className="flex gap-1 shrink-0">
+              <button onClick={() => onEdit(ex)} aria-label="수정"
+                className="min-w-11 h-10 px-3 flex items-center justify-center text-sm text-text-secondary active:text-primary active:bg-surface rounded-lg">수정</button>
+              <button onClick={() => startDelete(ex)} aria-label="삭제"
+                className="min-w-11 h-10 px-3 flex items-center justify-center text-sm text-text-secondary active:text-danger active:bg-danger/10 rounded-lg">삭제</button>
+            </div>
+          </div>
+          {confirmId === ex.id && (
+            <div className="mt-2 pt-2 border-t border-border">
+              <p className="text-xs text-danger mb-2">{usageMsg}</p>
+              <div className="flex gap-2">
+                <button onClick={() => setConfirmId(null)} className="flex-1 h-10 bg-surface rounded-lg text-sm">취소</button>
+                <button onClick={() => confirmDelete(ex)} className="flex-1 h-10 bg-danger text-white rounded-lg text-sm font-semibold">삭제</button>
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// 커스텀 운동 추가/수정 모달 (editExercise가 있으면 수정 모드)
+function AddExerciseModal({ onClose, onSaved, editExercise }: { onClose: () => void; onSaved: () => void; editExercise?: Exercise }) {
+  const isEdit = !!editExercise;
+  const [name, setName] = useState(editExercise?.name ?? '');
+  const [muscleGroup, setMuscleGroup] = useState<MuscleGroup>(editExercise?.muscleGroup ?? '가슴');
+  const [equipmentType, setEquipmentType] = useState<EquipmentType>(editExercise?.equipmentType ?? '바벨');
+  const [description, setDescription] = useState(editExercise?.description ?? '');
 
   const handleSave = async () => {
     if (!name.trim()) return;
-    await db.exercises.add({
-      name: name.trim(),
-      muscleGroup,
-      secondaryMuscle: [],
-      equipmentType,
-      description,
-      isCustom: true,
-    });
+    if (isEdit && editExercise?.id !== undefined) {
+      await db.exercises.update(editExercise.id, {
+        name: name.trim(), muscleGroup, equipmentType, description,
+      });
+    } else {
+      await db.exercises.add({
+        name: name.trim(),
+        muscleGroup,
+        secondaryMuscle: [],
+        equipmentType,
+        description,
+        isCustom: true,
+      });
+    }
     onSaved();
   };
 
@@ -347,8 +438,8 @@ function AddExerciseModal({ onClose, onSaved }: { onClose: () => void; onSaved: 
     <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center">
       <div className="bg-surface w-full max-w-[430px] rounded-t-2xl p-4">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-bold">커스텀 운동 추가</h3>
-          <button onClick={onClose} className="text-text-secondary text-2xl leading-none">&times;</button>
+          <h3 className="text-lg font-bold">{isEdit ? '운동 수정' : '커스텀 운동 추가'}</h3>
+          <button onClick={onClose} aria-label="닫기" className="text-text-secondary text-2xl leading-none w-11 h-11 flex items-center justify-center -mr-2">&times;</button>
         </div>
 
         <div className="space-y-3">
@@ -412,9 +503,9 @@ function AddExerciseModal({ onClose, onSaved }: { onClose: () => void; onSaved: 
         <button
           onClick={handleSave}
           disabled={!name.trim()}
-          className="w-full mt-4 py-3 bg-primary hover:bg-primary-dark disabled:opacity-40 text-white rounded-xl font-semibold transition-colors"
+          className="w-full mt-4 py-3 bg-primary active:bg-primary-dark disabled:opacity-40 text-white rounded-xl font-semibold transition-colors"
         >
-          운동 추가
+          {isEdit ? '저장' : '운동 추가'}
         </button>
       </div>
     </div>
