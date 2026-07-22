@@ -48,6 +48,15 @@ export default function ExerciseCard({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showWarmup, setShowWarmup] = useState(false);
 
+  // 아코디언: 한 번에 한 세트만 펼쳐서 편집. 항상 한 세트만 다루는 실제 패턴과 일치.
+  // 초기값 = 첫 미완료 세트 (없으면 마지막 세트)
+  const firstIncomplete = exercise.sets.findIndex((s) => !s.isCompleted);
+  const [activeSetIndex, setActiveSetIndex] = useState<number>(
+    firstIncomplete >= 0 ? firstIncomplete : Math.max(0, exercise.sets.length - 1)
+  );
+  // 세트 삭제로 인덱스가 범위를 벗어날 수 있으므로 렌더 시점에 클램프 (effect 불필요)
+  const activeIndex = Math.min(activeSetIndex, Math.max(0, exercise.sets.length - 1));
+
   // useLiveQuery는 rejection을 렌더 중 throw하므로 각 쿼리를 개별 격리.
   // (백그라운드 전환으로 IndexedDB 연결이 끊겨도 카드 하나만 비어 보이고 앱은 살아있음)
   const exerciseInfo = useLiveQuery(
@@ -78,9 +87,15 @@ export default function ExerciseCard({
 
   const handleComplete = (setIndex: number) => {
     const set = exercise.sets[setIndex];
+    const wasCompleted = set.isCompleted;
     const canComplete = isBodyweight ? set.reps > 0 : (set.weight > 0 && set.reps > 0);
-    if (!set.isCompleted && canComplete) onSetCompleted?.();
+    if (!wasCompleted && canComplete) onSetCompleted?.();
     onCompleteSet(setIndex, isBodyweight);
+    // 완료 처리(토글 아님)면 다음 미완료 세트로 자동 이동
+    if (!wasCompleted && canComplete) {
+      const next = exercise.sets.findIndex((s, i) => i > setIndex && !s.isCompleted);
+      if (next >= 0) setActiveSetIndex(next);
+    }
   };
 
   // 워밍업 제안 조건: 바벨 운동이고, 첫 세트에 무게가 입력된 경우
@@ -147,18 +162,6 @@ export default function ExerciseCard({
         />
       )}
 
-      {/* 헤더 라벨 */}
-      <div className="flex items-center gap-1.5 px-3 mb-1 text-[10px] text-text-secondary uppercase tracking-wider font-medium">
-        <span className="w-8 text-center">세트</span>
-        {!isBodyweight ? (
-          <span className="flex-1 min-w-[80px] text-center">무게</span>
-        ) : (
-          <span className="flex-1 min-w-[60px] text-center">+무게</span>
-        )}
-        <span className="flex-1 min-w-[70px] text-center">횟수</span>
-        <span className="w-11"></span>
-      </div>
-
       {/* 세트 목록 */}
       {exercise.sets.map((set, i) => (
         <SetRow
@@ -173,6 +176,8 @@ export default function ExerciseCard({
           isBodyweight={isBodyweight}
           equipmentType={exerciseInfo.equipmentType}
           isCompound={isCompound}
+          isExpanded={i === activeIndex}
+          onActivate={() => setActiveSetIndex(i)}
           onUpdate={(updates) => onUpdateSet(i, updates)}
           onComplete={() => handleComplete(i)}
           onRemove={() => onRemoveSet(i)}

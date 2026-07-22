@@ -1,7 +1,7 @@
-const CACHE_NAME = 'workout-tracker-v18';
+const CACHE_NAME = 'workout-tracker-v19';
 // 직전 버전 캐시는 지우지 않는다. 배포 순간 열려 있던 탭이 참조하는 해시 자산이
 // 서버에서도 캐시에서도 사라지면 그 탭은 확정 크래시하기 때문.
-const KEEP_CACHES = [CACHE_NAME, 'workout-tracker-v17'];
+const KEEP_CACHES = [CACHE_NAME, 'workout-tracker-v18'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
