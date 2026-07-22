@@ -194,7 +194,7 @@ export default function ProgramPage() {
     const allFilled = selectedProgram.exercises.some((ex) => (progress.oneRepMaxes[ex] || 0) > 0);
     return (
       <div className="p-4">
-        <button onClick={() => { setSelectedProgram(null); setSetupMode(false); }} className="text-text-secondary text-sm mb-4">
+        <button onClick={() => { setSelectedProgram(null); setSetupMode(false); }} className="-ml-2 px-2 h-11 flex items-center text-text-secondary text-sm active:text-text active:bg-surface-light rounded-lg mb-2">
           ← 프로그램 선택
         </button>
         <h1 className="text-2xl font-bold mb-1">{selectedProgram.name}</h1>
@@ -277,7 +277,7 @@ export default function ProgramPage() {
   return (
     <div className="p-4">
       <div className="flex items-center gap-2 mb-4">
-        <button onClick={handleResetProgram} className="text-text-secondary text-sm">← 프로그램 선택</button>
+        <button onClick={handleResetProgram} className="-ml-2 px-2 h-11 flex items-center text-text-secondary text-sm active:text-text active:bg-surface-light rounded-lg">← 프로그램 선택</button>
       </div>
 
       <div className="flex justify-between items-center mb-3">

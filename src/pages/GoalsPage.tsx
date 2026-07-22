@@ -16,7 +16,7 @@ export default function GoalsPage() {
   return (
     <div className="p-4 pb-20">
       <div className="flex justify-between items-center mb-4">
-        <button onClick={() => navigate(-1)} className="text-text-secondary text-sm">← 뒤로</button>
+        <button onClick={() => navigate(-1)} aria-label="뒤로" className="-ml-2 px-2 h-11 flex items-center text-text-secondary text-sm active:text-text active:bg-surface-light rounded-lg">← 뒤로</button>
         <h1 className="text-xl font-bold">목표</h1>
         <div className="w-10" />
       </div>

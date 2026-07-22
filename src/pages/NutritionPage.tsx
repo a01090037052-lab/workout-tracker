@@ -826,7 +826,7 @@ function AddMealModal({ onAdd, onAddMany, onClose }: { onAdd: (entry: MacroEntry
           <>
             <button
               onClick={() => { setMode('search'); setSelectedFood(null); }}
-              className="text-xs text-primary-light mb-2"
+              className="-ml-2 px-2 h-11 flex items-center text-xs text-primary-light mb-1 active:bg-surface-light rounded-lg"
             >← 다른 음식 선택</button>
             <div className="bg-surface-light rounded-lg p-3 mb-3">
               <div className="font-semibold mb-1">{selectedFood.name}</div>
@@ -2152,7 +2152,7 @@ function NewFoodForm({ onSaved, onCancel }: { onSaved: (food: Food) => void; onC
 
   return (
     <>
-      <button onClick={onCancel} className="text-xs text-primary-light mb-3">← 검색으로 돌아가기</button>
+      <button onClick={onCancel} className="-ml-2 px-2 h-11 flex items-center text-xs text-primary-light mb-2 active:bg-surface-light rounded-lg">← 검색으로 돌아가기</button>
 
       <div className="space-y-3">
         <div>
