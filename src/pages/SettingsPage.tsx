@@ -339,6 +339,7 @@ export default function SettingsPage() {
 function CustomExerciseList({ onEdit, onDeleted }: { onEdit: (ex: Exercise) => void; onDeleted: (name: string) => void }) {
   const [confirmId, setConfirmId] = useState<number | null>(null);
   const [usageMsg, setUsageMsg] = useState('');
+  const [expanded, setExpanded] = useState(false);
 
   // isCustom은 boolean이라 인덱스 조회 불가 → toArray 후 필터
   const customExercises = useLiveQuery(async () => {
@@ -377,7 +378,19 @@ function CustomExerciseList({ onEdit, onDeleted }: { onEdit: (ex: Exercise) => v
   }
 
   return (
-    <div className="space-y-2">
+    <div>
+      {/* 접기/펴기 토글 (기본 접힘) */}
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        aria-expanded={expanded}
+        className="w-full flex items-center justify-between h-11 px-1 text-sm active:bg-surface-light rounded-lg"
+      >
+        <span className="font-medium">내 커스텀 종목 {customExercises.length}개</span>
+        <span className={`text-text-secondary text-lg transition-transform ${expanded ? 'rotate-90' : ''}`}>›</span>
+      </button>
+
+      {expanded && (
+    <div className="space-y-2 mt-2">
       {customExercises.map((ex) => (
         <div key={ex.id} className="bg-surface-light rounded-lg p-2">
           <div className="flex items-center justify-between">
@@ -403,6 +416,8 @@ function CustomExerciseList({ onEdit, onDeleted }: { onEdit: (ex: Exercise) => v
           )}
         </div>
       ))}
+    </div>
+      )}
     </div>
   );
 }
