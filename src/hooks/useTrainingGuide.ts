@@ -1,4 +1,5 @@
 import type { TrainingGoal, WorkoutSet } from '../types';
+import { storage } from '../lib/storage';
 
 export interface TrainingZone {
   zone: 'strength' | 'hypertrophy' | 'endurance';
@@ -92,10 +93,18 @@ export function classifyExercise(name: string, secondaryMuscleCount: number = 0)
 
 // === 무게 단위 ===
 // 증량 단위 (다음 운동 또는 도전 시 권장)
-export function getIncrement(equipmentType?: string, isCompound: boolean = true): number {
+// 실제 헬스장에서 세팅 가능한 최소 무게 단위 = 증량 단위.
+// 바벨은 원판을 양쪽에 다는 구조라 1.25kg 마이크로 원판이 없으면 5kg 단위로만 가능
+// (2.5kg 원판 한 쌍 = +5kg). 마이크로 원판이 있으면 2.5kg 단위(1.25kg 한 쌍).
+// isCompound는 이제 로딩 단위에 영향 없음 — 같은 바에 얹으므로 물리적으로 동일.
+function barbellStep(): number {
+  return storage.microPlates.get() ? 2.5 : 5;
+}
+
+export function getIncrement(equipmentType?: string, _isCompound: boolean = true): number {
   switch (equipmentType) {
-    case '바벨': return isCompound ? 2.5 : 1.25;
-    case '덤벨': return 2;       // 한쪽당 +1kg
+    case '바벨': return barbellStep();
+    case '덤벨': return 2.5;   // 덤벨은 보통 2.5kg 단위로 준비돼 있음
     case '머신': return 5;
     case '케이블': return 5;
     case '맨몸': return 0;
@@ -103,15 +112,16 @@ export function getIncrement(equipmentType?: string, isCompound: boolean = true)
   }
 }
 
-// 무게 반올림 단위 (가능한 실제 세팅 무게)
-function getRoundStep(equipmentType?: string, isCompound: boolean = true): number {
+// 무게 반올림 단위 (가능한 실제 세팅 무게). 증량 단위와 동일하게 맞춰
+// 추천값이 항상 실제로 세팅 가능한 무게가 되도록 함.
+function getRoundStep(equipmentType?: string, _isCompound: boolean = true): number {
   switch (equipmentType) {
-    case '바벨': return isCompound ? 2.5 : 1.25;
-    case '덤벨': return 1;
-    case '머신': return 2.5;
-    case '케이블': return 2.5;
+    case '바벨': return barbellStep();
+    case '덤벨': return 2.5;
+    case '머신': return 5;
+    case '케이블': return 5;
     case '맨몸': return 0.5;
-    default: return 0.5;
+    default: return 2.5;
   }
 }
 

@@ -169,6 +169,17 @@ export const storage = {
     },
   },
 
+  microPlates: {
+    // default false: 1.25kg 마이크로 원판 없음 → 바벨은 5kg 단위로만 세팅 가능.
+    // 켜면 바벨 추천/원판 계산이 2.5kg 단위가 됨.
+    get(): boolean {
+      return localStorage.getItem('microPlates') === 'on';
+    },
+    set(enabled: boolean) {
+      writeRaw('microPlates', enabled ? 'on' : 'off');
+    },
+  },
+
   dietPreferences: {
     get(): DietPreferences {
       return readJSON<DietPreferences>('dietPreferences') || { excludedFoodIds: [], simpleMode: false };

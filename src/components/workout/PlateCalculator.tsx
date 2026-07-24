@@ -1,8 +1,7 @@
 import { useState } from 'react';
+import { storage } from '../../lib/storage';
 
 const DEFAULT_BAR = 20;
-const DEFAULT_PLATES = [20, 15, 10, 5, 2.5];
-
 const MAX_WEIGHT = 500;
 
 function calculatePlates(targetWeight: number, barWeight: number, availablePlates: number[]): number[] {
@@ -30,7 +29,9 @@ interface Props {
 export default function PlateCalculator({ onClose }: Props) {
   const [targetWeight, setTargetWeight] = useState(60);
 
-  const plates = calculatePlates(targetWeight, DEFAULT_BAR, DEFAULT_PLATES);
+  // 마이크로 원판(1.25kg) 보유 시에만 목록에 포함 → 설정과 추천 로직이 일치
+  const availablePlates = storage.microPlates.get() ? [20, 15, 10, 5, 2.5, 1.25] : [20, 15, 10, 5, 2.5];
+  const plates = calculatePlates(targetWeight, DEFAULT_BAR, availablePlates);
   const actualWeight = DEFAULT_BAR + plates.reduce((a, b) => a + b, 0) * 2;
 
   return (

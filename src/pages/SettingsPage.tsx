@@ -192,6 +192,15 @@ export default function SettingsPage() {
     showToast(next ? '무게 추천 켜짐' : '무게 추천 꺼짐');
   };
 
+  // 마이크로 원판 (1.25kg) 보유 여부 → 바벨 증량 단위
+  const [microPlates, setMicroPlates] = useState(() => storage.microPlates.get());
+  const toggleMicroPlates = () => {
+    const next = !microPlates;
+    setMicroPlates(next);
+    storage.microPlates.set(next);
+    showToast(next ? '바벨 2.5kg 단위 추천' : '바벨 5kg 단위 추천');
+  };
+
   // 통계
   const sessionCount = useLiveQuery(() => db.sessions.count());
   const exerciseCount = useLiveQuery(() => db.exercises.count());
@@ -230,12 +239,33 @@ export default function SettingsPage() {
           </div>
           <button
             onClick={toggleWeightSuggestion}
-            className={`w-12 h-7 rounded-full transition-colors relative ${
+            aria-label="무게 추천 토글"
+            className={`w-12 h-7 rounded-full transition-colors relative shrink-0 ${
               weightSuggestion ? 'bg-primary' : 'bg-surface-light'
             }`}
           >
             <div className={`w-5 h-5 bg-white rounded-full absolute top-1 transition-all ${
               weightSuggestion ? 'right-1' : 'left-1'
+            }`} />
+          </button>
+        </div>
+
+        <div className="flex justify-between items-center mt-4 pt-4 border-t border-border">
+          <div className="flex-1 pr-3">
+            <div className="text-sm">1.25kg 마이크로 원판 있음</div>
+            <div className="text-xs text-text-secondary">
+              {microPlates ? '바벨을 2.5kg 단위로 추천' : '바벨을 5kg 단위로 추천 (일반 헬스장)'}
+            </div>
+          </div>
+          <button
+            onClick={toggleMicroPlates}
+            aria-label="마이크로 원판 토글"
+            className={`w-12 h-7 rounded-full transition-colors relative shrink-0 ${
+              microPlates ? 'bg-primary' : 'bg-surface-light'
+            }`}
+          >
+            <div className={`w-5 h-5 bg-white rounded-full absolute top-1 transition-all ${
+              microPlates ? 'right-1' : 'left-1'
             }`} />
           </button>
         </div>
