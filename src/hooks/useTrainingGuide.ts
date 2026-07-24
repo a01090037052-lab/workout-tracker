@@ -100,11 +100,15 @@ export function classifyExercise(name: string, secondaryMuscleCount: number = 0)
 function barbellStep(): number {
   return storage.microPlates.get() ? 2.5 : 5;
 }
+// 덤벨은 헬스장마다 2kg 단위(기본) 또는 2.5kg 단위
+function dumbbellStep(): number {
+  return storage.dumbbell25.get() ? 2.5 : 2;
+}
 
 export function getIncrement(equipmentType?: string, _isCompound: boolean = true): number {
   switch (equipmentType) {
     case '바벨': return barbellStep();
-    case '덤벨': return 2.5;   // 덤벨은 보통 2.5kg 단위로 준비돼 있음
+    case '덤벨': return dumbbellStep();
     case '머신': return 5;
     case '케이블': return 5;
     case '맨몸': return 0;
@@ -117,7 +121,7 @@ export function getIncrement(equipmentType?: string, _isCompound: boolean = true
 function getRoundStep(equipmentType?: string, _isCompound: boolean = true): number {
   switch (equipmentType) {
     case '바벨': return barbellStep();
-    case '덤벨': return 2.5;
+    case '덤벨': return dumbbellStep();
     case '머신': return 5;
     case '케이블': return 5;
     case '맨몸': return 0.5;

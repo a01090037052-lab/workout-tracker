@@ -180,6 +180,16 @@ export const storage = {
     },
   },
 
+  dumbbell25: {
+    // default false: 덤벨이 2kg 단위(2,4,6…). 켜면 2.5kg 단위(2.5,5,7.5…).
+    get(): boolean {
+      return localStorage.getItem('dumbbell25') === 'on';
+    },
+    set(enabled: boolean) {
+      writeRaw('dumbbell25', enabled ? 'on' : 'off');
+    },
+  },
+
   dietPreferences: {
     get(): DietPreferences {
       return readJSON<DietPreferences>('dietPreferences') || { excludedFoodIds: [], simpleMode: false };

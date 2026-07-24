@@ -201,6 +201,15 @@ export default function SettingsPage() {
     showToast(next ? '바벨 2.5kg 단위 추천' : '바벨 5kg 단위 추천');
   };
 
+  // 덤벨 증량 단위 (2kg 기본 / 2.5kg)
+  const [dumbbell25, setDumbbell25] = useState(() => storage.dumbbell25.get());
+  const toggleDumbbell25 = () => {
+    const next = !dumbbell25;
+    setDumbbell25(next);
+    storage.dumbbell25.set(next);
+    showToast(next ? '덤벨 2.5kg 단위 추천' : '덤벨 2kg 단위 추천');
+  };
+
   // 통계
   const sessionCount = useLiveQuery(() => db.sessions.count());
   const exerciseCount = useLiveQuery(() => db.exercises.count());
@@ -266,6 +275,26 @@ export default function SettingsPage() {
           >
             <div className={`w-5 h-5 bg-white rounded-full absolute top-1 transition-all ${
               microPlates ? 'right-1' : 'left-1'
+            }`} />
+          </button>
+        </div>
+
+        <div className="flex justify-between items-center mt-4 pt-4 border-t border-border">
+          <div className="flex-1 pr-3">
+            <div className="text-sm">덤벨 2.5kg 단위</div>
+            <div className="text-xs text-text-secondary">
+              {dumbbell25 ? '덤벨을 2.5kg 단위로 추천' : '덤벨을 2kg 단위로 추천 (기본)'}
+            </div>
+          </div>
+          <button
+            onClick={toggleDumbbell25}
+            aria-label="덤벨 단위 토글"
+            className={`w-12 h-7 rounded-full transition-colors relative shrink-0 ${
+              dumbbell25 ? 'bg-primary' : 'bg-surface-light'
+            }`}
+          >
+            <div className={`w-5 h-5 bg-white rounded-full absolute top-1 transition-all ${
+              dumbbell25 ? 'right-1' : 'left-1'
             }`} />
           </button>
         </div>
