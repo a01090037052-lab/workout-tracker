@@ -38,14 +38,17 @@ export default function SetRow({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const repsInputRef = useRef<HTMLInputElement>(null);
   const rowRef = useRef<HTMLDivElement>(null);
+  const mountedRef = useRef(false);
 
   // 입력 중에는 문자열 버퍼를 유지하고, 확정(blur) 시점에만 숫자로 반영.
   // type="number" + Number()는 "62." 상태에서 빈 문자열을 반환해 소수점 입력이 불가능했음.
   const [weightDraft, setWeightDraft] = useState<string | null>(null);
   const [repsDraft, setRepsDraft] = useState<string | null>(null);
 
-  // 활성 세트가 화면 밖이면 안으로. block:'nearest'라 이미 보이면 스크롤 안 함.
+  // 완료로 다음 세트가 활성화될 때만 스크롤. 첫 마운트(페이지 진입)에는 스크롤하지 않아
+  // 여러 종목이 있을 때 마지막 종목으로 화면이 튀는 것을 방지.
   useEffect(() => {
+    if (!mountedRef.current) { mountedRef.current = true; return; }
     if (isActive) rowRef.current?.scrollIntoView({ block: 'nearest' });
   }, [isActive]);
 
@@ -73,7 +76,12 @@ export default function SetRow({
     e.preventDefault();
     commitReps();
     e.currentTarget.blur();
-    if (!set.isCompleted && canComplete) onComplete();
+    // canComplete는 렌더 시점 prop(set) 기준이라, 방금 타이핑한 값이 아직 반영 안 됨.
+    // 완료 여부는 미확정 draft 값으로 즉석 판단해야 첫 Enter에 바로 완료된다.
+    const reps = repsDraft !== null ? Math.floor(Number(repsDraft) || 0) : set.reps;
+    const weight = weightDraft !== null ? (Number(weightDraft) || 0) : set.weight;
+    const ok = isBodyweight ? reps > 0 : (weight > 0 && reps > 0);
+    if (!set.isCompleted && ok) onComplete();
   };
 
   const handleComplete = () => {

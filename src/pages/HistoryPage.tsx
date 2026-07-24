@@ -80,14 +80,18 @@ function SessionDetail({ session: initialSession, onClose }: { session: WorkoutS
     if (!initialSession.id) return;
     const validExercises = editExercises
       .map((ex) => ({ ...ex, sets: ex.sets.filter((s) => s.isCompleted && s.reps > 0) }))
-      .filter((ex) => ex.sets.length > 0);
+      .filter((ex) => ex.sets.length > 0)
+      .map((ex, i) => ({ ...ex, order: i })); // 삭제/추가 후 order 재정렬 (중복 방지)
+
+    const dropped = editExercises.length - validExercises.length;
 
     await db.sessions.update(initialSession.id, { exercises: validExercises });
     const exerciseIds = validExercises.map((e) => e.exerciseId);
     await recalculatePRs(exerciseIds);
     setIsEditing(false);
-    setToast('저장 완료');
-    setTimeout(() => setToast(''), 2000);
+    // 횟수를 입력하지 않은 종목은 저장에서 빠지므로 그 사실을 알림
+    setToast(dropped > 0 ? '저장됨 · 횟수 없는 종목은 제외' : '저장 완료');
+    setTimeout(() => setToast(''), 2500);
   };
 
   const handleDelete = async () => {
@@ -130,16 +134,18 @@ function SessionDetail({ session: initialSession, onClose }: { session: WorkoutS
 
   const addExercise = (exerciseId: number) => {
     setShowPicker(false);
-    setEditExercises((prev) => {
-      if (prev.some((e) => e.exerciseId === exerciseId)) return prev; // 중복 방지
-      // 과거 기록이므로 완료된 세트 1개로 시작 (사용자가 무게·횟수 입력).
-      // reps가 0이면 저장 시 필터로 제거되므로 사용자가 값을 채워야 남는다.
-      return [...prev, {
-        exerciseId,
-        order: prev.length,
-        sets: [{ setNumber: 1, weight: 0, reps: 0, setType: 'normal', isCompleted: true, isPR: false }],
-      }];
-    });
+    if (editExercises.some((e) => e.exerciseId === exerciseId)) {
+      setToast('이미 추가된 종목이에요');
+      setTimeout(() => setToast(''), 2000);
+      return;
+    }
+    // 과거 기록이므로 완료된 세트 1개로 시작 (사용자가 무게·횟수 입력).
+    // reps가 0이면 저장 시 필터로 제거되므로 사용자가 값을 채워야 남는다.
+    setEditExercises((prev) => [...prev, {
+      exerciseId,
+      order: prev.length,
+      sets: [{ setNumber: 1, weight: 0, reps: 0, setType: 'normal', isCompleted: true, isPR: false }],
+    }]);
   };
 
   return (

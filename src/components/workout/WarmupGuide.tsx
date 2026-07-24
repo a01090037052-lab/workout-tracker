@@ -1,3 +1,5 @@
+import { storage } from '../../lib/storage';
+
 interface Props {
   mainWeight: number;
   onApply: (sets: { weight: number; reps: number }[]) => void;
@@ -8,19 +10,22 @@ function generateWarmupSets(mainWeight: number): { weight: number; reps: number 
   if (mainWeight <= 20) return [];
 
   const bar = 20;
+  // 실제로 세팅 가능한 무게로 반올림 (마이크로 원판 없으면 5kg, 있으면 2.5kg)
+  const step = storage.microPlates.get() ? 2.5 : 5;
+  const round = (w: number) => Math.round(w / step) * step;
   const sets: { weight: number; reps: number }[] = [];
 
   // 빈 바
   sets.push({ weight: bar, reps: 10 });
 
   // 50% 정도
-  const mid = Math.round(mainWeight * 0.5 / 2.5) * 2.5;
+  const mid = round(mainWeight * 0.5);
   if (mid > bar) {
     sets.push({ weight: mid, reps: 8 });
   }
 
   // 75% 정도
-  const high = Math.round(mainWeight * 0.75 / 2.5) * 2.5;
+  const high = round(mainWeight * 0.75);
   if (high > mid && high < mainWeight) {
     sets.push({ weight: high, reps: 5 });
   }
