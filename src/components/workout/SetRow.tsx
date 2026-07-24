@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { WorkoutSet, TrainingGoal, Condition } from '../../types';
-import { getTrainingZone, checkGoalMismatch, suggestForSet, getIncrement } from '../../hooks/useTrainingGuide';
+import { getTrainingZone, checkGoalMismatch, suggestForSet } from '../../hooks/useTrainingGuide';
 import { storage } from '../../lib/storage';
 
 interface Props {
@@ -14,6 +14,7 @@ interface Props {
   isBodyweight?: boolean;
   equipmentType?: string;
   isCompound?: boolean;
+  /** 현재 편집 중인(활성) 세트인지 — 강조 테두리 + 칩/타입/삭제 보조줄 표시 */
   isExpanded?: boolean;
   onActivate?: () => void;
   onUpdate: (updates: Partial<WorkoutSet>) => void;
@@ -32,37 +33,21 @@ function sanitizeInt(v: string): string {
 export default function SetRow({
   set, setIndex, currentSets, previousSessionSets,
   estimated1RM, trainingGoal, condition, isBodyweight, equipmentType, isCompound,
-  isExpanded, onActivate, onUpdate, onComplete, onRemove,
+  isExpanded: isActive, onActivate, onUpdate, onComplete, onRemove,
 }: Props) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const repsInputRef = useRef<HTMLInputElement>(null);
   const rowRef = useRef<HTMLDivElement>(null);
 
-  // 입력 중에는 문자열 버퍼를 그대로 두고, 확정(blur) 시점에만 숫자로 반영.
+  // 입력 중에는 문자열 버퍼를 유지하고, 확정(blur) 시점에만 숫자로 반영.
   // type="number" + Number()는 "62." 상태에서 빈 문자열을 반환해 소수점 입력이 불가능했음.
   const [weightDraft, setWeightDraft] = useState<string | null>(null);
   const [repsDraft, setRepsDraft] = useState<string | null>(null);
 
-  // 이 세트가 펼쳐지면 화면 안으로. block:'nearest'라 이미 보이면 스크롤하지 않아 덜 튄다.
+  // 활성 세트가 화면 밖이면 안으로. block:'nearest'라 이미 보이면 스크롤 안 함.
   useEffect(() => {
-    if (isExpanded) rowRef.current?.scrollIntoView({ block: 'nearest' });
-  }, [isExpanded]);
-
-  const handleWeightEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key !== 'Enter') return;
-    e.preventDefault();
-    commitWeight();
-    repsInputRef.current?.focus();
-  };
-  const handleRepsEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key !== 'Enter') return;
-    e.preventDefault();
-    commitReps();
-    e.currentTarget.blur();
-    if (set.isCompleted) return;
-    const canComplete = isBodyweight ? set.reps > 0 : (set.weight > 0 && set.reps > 0);
-    if (canComplete) onComplete();
-  };
+    if (isActive) rowRef.current?.scrollIntoView({ block: 'nearest' });
+  }, [isActive]);
 
   const commitWeight = () => {
     if (weightDraft === null) return;
@@ -75,17 +60,26 @@ export default function SetRow({
     setRepsDraft(null);
   };
 
-  // ± 버튼은 방금 타이핑한(아직 미확정) 값을 기준으로 증감해야 한다.
-  // set.weight(직전 렌더의 prop)를 쓰면 타이핑한 값이 버려진다.
-  const nudgeWeight = (delta: number) => {
-    const base = weightDraft !== null ? (Number(weightDraft) || 0) : (set.weight || 0);
-    setWeightDraft(null);
-    onUpdate({ weight: Math.max(0, Math.min(999, base + delta)) });
+  const canComplete = isBodyweight ? set.reps > 0 : (set.weight > 0 && set.reps > 0);
+
+  const handleWeightEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    commitWeight();
+    repsInputRef.current?.focus();
   };
-  const nudgeReps = (delta: number) => {
-    const base = repsDraft !== null ? (Math.floor(Number(repsDraft)) || 0) : (set.reps || 0);
-    setRepsDraft(null);
-    onUpdate({ reps: Math.max(0, Math.min(999, base + delta)) });
+  const handleRepsEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    commitReps();
+    e.currentTarget.blur();
+    if (!set.isCompleted && canComplete) onComplete();
+  };
+
+  const handleComplete = () => {
+    commitWeight();
+    commitReps();
+    onComplete();
   };
 
   const zone = set.isCompleted && estimated1RM
@@ -100,197 +94,156 @@ export default function SetRow({
   const hasSuggestion = suggestion && suggestion.weight > 0;
   const previousSet = previousSessionSets?.[setIndex];
 
-  const incFromGuide = getIncrement(equipmentType, isCompound);
-  const weightStep = incFromGuide > 0 ? incFromGuide : 1;
-
-  const typeBadge = set.setType === 'warmup' ? 'W' : set.setType === 'dropset' ? 'D' : `${set.setNumber}`;
-  const typeBadgeClass =
-    set.setType === 'warmup' ? 'bg-yellow-500/20 text-yellow-400'
-    : set.setType === 'dropset' ? 'bg-purple-500/20 text-purple-400'
-    : set.isCompleted ? 'bg-primary/20 text-primary-light' : 'bg-surface-light text-text-secondary';
-
   const weightValue = weightDraft !== null ? weightDraft : (set.weight ? String(set.weight) : '');
   const repsValue = repsDraft !== null ? repsDraft : (set.reps ? String(set.reps) : '');
 
-  // ── 접힌 세트: 한 줄 요약. 탭하면 펼쳐진다 ─────────────────────
-  if (!isExpanded) {
-    const summary = set.isCompleted || set.weight || set.reps
-      ? (isBodyweight ? `${set.reps || 0}회` : `${set.weight || 0}kg × ${set.reps || 0}`)
-      : '미입력';
-    return (
-      <button
-        ref={rowRef as never}
-        onClick={onActivate}
-        className={`w-full flex items-center gap-2.5 py-2.5 px-3 mb-1.5 rounded-xl text-left transition-colors ${
-          set.isCompleted ? 'bg-primary/5' : 'bg-surface-light/30 active:bg-surface-light/60'
-        }`}
-      >
-        <span className={`text-[11px] w-7 h-7 flex items-center justify-center font-mono font-bold rounded ${typeBadgeClass}`}>
-          {typeBadge}
-        </span>
-        <span className={`flex-1 text-sm font-mono ${set.isCompleted ? 'text-text' : 'text-text-secondary'}`}>
-          {summary}
-        </span>
-        {zone && <span className={`text-xs ${zone.color}`}>{zone.icon}</span>}
-        {/* 완료 세트는 상태 표시(초록 ✓), 미완료는 펼치기 힌트(›) — 체크박스로 오인 방지 */}
-        {set.isCompleted ? (
-          <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0 bg-success text-white">✓</span>
-        ) : (
-          <span className="w-6 h-6 flex items-center justify-center text-lg text-text-secondary/50 shrink-0">›</span>
-        )}
-      </button>
-    );
-  }
+  const weightPlaceholder = isBodyweight ? '+0'
+    : hasSuggestion ? `${suggestion!.weight}`
+    : previousSet?.weight ? `${previousSet.weight}` : '0';
+  const repsPlaceholder = hasSuggestion ? `${suggestion!.reps}`
+    : previousSet?.reps ? `${previousSet.reps}` : '0';
 
-  // ── 펼친 세트: 큰 컨트롤 ──────────────────────────────────────
-  const canComplete = isBodyweight ? set.reps > 0 : (set.weight > 0 && set.reps > 0);
+  // 세트 번호 배지 (W/D 타입은 색으로 구분)
+  const badgeText = set.setType === 'warmup' ? 'W' : set.setType === 'dropset' ? 'D' : `${set.setNumber}`;
+  const badgeClass =
+    set.setType === 'warmup' ? 'bg-yellow-500/20 text-yellow-400'
+    : set.setType === 'dropset' ? 'bg-purple-500/20 text-purple-400'
+    : set.isCompleted ? 'bg-success/20 text-success'
+    : isActive ? 'bg-primary/20 text-primary-light'
+    : 'bg-surface-light text-text-secondary';
+
+  const inputClass = (active: boolean) =>
+    `w-full h-11 text-center text-lg font-mono font-bold rounded-lg outline-none transition-all ${
+      set.isCompleted ? 'bg-success/5 text-text'
+      : active ? 'bg-surface focus:ring-2 focus:ring-primary'
+      : 'bg-surface-light/40'
+    }`;
+
   return (
     <div
       ref={rowRef}
-      className={`mb-2 rounded-2xl border p-3 ${
-        set.isCompleted ? 'bg-primary/10 border-primary/25' : 'bg-surface-light/40 border-border'
+      className={`mb-1.5 rounded-xl transition-colors ${
+        isActive ? 'bg-surface-light/60 ring-1 ring-primary/40'
+        : set.isCompleted ? 'bg-success/5'
+        : 'bg-surface-light/25'
       }`}
     >
-      {/* 세트 타입 세그먼트 + 라벨 */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-1 bg-surface rounded-lg p-0.5">
-          {([['warmup', 'W'], ['normal', '일반'], ['dropset', 'D']] as const).map(([type, label]) => (
-            <button
-              key={type}
-              onClick={() => onUpdate({ setType: type })}
-              className={`px-2.5 h-8 text-xs font-medium rounded-md transition-colors ${
-                (set.setType || 'normal') === type
-                  ? type === 'warmup' ? 'bg-yellow-500/20 text-yellow-400'
-                    : type === 'dropset' ? 'bg-purple-500/20 text-purple-400'
-                    : 'bg-primary/20 text-primary-light'
-                  : 'text-text-secondary'
-              }`}
-            >{label}</button>
-          ))}
-        </div>
-        <span className="text-xs text-text-secondary font-mono">{set.setNumber}세트</span>
-      </div>
-
-      {/* 무게: ± 버튼이 주력 컨트롤 (자주 하는 건 65→67.5처럼 고치는 것) */}
-      <div className="flex items-center gap-2 mb-2">
+      {/* 메인 줄: 번호 · 무게 × 횟수 · 완료 체크 */}
+      <div className="flex items-center gap-1.5 p-1.5">
         <button
-          onClick={() => nudgeWeight(-weightStep)}
-          aria-label="무게 줄이기"
-          className="w-14 h-14 rounded-xl bg-surface text-2xl text-text-secondary active:bg-border shrink-0"
-        >−</button>
-        <div className="relative flex-1">
+          onClick={onActivate}
+          aria-label={`${set.setNumber}세트`}
+          className={`w-7 h-11 shrink-0 flex items-center justify-center text-xs font-mono font-bold rounded-lg ${badgeClass}`}
+        >{badgeText}</button>
+
+        <div className="flex-1 min-w-0">
           <input
-            type="text"
-            inputMode="decimal"
-            enterKeyHint="next"
+            type="text" inputMode="decimal" enterKeyHint="next"
             value={weightValue}
-            onFocus={(e) => { setWeightDraft(set.weight ? String(set.weight) : ''); e.target.select(); }}
+            onFocus={(e) => { onActivate?.(); setWeightDraft(set.weight ? String(set.weight) : ''); e.target.select(); }}
             onChange={(e) => setWeightDraft(sanitizeDecimal(e.target.value))}
             onBlur={commitWeight}
             onKeyDown={handleWeightEnter}
-            placeholder={isBodyweight ? '+0' : (hasSuggestion ? `${suggestion!.weight}` : previousSet?.weight ? `${previousSet.weight}` : '0')}
-            className={`w-full h-14 text-center text-3xl font-mono font-bold rounded-xl outline-none transition-all ${
-              set.isCompleted ? 'bg-primary/10 text-primary-light' : 'bg-surface focus:ring-2 focus:ring-primary'
-            }`}
+            placeholder={weightPlaceholder}
+            aria-label="무게"
+            className={inputClass(isActive ?? false)}
           />
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-secondary">{isBodyweight ? '+kg' : 'kg'}</span>
         </div>
-        <button
-          onClick={() => nudgeWeight(weightStep)}
-          aria-label="무게 늘리기"
-          className="w-14 h-14 rounded-xl bg-surface text-2xl text-text-secondary active:bg-border shrink-0"
-        >+</button>
-      </div>
-
-      {/* 지난번 / 추천 칩 — 탭하면 무게+횟수 동시 입력 */}
-      <div className="flex items-center gap-2 mb-3">
-        {previousSet && (previousSet.weight > 0 || previousSet.reps > 0) && (
-          <button
-            onClick={() => onUpdate({ weight: previousSet.weight, reps: previousSet.reps })}
-            className="flex-1 h-9 rounded-lg bg-surface text-xs text-text-secondary font-mono active:bg-border"
-          >지난번 {isBodyweight ? `${previousSet.reps}회` : `${previousSet.weight}×${previousSet.reps}`}</button>
-        )}
-        {hasSuggestion && (
-          <button
-            onClick={() => onUpdate({ weight: suggestion!.weight, reps: suggestion!.reps })}
-            className="flex-1 h-9 rounded-lg bg-primary/15 text-xs text-primary-light font-mono font-semibold active:bg-primary/25"
-          >추천 {isBodyweight ? `${suggestion!.reps}회` : `${suggestion!.weight}×${suggestion!.reps}`}</button>
-        )}
-      </div>
-
-      {/* 횟수 */}
-      <div className="flex items-center gap-2 mb-3">
-        <span className="text-xs text-text-secondary w-8">횟수</span>
-        <button
-          onClick={() => nudgeReps(-1)}
-          aria-label="횟수 줄이기"
-          className="w-12 h-12 rounded-xl bg-surface text-xl text-text-secondary active:bg-border shrink-0"
-        >−</button>
-        <div className="relative flex-1">
+        <span className="text-text-secondary text-xs shrink-0">{isBodyweight ? '+kg' : 'kg'}</span>
+        <span className="text-text-secondary text-sm shrink-0">×</span>
+        <div className="w-[52px] shrink-0">
           <input
             ref={repsInputRef}
-            type="text"
-            inputMode="numeric"
-            enterKeyHint="done"
+            type="text" inputMode="numeric" enterKeyHint="done"
             value={repsValue}
-            onFocus={(e) => { setRepsDraft(set.reps ? String(set.reps) : ''); e.target.select(); }}
+            onFocus={(e) => { onActivate?.(); setRepsDraft(set.reps ? String(set.reps) : ''); e.target.select(); }}
             onChange={(e) => setRepsDraft(sanitizeInt(e.target.value))}
             onBlur={commitReps}
             onKeyDown={handleRepsEnter}
-            placeholder={hasSuggestion ? `${suggestion!.reps}` : previousSet?.reps ? `${previousSet.reps}` : '0'}
-            className={`w-full h-12 text-center text-2xl font-mono font-bold rounded-xl outline-none transition-all ${
-              set.isCompleted ? 'bg-primary/10 text-primary-light' : 'bg-surface focus:ring-2 focus:ring-primary'
-            }`}
+            placeholder={repsPlaceholder}
+            aria-label="횟수"
+            className={inputClass(isActive ?? false)}
           />
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-secondary">회</span>
         </div>
+        <span className="text-text-secondary text-xs shrink-0">회</span>
+
+        {/* 완료 체크박스 */}
         <button
-          onClick={() => nudgeReps(1)}
-          aria-label="횟수 늘리기"
-          className="w-12 h-12 rounded-xl bg-surface text-xl text-text-secondary active:bg-border shrink-0"
-        >+</button>
+          onClick={handleComplete}
+          aria-label={set.isCompleted ? '완료 취소' : '세트 완료'}
+          className={`w-10 h-11 shrink-0 flex items-center justify-center rounded-lg transition-all active:scale-90 ${
+            set.isCompleted
+              ? 'text-success'
+              : canComplete ? 'text-primary-light' : 'text-text-secondary/40'
+          }`}
+        >
+          <span className={`w-7 h-7 rounded-full flex items-center justify-center text-sm border-2 ${
+            set.isCompleted ? 'bg-success border-success text-white' : 'border-current'
+          }`}>✓</span>
+        </button>
       </div>
 
-      {/* 운동 영역 / 목표 불일치 / 추천 메시지 */}
-      {(zone || (suggestion && !set.isCompleted)) && (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-1 mb-3 text-[11px]">
-          {zone && (
-            <span className={`flex items-center gap-1 ${zone.color}`}>
-              <span>{zone.icon}</span><span>{zone.label}</span>
-              {mismatch && <span className="text-warning ml-1">⚠ {mismatch}</span>}
-            </span>
+      {/* 활성 세트 보조줄: 추천/지난번 칩 + 타입 + 삭제 */}
+      {isActive && !showDeleteConfirm && (
+        <div className="px-1.5 pb-2 space-y-1.5">
+          {(hasSuggestion || (previousSet && (previousSet.weight > 0 || previousSet.reps > 0))) && (
+            <div className="flex items-center gap-1.5">
+              {previousSet && (previousSet.weight > 0 || previousSet.reps > 0) && (
+                <button
+                  onClick={() => onUpdate({ weight: previousSet.weight, reps: previousSet.reps })}
+                  className="flex-1 h-8 rounded-lg bg-surface text-[11px] text-text-secondary font-mono active:bg-border"
+                >지난번 {isBodyweight ? `${previousSet.reps}회` : `${previousSet.weight}×${previousSet.reps}`}</button>
+              )}
+              {hasSuggestion && (
+                <button
+                  onClick={() => onUpdate({ weight: suggestion!.weight, reps: suggestion!.reps })}
+                  className="flex-1 h-8 rounded-lg bg-primary/15 text-[11px] text-primary-light font-mono font-semibold active:bg-primary/25"
+                >추천 {isBodyweight ? `${suggestion!.reps}회` : `${suggestion!.weight}×${suggestion!.reps}`}</button>
+              )}
+            </div>
           )}
-          {suggestion && !set.isCompleted && (
-            <span className="text-primary-light/80">{suggestion.message}</span>
-          )}
+          <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-0.5 bg-surface rounded-lg p-0.5">
+              {([['warmup', 'W'], ['normal', '일반'], ['dropset', 'D']] as const).map(([type, label]) => (
+                <button
+                  key={type}
+                  onClick={() => onUpdate({ setType: type })}
+                  className={`px-2 h-7 text-[11px] font-medium rounded-md transition-colors ${
+                    (set.setType || 'normal') === type
+                      ? type === 'warmup' ? 'bg-yellow-500/20 text-yellow-400'
+                        : type === 'dropset' ? 'bg-purple-500/20 text-purple-400'
+                        : 'bg-primary/20 text-primary-light'
+                      : 'text-text-secondary'
+                  }`}
+                >{label}</button>
+              ))}
+            </div>
+            <div className="flex-1" />
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              aria-label="세트 삭제"
+              className="h-7 px-2.5 text-[11px] text-text-secondary active:text-danger active:bg-danger/10 rounded-lg"
+            >세트 삭제</button>
+          </div>
         </div>
       )}
 
-      {/* 완료 + 삭제 */}
-      {!showDeleteConfirm ? (
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => { commitWeight(); commitReps(); onComplete(); }}
-            className={`flex-1 h-12 rounded-xl font-semibold text-sm transition-all ${
-              set.isCompleted
-                ? 'bg-gradient-to-br from-success to-green-600 text-white shadow-md shadow-success/30'
-                : canComplete
-                  ? 'bg-primary text-white active:scale-[0.98]'
-                  : 'bg-surface text-text-secondary'
-            }`}
-          >
-            {set.isCompleted ? '완료됨 ✓' : '완료 ✓'}
-          </button>
-          <button
-            onClick={() => setShowDeleteConfirm(true)}
-            className="w-12 h-12 rounded-xl bg-surface text-text-secondary/50 active:text-danger text-lg shrink-0"
-          >✕</button>
-        </div>
-      ) : (
-        <div className="flex items-center gap-2 px-1 py-1">
+      {/* 삭제 확인 */}
+      {showDeleteConfirm && (
+        <div className="flex items-center gap-2 px-2 pb-2">
           <span className="text-xs text-danger flex-1">이 세트를 삭제할까요?</span>
           <button onClick={() => setShowDeleteConfirm(false)} className="text-xs px-3 h-9 bg-surface rounded-lg">취소</button>
           <button onClick={() => { onRemove(); setShowDeleteConfirm(false); }} className="text-xs px-3 h-9 bg-danger text-white rounded-lg">삭제</button>
+        </div>
+      )}
+
+      {/* 완료된 세트의 운동 영역 / 목표 불일치 */}
+      {zone && !isActive && (
+        <div className="flex items-center gap-2 px-3 pb-1.5 text-[10px]">
+          <span className={`flex items-center gap-1 ${zone.color}`}>
+            <span>{zone.icon}</span><span>{zone.label}</span>
+          </span>
+          {mismatch && <span className="text-warning">⚠ {mismatch}</span>}
         </div>
       )}
     </div>
