@@ -6,6 +6,26 @@ import { parseLocalDate } from '../hooks/useLocalDate';
 import MuscleHeatmap from '../components/stats/MuscleHeatmap';
 const COLORS = ['#6366F1', '#22C55E', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4'];
 
+// 맨몸 운동은 무게 0이라 kg 볼륨에 안 잡힌다 → 세트·총 횟수를 별도 집계.
+// (가중 맨몸의 추가 중량은 이미 kg 볼륨에 포함되므로 여기선 횟수만 센다)
+function bodyweightWork(
+  ss: { exercises: { exerciseId: number; sets: { isCompleted: boolean; reps: number; setType?: string }[] }[] }[],
+  exerciseMap: Map<number, { equipmentType?: string }>
+): { sets: number; reps: number } {
+  let sets = 0, reps = 0;
+  for (const s of ss) {
+    for (const ex of s.exercises) {
+      if (exerciseMap.get(ex.exerciseId)?.equipmentType !== '맨몸') continue;
+      for (const set of ex.sets) {
+        if (!set.isCompleted || set.setType === 'warmup') continue;
+        sets += 1;
+        reps += set.reps;
+      }
+    }
+  }
+  return { sets, reps };
+}
+
 export default function StatsPage() {
   const [tab, setTab] = useState<'exercise' | 'muscle' | 'heatmap' | 'weekly' | 'monthly'>('exercise');
   const [selectedExerciseId, setSelectedExerciseId] = useState<number | null>(null);
@@ -382,6 +402,7 @@ function WeeklyStats({ sessions, exercises, personalRecords }: { sessions: any[]
   const volumeChange = lastVolume > 0 ? ((thisVolume - lastVolume) / lastVolume * 100) : 0;
 
   const thisDuration = calcDuration(thisWeek);
+  const bw = bodyweightWork(thisWeek, exerciseMap);
 
   // 이번 주 PR
   const weekPRs = personalRecords.filter((pr: any) => parseLocalDate(pr.date) >= startOfWeek);
@@ -448,6 +469,16 @@ function WeeklyStats({ sessions, exercises, personalRecords }: { sessions: any[]
             <div className="text-xs text-text-secondary">PR 달성</div>
           </div>
         </div>
+
+        {/* 맨몸 운동: kg 볼륨에 안 잡히므로 세트·횟수로 별도 표시 */}
+        {bw.sets > 0 && (
+          <div className="bg-surface-light rounded-lg p-3 mt-3 flex items-center justify-between">
+            <span className="text-sm">🤸 맨몸 운동</span>
+            <span className="text-sm font-mono">
+              {bw.sets}세트 · 총 {bw.reps.toLocaleString()}회
+            </span>
+          </div>
+        )}
       </div>
 
       {/* PR 목록 */}
@@ -539,6 +570,7 @@ function MonthlyStats({ sessions, exercises, personalRecords }: { sessions: any[
   const current = calcStats(monthSessions);
   const prev = calcStats(prevMonthSessions);
   const volumeChange = prev.totalVolume > 0 ? ((current.totalVolume - prev.totalVolume) / prev.totalVolume * 100) : 0;
+  const monthBw = bodyweightWork(monthSessions, exerciseMap);
 
   // 월간 PR
   const monthPRs = personalRecords.filter((pr: any) => pr.date.startsWith(selectedMonth));
@@ -618,6 +650,16 @@ function MonthlyStats({ sessions, exercises, personalRecords }: { sessions: any[
                 <div className="text-xs text-text-secondary">총 세트</div>
               </div>
             </div>
+
+            {/* 맨몸 운동: kg 볼륨에 안 잡히므로 세트·횟수로 별도 표시 */}
+            {monthBw.sets > 0 && (
+              <div className="bg-surface-light rounded-lg p-3 mt-3 flex items-center justify-between">
+                <span className="text-sm">🤸 맨몸 운동</span>
+                <span className="text-sm font-mono">
+                  {monthBw.sets}세트 · 총 {monthBw.reps.toLocaleString()}회
+                </span>
+              </div>
+            )}
           </div>
 
           {/* 주차별 볼륨 그래프 */}
